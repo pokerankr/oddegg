@@ -924,6 +924,9 @@
       let _autoClaimTick      = null;              // 1s interval driving the countdown display
       let _autoClaimRemaining = 0;                 // seconds left on the countdown
       let _stuckClaimTimer    = null;              // recovery: resets egg if stuck in 'claiming'
+      let _claimerNameTimer   = null;              // auto-submits name form after 10s
+      let _claimerNameTick    = null;              // 1s interval for name-form countdown
+      let _claimerNameRemaining = 0;
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1294,6 +1297,31 @@
         if (_stuckClaimTimer) { clearTimeout(_stuckClaimTimer); _stuckClaimTimer = null; }
       }
 
+      function _startClaimerNameTimer() {
+        _clearClaimerNameTimer();
+        _claimerNameRemaining = 10;
+        _claimerNameTick = setInterval(() => {
+          _claimerNameRemaining--;
+          const el = document.getElementById("claimerCountdown");
+          if (el) el.textContent = _claimerNameRemaining > 0
+            ? `Auto-submitting in ${_claimerNameRemaining}s…`
+            : "Submitting…";
+          if (_claimerNameRemaining <= 0) _clearClaimerNameTimer();
+        }, 1000);
+        _claimerNameTimer = setTimeout(async () => {
+          _claimerNameTimer = null;
+          if (state.eggState?.status === 'claiming' && _isClaimer) {
+            await handleClaimHatch();
+          }
+        }, 10000);
+      }
+
+      function _clearClaimerNameTimer() {
+        if (_claimerNameTimer) { clearTimeout(_claimerNameTimer); _claimerNameTimer = null; }
+        if (_claimerNameTick)  { clearInterval(_claimerNameTick);  _claimerNameTick  = null; }
+        _claimerNameRemaining = 0;
+      }
+
       // Maps an egg_state DB row to state.eggState
       function _applyEggRow(row) {
         if (!row) return;
@@ -1331,6 +1359,7 @@
         } else if (row.status === 'hatching') {
           _clearAutoClaimTimer();
           _clearStuckClaimTimer();
+          _clearClaimerNameTimer();
         }
       }
 
@@ -1504,6 +1533,7 @@
       }
 
       async function handleClaimHatch() {
+        _clearClaimerNameTimer();
         const pokemon = state.eggState.pokemon;
         if (!pokemon) return;
 
@@ -1636,6 +1666,7 @@
           return;
         }
         _isClaimer = true;
+        _startClaimerNameTimer();
         render();
       }
 
@@ -1836,6 +1867,7 @@
                   <div class="controls">
                     <button class="${btnClass}" id="addDexBtn">${pokemon.slug === "ditto" ? "Claim Ditto!" : primaryText}</button>
                   </div>
+                  <div id="claimerCountdown" style="margin-top:8px;font-size:13px;color:var(--slate);">Auto-submitting in ${_claimerNameRemaining || 10}s…</div>
                 </div>`;
         } else {
           // Someone else claimed it
