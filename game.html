@@ -920,6 +920,9 @@
       const SESSION_ID      = crypto.randomUUID(); // per-tab claim identity
       let _pendingEggSteps  = 0;                   // egg steps queued for Supabase flush
       let _isClaimer        = false;               // true if this tab won the claim race
+      let _autoClaimTimer   = null;                // fires if egg goes unclaimed for 10s
+      let _autoClaimTick    = null;                // 1s interval driving the countdown display
+      let _autoClaimRemaining = 0;                 // seconds left on the countdown
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1225,9 +1228,50 @@
         } catch {}
       }
 
+      // ─── Auto-claim timer ────────────────────────────────────────────────────
+      function _clearAutoClaimTimer() {
+        if (_autoClaimTimer)  { clearTimeout(_autoClaimTimer);  _autoClaimTimer  = null; }
+        if (_autoClaimTick)   { clearInterval(_autoClaimTick);  _autoClaimTick   = null; }
+        _autoClaimRemaining = 0;
+      }
+
+      function _startAutoClaimTimer() {
+        _clearAutoClaimTimer();
+        _autoClaimRemaining = 10;
+        _autoClaimTick = setInterval(() => {
+          _autoClaimRemaining--;
+          const el = document.getElementById("autoClaimCountdown");
+          if (el) el.textContent = _autoClaimRemaining > 0
+            ? `Auto-claiming in ${_autoClaimRemaining}s…`
+            : "Auto-claiming…";
+          if (_autoClaimRemaining <= 0) _clearAutoClaimTimer();
+        }, 1000);
+        _autoClaimTimer = setTimeout(_autoClaimExpired, 10000);
+      }
+
+      async function _autoClaimExpired() {
+        _clearAutoClaimTimer();
+        if (!state.eggState || state.eggState.status !== 'hatched') return;
+        const { data: won } = await db.rpc("try_claim_egg");
+        if (!won) return; // another player just beat us to it
+        _isClaimer = true;
+        const pokemon = state.eggState.pokemon;
+        if (!pokemon) { _isClaimer = false; return; }
+        // For ditto morph (2nd+ ditto) pick a random uncaught pokemon automatically
+        const alreadyHaveDitto = Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
+        if (pokemon.slug === "ditto" && alreadyHaveDitto) {
+          const unlockMap = getUnlockMap(pokemon.isShiny);
+          const available = EGG_POOL.filter(s => !unlockMap[s]);
+          dittoChosenSlug = available.length > 0 ? randomFrom(available) : randomFrom(EGG_POOL);
+        }
+        // claimerInput won't be in the DOM — handleClaimHatch reads "" → "Anonymous Trainer"
+        await handleClaimHatch();
+      }
+
       // Maps an egg_state DB row to state.eggState
       function _applyEggRow(row) {
         if (!row) return;
+        const prevStatus = state.eggState?.status;
         const isActive = row.status === 'hatched' || row.status === 'claiming';
         // Preserve optimistic local steps when still hatching — prevents backwards jitter
         // (same Math.max pattern used for globalClicks)
@@ -1251,6 +1295,12 @@
             : null,
           error: "",
         };
+        // Manage auto-claim timer based on status transitions
+        if (row.status === 'hatched' && prevStatus !== 'hatched') {
+          _startAutoClaimTimer();
+        } else if (row.status !== 'hatched') {
+          _clearAutoClaimTimer();
+        }
       }
 
       // Generates egg params locally, saves to Supabase, and updates local state
@@ -1545,6 +1595,7 @@
 
       // Called when any player taps "Claim It!" — first one wins the race
       async function handleAttemptClaim() {
+        _clearAutoClaimTimer();
         const btn = document.getElementById("claimBtn");
         if (btn) btn.disabled = true;
         const { data: won, error } = await db.rpc("try_claim_egg");
@@ -1735,6 +1786,7 @@
                   <div class="controls" style="justify-content:center;">
                     <button class="success-btn" id="claimBtn" style="font-size:19px;padding:16px 32px;">✋ Claim It!</button>
                   </div>
+                  <div id="autoClaimCountdown" style="margin-top:10px;font-size:13px;color:var(--slate);">Auto-claiming in ${_autoClaimRemaining || 10}s…</div>
                 </div>`;
         } else if (egg.status === 'claiming' && _isClaimer) {
           // This player won — show name form
