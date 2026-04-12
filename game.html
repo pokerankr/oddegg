@@ -917,6 +917,9 @@
       let _stateDirty        = false; // true when shared state needs syncing
       const _clickTimestamps = [];    // rolling window for autoclicker detection
       let _autoclickerCooldown = false;
+      const SESSION_ID      = crypto.randomUUID(); // per-tab claim identity
+      let _pendingEggSteps  = 0;                   // egg steps queued for Supabase flush
+      let _isClaimer        = false;               // true if this tab won the claim race
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1009,6 +1012,7 @@
           isSpecial:    data.isSpecial,
           isShiny,
           isDitto,
+          status:   'hatching',
           hatched:  false,
           loading:  false,
           pokemon:  null,
@@ -1131,9 +1135,7 @@
 
       // ─── Persistence: Supabase (shared) + localStorage (egg + UI) ───────────
       function saveState(immediate = false) {
-        // Egg stays local — each player keeps their own in-progress egg
-        try { localStorage.setItem(STORAGE_KEY + "-egg", JSON.stringify(state.eggState)); } catch {}
-        // UI-only state stays local
+        // UI-only state stays local (egg is now shared via Supabase egg_state table)
         try { localStorage.setItem(STORAGE_KEY + "-ui", JSON.stringify({ activeDexView: state.activeDexView, claimer: state.claimer })); } catch {}
         _stateDirty = true;
         if (immediate) _syncToSupabase();
@@ -1223,28 +1225,99 @@
         } catch {}
       }
 
-      async function loadState() {
-        // Load egg from localStorage (stays per-player for now)
+      // Maps an egg_state DB row to state.eggState
+      function _applyEggRow(row) {
+        if (!row) return;
+        const isActive = row.status === 'hatched' || row.status === 'claiming';
+        state.eggState = {
+          targetSteps:  row.target_steps,
+          currentSteps: row.current_steps,
+          targetSlug:   row.target_slug,
+          isSpecial:    row.is_special,
+          isShiny:      row.is_shiny,
+          isDitto:      row.is_ditto,
+          hint1At:      row.hint1_at,
+          hint2At:      row.hint2_at,
+          status:       row.status || 'hatching',
+          hatched:      isActive,
+          loading:      false,
+          pokemon:      isActive && row.target_slug
+            ? { ...buildPokemonRecord(row.target_slug, row.is_shiny), stepsToHatch: row.current_steps }
+            : null,
+          error: "",
+        };
+      }
+
+      // Generates egg params locally, saves to Supabase, and updates local state
+      async function generateAndSaveEgg() {
+        const fresh = buildFreshEgg();
+        _isClaimer  = false;
+        state.eggState = { ...fresh, status: 'hatching' };
+        if (!fresh.targetSlug) return; // EGG_POOL not ready yet
         try {
-          const rawEgg = localStorage.getItem(STORAGE_KEY + "-egg");
-          if (rawEgg) state.eggState = JSON.parse(rawEgg);
-        } catch {}
-        // Clean up old combined localStorage key if Supabase is now in use —
-        // prevents stale local data from overriding the shared dex on refresh
+          await db.rpc("save_new_egg", {
+            p_target_slug:  fresh.targetSlug,
+            p_target_steps: fresh.targetSteps,
+            p_is_shiny:     fresh.isShiny,
+            p_is_ditto:     fresh.isDitto,
+            p_is_special:   fresh.isSpecial,
+            p_hint1_at:     fresh.hint1At,
+            p_hint2_at:     fresh.hint2At,
+          });
+        } catch (e) {
+          console.error("[OddEgg] generateAndSaveEgg failed:", e);
+        }
+      }
+
+      // Flushes pending egg steps to Supabase — called on a fast timer
+      function _flushEggSteps() {
+        if (_pendingEggSteps === 0) return;
+        if (!state.eggState || state.eggState.status !== 'hatching') {
+          _pendingEggSteps = 0;
+          return;
+        }
+        const steps = _pendingEggSteps;
+        _pendingEggSteps = 0;
+        db.rpc("increment_egg_steps", { amount: steps }).then(({ data, error }) => {
+          if (error) {
+            console.error("[OddEgg] Egg step flush failed:", error);
+            _pendingEggSteps += steps;
+            return;
+          }
+          if (data) {
+            const row = Array.isArray(data) ? data[0] : data;
+            if (row && typeof row === 'object' && 'status' in row) {
+              const wasHatching = state.eggState?.status === 'hatching';
+              _applyEggRow(row);
+              if (wasHatching && state.eggState.status !== 'hatching') {
+                render(); // egg just hatched — show reveal to this player immediately
+              } else {
+                const el = document.getElementById("clickCounter");
+                if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
+              }
+            }
+          }
+          // If data is null/void, realtime handles status updates
+        });
+      }
+
+      async function loadState() {
+        // Clean up old combined localStorage key — stale local data should not override shared dex
         if (localStorage.getItem(STORAGE_KEY + "-egg") || localStorage.getItem(STORAGE_KEY + "-ui")) {
           localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(STORAGE_KEY + "-egg"); // egg is now shared via Supabase
         }
         // Load UI state from localStorage
         try {
           const rawUi = localStorage.getItem(STORAGE_KEY + "-ui");
           if (rawUi) {
             const ui = JSON.parse(rawUi);
-            if (ui?.activeDexView)         state.activeDexView = ui.activeDexView;
+            if (ui?.activeDexView)               state.activeDexView = ui.activeDexView;
             if (typeof ui?.claimer === "string") state.claimer = ui.claimer;
           }
         } catch {}
 
-        // Load shared state from Supabase
+        // Load shared dex/charm state from Supabase
         try {
           const { data } = await db.from("shared_game_state").select("*").eq("id", 1).single();
           if (data) {
@@ -1252,29 +1325,36 @@
             if (Array.isArray(data.shiny_dex))        state.shinyDex       = data.shiny_dex;
             if (Array.isArray(data.recent_log))       state.recentLog      = data.recent_log;
             if (Array.isArray(data.shiny_recent_log)) state.shinyRecentLog = data.shiny_recent_log;
-            if (data.found_counts && typeof data.found_counts === "object")           state.foundCounts      = data.found_counts;
+            if (data.found_counts && typeof data.found_counts === "object")             state.foundCounts      = data.found_counts;
             if (data.shiny_found_counts && typeof data.shiny_found_counts === "object") state.shinyFoundCounts = data.shiny_found_counts;
-            if (data.unlocked_dex && typeof data.unlocked_dex === "object")           Object.assign(state.unlockedDex, data.unlocked_dex);
+            if (data.unlocked_dex && typeof data.unlocked_dex === "object")             Object.assign(state.unlockedDex, data.unlocked_dex);
             if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object") Object.assign(state.unlockedShinyDex, data.unlocked_shiny_dex);
             if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
             if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
             if (typeof data.global_clicks           === "number")  state.globalClicks          = Math.max(state.globalClicks, data.global_clicks);
           } else {
-            // No Supabase row yet — one-time migration from old localStorage format
             _migrateFromLocalStorage();
           }
         } catch {
-          // Supabase unavailable — fall back to old localStorage format
           _migrateFromLocalStorage();
+        }
+
+        // Load shared egg from Supabase egg_state table
+        try {
+          const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+          if (eggRow) {
+            _applyEggRow(eggRow);
+          } else {
+            await generateAndSaveEgg(); // first load — create the shared egg
+          }
+        } catch {
+          if (!state.eggState) state.eggState = { ...buildFreshEgg(), status: 'hatching' };
         }
 
         // Ensure dex members are marked unlocked
         state.dex.forEach(e      => unlockPokemon(e.slug, false));
         state.shinyDex.forEach(e => unlockPokemon(e.slug, true));
-
-        // Ensure eggState exists
-        if (!state.eggState) state.eggState = buildFreshEgg();
 
         // Re-run merges in case data changed
         const processedLines = new Set();
@@ -1287,7 +1367,7 @@
       // ─── Event handlers ──────────────────────────────────────────────────────
       function handleTakeStep() {
         const egg = state.eggState;
-        if (egg.hatched || egg.loading) return;
+        if (!egg || egg.status !== 'hatching') return;
 
         // Autoclicker guard — block input during cooldown
         if (_autoclickerCooldown) return;
@@ -1301,40 +1381,13 @@
 
         state.globalClicks++;
         _pendingClicks++;
+        _pendingEggSteps++;
+        egg.currentSteps++;
+
         document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
-
-        const nextSteps = egg.currentSteps + 1;
-
-        if (nextSteps < egg.targetSteps) {
-          egg.currentSteps = nextSteps;
-          egg.error = "";
-          saveState();
-          // Just update the counter display — no full re-render needed
-          const counterEl = document.getElementById("clickCounter");
-          if (counterEl) counterEl.textContent = fmt(egg.currentSteps) + " steps";
-          return;
-        }
-
-        // Hatch!
-        egg.currentSteps = nextSteps;
-        egg.loading = true;
-        egg.error   = "";
-        saveState();
-        render();
-
-        setTimeout(() => {
-          const baseSlug = egg.targetSlug;
-          const isShiny  = egg.isShiny;
-
-          egg.hatched = true;
-          egg.loading = false;
-          egg.pokemon = {
-            ...buildPokemonRecord(baseSlug, isShiny),
-            stepsToHatch: egg.currentSteps,
-          };
-          saveState();
-          render();
-        }, 500);
+        const counterEl = document.getElementById("clickCounter");
+        if (counterEl) counterEl.textContent = fmt(egg.currentSteps) + " steps";
+        // Hatch is detected server-side via increment_egg_steps and broadcast via realtime
       }
 
       // Shared helper: add a pokemon slug to the dex + log evolution events
@@ -1364,7 +1417,7 @@
         }
       }
 
-      function handleClaimHatch() {
+      async function handleClaimHatch() {
         const pokemon = state.eggState.pokemon;
         if (!pokemon) return;
 
@@ -1409,8 +1462,8 @@
 
           dittoChosenSlug  = null;
           state.claimer    = "";
-          state.eggState   = buildFreshEgg();
           const newCharms  = checkCharmUnlocks();
+          await generateAndSaveEgg();
           saveState(true); render(); newCharms.forEach(showCharmToast);
           return;
         }
@@ -1428,8 +1481,8 @@
         addPokemonToDex(pokemon.slug, isShiny, entry);
 
         state.claimer  = "";
-        state.eggState = buildFreshEgg();
         const newCharms = checkCharmUnlocks();
+        await generateAndSaveEgg();
         saveState(true); render(); newCharms.forEach(showCharmToast);
       }
 
@@ -1449,27 +1502,31 @@
         render();
       }
 
-      function toggleDevMode() {
+      async function toggleDevMode() {
         devEggSlug = devEggSlug ? null : "charmander";
         document.getElementById("modeValue").textContent = devEggSlug ? "Charmander Only" : "All Generations";
-        state.eggState = buildFreshEgg();
-        saveState();
+        await generateAndSaveEgg();
         render();
       }
 
-      function toggleDittoMode() {
+      async function toggleDittoMode() {
         devDittoMode = !devDittoMode;
         document.getElementById("modeValue").textContent = devDittoMode ? "Ditto Mode" : "All Generations";
-        state.eggState = buildFreshEgg();
-        saveState();
+        await generateAndSaveEgg();
         render();
       }
 
-      function handleDevSkip() {
-        // Fast-forward egg to 1 click before hatching
-        state.eggState.currentSteps = state.eggState.targetSteps - 1;
-        saveState();
-        render();
+      async function handleDevSkip() {
+        const egg = state.eggState;
+        if (!egg || egg.status !== 'hatching') return;
+        _pendingEggSteps = 0;
+        // Send enough steps to guarantee a hatch regardless of current DB value
+        const { data } = await db.rpc("increment_egg_steps", { amount: MAX_STEPS });
+        if (data) {
+          const row = Array.isArray(data) ? data[0] : data;
+          if (row && typeof row === 'object' && 'status' in row) { _applyEggRow(row); render(); }
+        }
+        // Realtime will also fire if the DB update broadcasts the change
       }
 
       function setDexView(view) {
@@ -1482,26 +1539,37 @@
       function openFullDex()  { state.fullDexOpen = true; fullDexPage = 0; renderFullDexOverlay(); }
       function closeFullDex() { state.fullDexOpen = false; renderFullDexOverlay(); }
 
+      // Called when any player taps "Claim It!" — first one wins the race
+      async function handleAttemptClaim() {
+        const btn = document.getElementById("claimBtn");
+        if (btn) btn.disabled = true;
+        const { data: won, error } = await db.rpc("try_claim_egg");
+        if (error || !won) {
+          // Lost the race — another player claimed it; realtime will update the UI
+          _isClaimer = false;
+          return;
+        }
+        _isClaimer = true;
+        render();
+      }
+
       // ─── Render: Main View ───────────────────────────────────────────────────
       function renderMainView() {
         const view = document.getElementById("mainView");
         const egg  = state.eggState;
-        const sparkClass = egg.isShiny ? "spark shiny-spark" : egg.isSpecial ? "spark special-spark" : "spark";
+        const sparkClass = egg?.isShiny ? "spark shiny-spark" : egg?.isSpecial ? "spark special-spark" : "spark";
 
-        if (!egg.hatched) {
-          const progress = egg.currentSteps / egg.targetSteps; // 0 → 1 (unknown to player)
-          const specialClass = egg.isShiny ? " shiny" : egg.isSpecial ? " special" : "";
-          const stepBtnClass = egg.isSpecial ? "step-btn special-step" : "step-btn";
-          const counterClass = egg.isSpecial ? "click-counter special-counter" : "click-counter";
-          const hint1At = egg.hint1At ?? 0.15;
-          const hint2At = egg.hint2At ?? 0.45;
+        if (!egg || egg.status === 'hatching') {
+          const progress = (egg?.currentSteps ?? 0) / (egg?.targetSteps ?? 1);
+          const specialClass = egg?.isShiny ? " shiny" : egg?.isSpecial ? " special" : "";
+          const stepBtnClass = egg?.isSpecial ? "step-btn special-step" : "step-btn";
+          const counterClass = egg?.isSpecial ? "click-counter special-counter" : "click-counter";
+          const hint1At = egg?.hint1At ?? 0.15;
+          const hint2At = egg?.hint2At ?? 0.45;
           let eggTypeHint, subText;
-          if (egg.loading) {
-            eggTypeHint = "The egg is hatching!";
-            subText     = "Something is stirring inside…";
-          } else if (egg.currentSteps === 0) {
-            eggTypeHint = egg.isSpecial ? "A mysterious golden egg is waiting…" : "An Odd Egg is waiting.";
-            subText     = egg.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
+          if (!egg || egg.currentSteps === 0) {
+            eggTypeHint = egg?.isSpecial ? "A mysterious golden egg is waiting…" : "An Odd Egg is waiting.";
+            subText     = egg?.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
           } else if (progress < hint1At) {
             eggTypeHint = "It looks as though this Egg will take a long time yet to hatch.";
             subText     = egg.isSpecial ? "Whatever is inside, it pulses with strange energy." : "Keep stepping — every step counts.";
@@ -1530,11 +1598,11 @@
                   <div class="${sparkClass} s4"></div>
                   <div class="${sparkClass} s5"></div>
                 </div>
-                <button class="egg-button${specialClass}" id="eggTapBtn" ${egg.loading ? "disabled" : ""} aria-label="Take a Step">
+                <button class="egg-button${specialClass}" id="eggTapBtn" aria-label="Take a Step">
                   <div class="egg-glow"></div>
-                  <img class="egg-image ${egg.loading ? "hatching" : ""}" src="${egg.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
+                  <img class="egg-image" src="${egg?.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
                 </button>
-                <div class="${counterClass}" id="clickCounter">${fmt(egg.currentSteps)} steps</div>
+                <div class="${counterClass}" id="clickCounter">${fmt(egg?.currentSteps ?? 0)} steps</div>
               </div>
               <div class="dialog-wrap">
                 <div class="dialog">
@@ -1545,12 +1613,12 @@
                     </div>
                   </div>
                   <div class="controls">
-                    <button class="${stepBtnClass}" id="stepBtn" ${egg.loading ? "disabled" : ""}>${egg.loading ? "Hatching…" : "Take a Step"}</button>
+                    <button class="${stepBtnClass}" id="stepBtn">Take a Step</button>
                     <button class="dev-btn" id="devSkipBtn" title="Dev: skip to last step">⚡ Skip</button>
                     <button class="dev-btn${devEggSlug ? ' active' : ''}" id="devModeBtn" title="Dev: lock egg pool to one species" style="${devEggSlug ? 'background:linear-gradient(180deg,#ffe0a0 0%,#ffc060 100%);color:#5f3a00;box-shadow:0 8px 0 #b07000;' : ''}">${devEggSlug ? `🔒 ${devEggSlug.charAt(0).toUpperCase()+devEggSlug.slice(1)} Only` : '🔓 All Gens'}</button>
                     <button class="dev-btn" id="devDittoBtn" title="Dev: force every egg to be Ditto" style="${devDittoMode ? 'background:linear-gradient(180deg,#ede0ff 0%,#c8a0f0 100%);color:#3d1a6e;box-shadow:0 8px 0 #7c3aed;' : ''}">🔮 Ditto${devDittoMode ? " ON" : ""}</button>
                   </div>
-                  ${egg.error ? `<div class="error">${egg.error}</div>` : ""}
+                  ${egg?.error ? `<div class="error">${egg.error}</div>` : ""}
                 </div>
               </div>
             </div>
@@ -1564,21 +1632,23 @@
           return;
         }
 
-        // ── Hatched state ──
-        const pokemon     = egg.pokemon;
-        const pData        = POKEMON_DATA[pokemon.slug];
-        const orbClass     = pokemon.isShiny ? "reveal-orb shiny-orb" : pokemon.isSpecial ? "reveal-orb special-orb" : "reveal-orb";
+        // ── Hatched / Claiming state ──
+        const pokemon = egg.pokemon;
+        if (!pokemon) return; // safety — status is hatched/claiming but pokemon not built yet
 
-        // ── Ditto morph path ──────────────────────────────────────────────────
-        if (pokemon.slug === "ditto" && Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"])) {
+        const pData    = POKEMON_DATA[pokemon.slug];
+        const orbClass = pokemon.isShiny ? "reveal-orb shiny-orb" : pokemon.isSpecial ? "reveal-orb special-orb" : "reveal-orb";
+        const alreadyHaveDitto = Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
+
+        // ── Ditto morph picker — claimer only, 2nd+ ditto ─────────────────────
+        if (pokemon.slug === "ditto" && alreadyHaveDitto && egg.status === 'claiming' && _isClaimer) {
           dittoChosenSlug = null;
-          // Build a grid of all pokemon the trainer doesn't have yet
           const isShiny   = pokemon.isShiny;
           const unlockMap = getUnlockMap(isShiny);
           const allSlots  = EGG_POOL.slice().sort((a, b) => POKEMON_DATA[a].id - POKEMON_DATA[b].id);
           const gridHTML  = allSlots.map(slug => {
-            const d       = POKEMON_DATA[slug];
-            const caught  = Boolean(unlockMap[slug]);
+            const d      = POKEMON_DATA[slug];
+            const caught = Boolean(unlockMap[slug]);
             return `<div class="ditto-tile${caught ? " ditto-tile-caught" : ""}" data-slug="${slug}" title="${d.name}">
               <img src="${isShiny ? d.shinyImage : d.image}" alt="${d.name}" />
               <div class="ditto-tile-name">${d.name}</div>
@@ -1615,7 +1685,6 @@
             </div>
           `;
 
-          // Wire ditto tile clicks
           document.getElementById("dittoGrid").addEventListener("click", e => {
             const tile = e.target.closest(".ditto-tile");
             if (!tile) return;
@@ -1623,22 +1692,17 @@
             document.querySelectorAll(".ditto-tile").forEach(t => t.classList.remove("ditto-tile-selected"));
             tile.classList.add("ditto-tile-selected");
             const d = POKEMON_DATA[dittoChosenSlug];
-            const selImg  = document.getElementById("dittoSelImg");
-            const selName = document.getElementById("dittoSelName");
-            selImg.src = pokemon.isShiny ? d.shinyImage : d.image;
-            selName.textContent = d.name;
+            document.getElementById("dittoSelImg").src = pokemon.isShiny ? d.shinyImage : d.image;
+            document.getElementById("dittoSelName").textContent = d.name;
             document.getElementById("dittoSelection").style.display = "flex";
             document.getElementById("dittoConfirmBtn").disabled = false;
           });
-
-          // Search filter
           document.getElementById("dittoSearch").addEventListener("input", e => {
             const q = e.target.value.toLowerCase().trim();
             document.querySelectorAll(".ditto-tile").forEach(tile => {
               tile.style.display = (!q || POKEMON_DATA[tile.dataset.slug].name.toLowerCase().includes(q)) ? "" : "none";
             });
           });
-
           document.getElementById("dittoConfirmBtn").addEventListener("click", handleClaimHatch);
           const claimerInput = document.getElementById("claimerInput");
           if (claimerInput) {
@@ -1651,15 +1715,48 @@
           return;
         }
 
-        // ── Normal hatched UI ─────────────────────────────────────────────────
+        // ── Build claim box HTML based on status / who claimed ─────────────────
         const lineComplete = hasLivingDexComplete(pokemon.line, pokemon.isShiny);
         const kicker       = pokemon.isSpecial
           ? (pData?.isLegendary ? "Legendary Discovery!" : "Mythical Discovery!")
           : (pokemon.slug === "ditto" ? "Transform!" : "Discovery!");
-        const primaryText  = lineComplete
-          ? (pokemon.isShiny ? `Count This Shiny ${pokemon.name}` : `Count This ${pokemon.name}`)
-          : (pokemon.isShiny ? "Add to Shiny Dex" : "Add to Dex");
-        const btnClass     = pokemon.isShiny ? "shiny-btn" : "success-btn";
+
+        let claimBoxHTML;
+        if (egg.status === 'hatched') {
+          // Anyone can grab it
+          claimBoxHTML = `
+                <div class="claim-box" style="text-align:center;">
+                  <div class="dialog-sub" style="margin-bottom:14px;">Who wants this Pokémon? Tap to claim!</div>
+                  <div class="controls" style="justify-content:center;">
+                    <button class="success-btn" id="claimBtn" style="font-size:19px;padding:16px 32px;">✋ Claim It!</button>
+                  </div>
+                </div>`;
+        } else if (egg.status === 'claiming' && _isClaimer) {
+          // This player won — show name form
+          const primaryText = lineComplete
+            ? (pokemon.isShiny ? `Count This Shiny ${pokemon.name}` : `Count This ${pokemon.name}`)
+            : (pokemon.isShiny ? "Add to Shiny Dex" : "Add to Dex");
+          const btnClass = pokemon.isShiny ? "shiny-btn" : "success-btn";
+          claimBoxHTML = `
+                <div class="claim-box">
+                  ${lineComplete
+                    ? `<label>Living Dex Complete</label>
+                       <div class="dialog-sub" style="margin-top:12px;">You already have the full ${pokemon.isShiny ? "shiny " : ""}${pokemon.name} line. This hatch increases the No. found count.</div>`
+                    : `<label>You claimed it! Enter your name:</label>
+                       <input id="claimerInput" placeholder="Enter your name" value="${state.claimer}" />
+                       <div id="claimError" class="error" style="display:none;margin-top:10px;"></div>`
+                  }
+                  <div class="controls">
+                    <button class="${btnClass}" id="addDexBtn">${pokemon.slug === "ditto" ? "Claim Ditto!" : primaryText}</button>
+                  </div>
+                </div>`;
+        } else {
+          // Someone else claimed it
+          claimBoxHTML = `
+                <div class="claim-box" style="text-align:center;">
+                  <div class="dialog-sub" style="padding:12px 0;">⏳ Another trainer is claiming this egg…</div>
+                </div>`;
+        }
 
         view.innerHTML = `
           <div class="field">
@@ -1679,34 +1776,27 @@
                   <div class="dexno">Dex #${String(pokemon.id).padStart(4, "0")}</div>
                   ${pokemon.isShiny   ? `<div class="shiny-badge">✨ Shiny Hatch</div>` : ""}
                   ${pokemon.isSpecial ? `<div class="legendary-badge">⭐ ${pData?.isLegendary ? "Legendary" : "Mythical"}</div>` : ""}
-                  ${pokemon.slug === "ditto" ? `<div class="legendary-badge" style="border-color:#9b7fe8;background:linear-gradient(180deg,#ede0ff 0%,#c8a0f0 100%);color:#3d1a6e;">🔮 First Ditto!</div>` : ""}
+                  ${pokemon.slug === "ditto" ? `<div class="legendary-badge" style="border-color:#9b7fe8;background:linear-gradient(180deg,#ede0ff 0%,#c8a0f0 100%);color:#3d1a6e;">🔮 ${alreadyHaveDitto ? "Ditto Again!" : "First Ditto!"}</div>` : ""}
                 </div>
-                <div class="claim-box">
-                  ${lineComplete
-                    ? `<label>Living Dex Complete</label>
-                       <div class="dialog-sub" style="margin-top:12px;">You already have the full ${pokemon.isShiny ? "shiny " : ""}${pokemon.name} line. This hatch increases the No. found count.</div>`
-                    : `<label>Who triggered the hatch?</label>
-                       <input id="claimerInput" placeholder="Enter your name" value="${state.claimer}" />
-                       <div id="claimError" class="error" style="display:none;margin-top:10px;"></div>`
-                  }
-                  <div class="controls">
-                    <button class="${btnClass}" id="addDexBtn">${pokemon.slug === "ditto" ? "Claim Ditto!" : primaryText}</button>
-                  </div>
-                </div>
+                ${claimBoxHTML}
               </div>
             </div>
           </div>
         `;
 
-        document.getElementById("addDexBtn").addEventListener("click", handleClaimHatch);
-        const claimerInput = document.getElementById("claimerInput");
-        if (claimerInput) {
-          claimerInput.addEventListener("input", e => {
-            state.claimer = e.target.value;
-            saveState();
-            const errEl = document.getElementById("claimError");
-            if (errEl) errEl.style.display = "none";
-          });
+        if (egg.status === 'hatched') {
+          document.getElementById("claimBtn").addEventListener("click", handleAttemptClaim);
+        } else if (egg.status === 'claiming' && _isClaimer) {
+          document.getElementById("addDexBtn").addEventListener("click", handleClaimHatch);
+          const claimerInput = document.getElementById("claimerInput");
+          if (claimerInput) {
+            claimerInput.addEventListener("input", e => {
+              state.claimer = e.target.value;
+              saveState();
+              const errEl = document.getElementById("claimError");
+              if (errEl) errEl.style.display = "none";
+            });
+          }
         }
       }
 
@@ -1919,8 +2009,10 @@
           await loadState();
           render();
           initRealtimeSync();
-          // Sync shared state to Supabase every 2 seconds — only fires when there's something to send
+          // Sync shared dex/charm state every 2 seconds
           setInterval(_syncToSupabase, 2000);
+          // Flush egg steps to Supabase every 500ms — fast enough for responsive hatch detection
+          setInterval(_flushEggSteps, 500);
 
           // Wire up persistent buttons
           document.getElementById("normalDexBtn").addEventListener("click", () => setDexView("normal"));
@@ -1942,6 +2034,7 @@
 
       // ─── Realtime sync ───────────────────────────────────────────────────────
       function initRealtimeSync() {
+        // Shared dex / charm / step counter changes
         db.channel("shared_game_state_changes")
           .on(
             "postgres_changes",
@@ -1950,7 +2043,6 @@
               const data = payload.new;
               if (!data) return;
 
-              // Apply shared state — never touch eggState so current player's egg is undisturbed
               if (Array.isArray(data.dex))              state.dex            = data.dex;
               if (Array.isArray(data.shiny_dex))        state.shinyDex       = data.shiny_dex;
               if (Array.isArray(data.recent_log))       state.recentLog      = data.recent_log;
@@ -1972,10 +2064,28 @@
                 if (el) el.textContent = fmt(state.globalClicks);
               }
 
-              // Re-render only the dex side — main egg view stays untouched
               renderDex();
               renderCharmBar();
               if (state.fullDexOpen) renderFullDexOverlay();
+            }
+          )
+          .subscribe();
+
+        // Shared egg changes — drives the main game view for all players
+        db.channel("egg_state_changes")
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "egg_state" },
+            (payload) => {
+              const data = payload.new;
+              if (!data) return;
+              const prevStatus = state.eggState?.status;
+              _applyEggRow(data);
+              // If a new egg just started, reset our claim flag
+              if (prevStatus === 'claiming' && data.status === 'hatching') {
+                _isClaimer = false;
+              }
+              render();
             }
           )
           .subscribe();
