@@ -1153,7 +1153,10 @@
           shiny_charm_unlocked:    state.shinyCharmUnlocked,
           catching_charm_unlocked: state.catchingCharmUnlocked,
           global_clicks:           state.globalClicks,
-        }); // fire and forget
+        }).then(({ error }) => {
+          if (error) console.error("[OddEgg] Supabase save failed:", error);
+          else console.log("[OddEgg] Supabase save OK");
+        });
       }
 
       // Reads old localStorage format on first launch (one-time migration to Supabase)
