@@ -2089,7 +2089,15 @@
               if (prevStatus === 'claiming' && data.status === 'hatching') {
                 _isClaimer = false;
               }
-              render();
+              // Only do a full re-render when the egg status changes (hatch, claim, new egg).
+              // During active stepping the status stays 'hatching' — just update the counter
+              // text so we don't rebuild the DOM and disrupt rapid taps.
+              if (data.status !== prevStatus) {
+                render();
+              } else if (data.status === 'hatching') {
+                const el = document.getElementById("clickCounter");
+                if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
+              }
             }
           )
           .subscribe();
