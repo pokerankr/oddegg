@@ -4,6 +4,13 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.4.2] — 2026-04-12
+### Atomic Step Counter
+- Fixed race condition where clicks from two devices would overwrite each other
+- Clicks are now batched locally and flushed to Supabase atomically every 1.5 seconds — the database adds them rather than replacing the count, so no clicks are lost regardless of timing
+
+---
+
 ## [0.4.1] — 2026-04-12
 ### Realtime Sync
 - Dex panel, recent log, charm bar, and step counter now update live across all connected devices — no refresh needed

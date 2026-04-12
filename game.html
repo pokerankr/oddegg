@@ -909,6 +909,8 @@
       let devDittoMode     = false; // force every egg to be a ditto
       let dittoChosenSlug  = null;  // set when trainer picks a pokemon for ditto to morph into
       let _saveTimer       = null;  // debounce handle for Supabase writes
+      let _pendingClicks   = 0;     // clicks accumulated since last atomic flush
+      let _clickFlushTimer = null;  // debounce handle for global click sync
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1139,6 +1141,7 @@
       }
 
       function _pushToSupabase() {
+        // global_clicks is excluded — handled atomically by _flushGlobalClicks()
         db.from("shared_game_state").upsert({
           id: 1,
           dex:                     state.dex,
@@ -1152,10 +1155,25 @@
           oval_charm_unlocked:     state.ovalCharmUnlocked,
           shiny_charm_unlocked:    state.shinyCharmUnlocked,
           catching_charm_unlocked: state.catchingCharmUnlocked,
-          global_clicks:           state.globalClicks,
         }).then(({ error }) => {
           if (error) console.error("[OddEgg] Supabase save failed:", error);
           else console.log("[OddEgg] Supabase save OK");
+        });
+      }
+
+      function _flushGlobalClicks() {
+        if (_pendingClicks === 0) return;
+        const toFlush  = _pendingClicks;
+        _pendingClicks = 0;
+        db.rpc("add_global_clicks", { amount: toFlush }).then(({ data, error }) => {
+          if (error) {
+            console.error("[OddEgg] Global clicks sync failed:", error);
+            _pendingClicks += toFlush; // put them back to retry next flush
+          } else if (typeof data === "number") {
+            state.globalClicks = data;
+            const el = document.getElementById("globalClickCount");
+            if (el) el.textContent = fmt(state.globalClicks);
+          }
         });
       }
 
@@ -1245,7 +1263,11 @@
         if (egg.hatched || egg.loading) return;
 
         state.globalClicks++;
+        _pendingClicks++;
         document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
+        // Batch clicks and flush atomically — prevents concurrent overwrites across devices
+        clearTimeout(_clickFlushTimer);
+        _clickFlushTimer = setTimeout(_flushGlobalClicks, 1500);
 
         const nextSteps = egg.currentSteps + 1;
 
