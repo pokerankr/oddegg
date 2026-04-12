@@ -4,6 +4,18 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.5.0] — 2026-04-12
+### Shared Egg
+- All players now hatch the **same egg** together — no more separate per-player eggs
+- Egg state lives in Supabase and is broadcast in real time to every connected player
+- When the egg hatches, everyone sees a **Claim It!** button simultaneously
+- The first player to tap wins the claim — they get the name form; everyone else sees "Another trainer is claiming this egg…"
+- After the winner confirms, the next egg is immediately generated and shared with all players
+- Ditto morph picker only appears for the player who claimed the egg
+- Dev skip button now forces a server-side hatch instead of advancing the local counter
+
+---
+
 ## [0.4.3] — 2026-04-12
 ### Merged Sync + Autoclicker Detection
 - All Supabase writes now happen in a single round-trip via `sync_game_state()` — halves API usage compared to the previous two-call approach
