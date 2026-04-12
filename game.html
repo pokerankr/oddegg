@@ -1164,7 +1164,7 @@
             _pendingClicks += toFlush; // restore so next interval retries
             _stateDirty = true;
           } else if (typeof data === "number") {
-            state.globalClicks = data;
+            state.globalClicks = Math.max(state.globalClicks, data);
             const el = document.getElementById("globalClickCount");
             if (el) el.textContent = fmt(state.globalClicks);
           }
