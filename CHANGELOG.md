@@ -4,6 +4,14 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.4.3] — 2026-04-12
+### Merged Sync + Autoclicker Detection
+- All Supabase writes now happen in a single round-trip via `sync_game_state()` — halves API usage compared to the previous two-call approach
+- Step counter now updates on all screens at a steady 2-second cadence even during nonstop tapping, not just when you pause
+- Autoclicker detection: more than 10 clicks per second triggers a warning toast and pauses stepping for 5 seconds
+
+---
+
 ## [0.4.2] — 2026-04-12
 ### Atomic Step Counter
 - Fixed race condition where clicks from two devices would overwrite each other

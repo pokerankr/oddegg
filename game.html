@@ -260,6 +260,10 @@
       .spark.s3 { left:27%; bottom:32%; animation-delay:0.8s; }
       .spark.s4 { right:25%; bottom:28%; animation-delay:1.1s; }
       .spark.s5 { left:49%; top:16%; animation-delay:1.35s; }
+      @keyframes slideDown {
+        from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+        to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+      }
       @keyframes sparkle {
         0%, 100% { transform: scale(0.45); opacity: 0.35; }
         50% { transform: scale(1); opacity: 1; }
@@ -909,9 +913,10 @@
       let devEggSlug       = null;  // null = all gens; set to a slug for dev testing
       let devDittoMode     = false; // force every egg to be a ditto
       let dittoChosenSlug  = null;  // set when trainer picks a pokemon for ditto to morph into
-      let _saveTimer       = null;  // debounce handle for Supabase writes
-      let _pendingClicks   = 0;     // clicks accumulated since last atomic flush
-      let _clickFlushTimer = null;  // debounce handle for global click sync
+      let _pendingClicks      = 0;     // clicks accumulated since last sync
+      let _stateDirty        = false; // true when shared state needs syncing
+      const _clickTimestamps = [];    // rolling window for autoclicker detection
+      let _autoclickerCooldown = false;
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1124,58 +1129,72 @@
         return events;
       }
 
-      // ─── Persistence ─────────────────────────────────────────────────────────
       // ─── Persistence: Supabase (shared) + localStorage (egg + UI) ───────────
       function saveState(immediate = false) {
         // Egg stays local — each player keeps their own in-progress egg
         try { localStorage.setItem(STORAGE_KEY + "-egg", JSON.stringify(state.eggState)); } catch {}
-        // UI-only state stays local (dex view tab, claimer name being typed)
+        // UI-only state stays local
         try { localStorage.setItem(STORAGE_KEY + "-ui", JSON.stringify({ activeDexView: state.activeDexView, claimer: state.claimer })); } catch {}
-
-        // Shared state → Supabase. Debounced during rapid clicking; flush immediately on hatches/resets.
-        clearTimeout(_saveTimer);
-        if (immediate) {
-          _pushToSupabase();
-        } else {
-          _saveTimer = setTimeout(_pushToSupabase, 2000);
-        }
+        _stateDirty = true;
+        if (immediate) _syncToSupabase();
       }
 
-      function _pushToSupabase() {
-        // global_clicks is excluded — handled atomically by _flushGlobalClicks()
-        db.from("shared_game_state").upsert({
-          id: 1,
-          dex:                     state.dex,
-          shiny_dex:               state.shinyDex,
-          recent_log:              state.recentLog,
-          shiny_recent_log:        state.shinyRecentLog,
-          found_counts:            state.foundCounts,
-          shiny_found_counts:      state.shinyFoundCounts,
-          unlocked_dex:            state.unlockedDex,
-          unlocked_shiny_dex:      state.unlockedShinyDex,
-          oval_charm_unlocked:     state.ovalCharmUnlocked,
-          shiny_charm_unlocked:    state.shinyCharmUnlocked,
-          catching_charm_unlocked: state.catchingCharmUnlocked,
-        }).then(({ error }) => {
-          if (error) console.error("[OddEgg] Supabase save failed:", error);
-          else console.log("[OddEgg] Supabase save OK");
-        });
-      }
-
-      function _flushGlobalClicks() {
-        if (_pendingClicks === 0) return;
+      // Single round-trip: atomically increments clicks AND updates all shared state
+      function _syncToSupabase() {
+        if (!_stateDirty && _pendingClicks === 0) return;
         const toFlush  = _pendingClicks;
         _pendingClicks = 0;
-        db.rpc("add_global_clicks", { amount: toFlush }).then(({ data, error }) => {
+        _stateDirty    = false;
+        db.rpc("sync_game_state", {
+          click_amount:          toFlush,
+          new_dex:               state.dex,
+          new_shiny_dex:         state.shinyDex,
+          new_recent_log:        state.recentLog,
+          new_shiny_recent_log:  state.shinyRecentLog,
+          new_found_counts:      state.foundCounts,
+          new_shiny_found_counts: state.shinyFoundCounts,
+          new_unlocked_dex:      state.unlockedDex,
+          new_unlocked_shiny_dex: state.unlockedShinyDex,
+          new_oval_charm:        state.ovalCharmUnlocked,
+          new_shiny_charm:       state.shinyCharmUnlocked,
+          new_catching_charm:    state.catchingCharmUnlocked,
+        }).then(({ data, error }) => {
           if (error) {
-            console.error("[OddEgg] Global clicks sync failed:", error);
-            _pendingClicks += toFlush; // put them back to retry next flush
+            console.error("[OddEgg] Sync failed:", error);
+            _pendingClicks += toFlush; // restore so next interval retries
+            _stateDirty = true;
           } else if (typeof data === "number") {
             state.globalClicks = data;
             const el = document.getElementById("globalClickCount");
             if (el) el.textContent = fmt(state.globalClicks);
           }
         });
+      }
+
+      // ─── Autoclicker detection ────────────────────────────────────────────────
+      function checkAutoclicker() {
+        const now = Date.now();
+        while (_clickTimestamps.length && now - _clickTimestamps[0] > 1000) _clickTimestamps.shift();
+        _clickTimestamps.push(now);
+        return _clickTimestamps.length > 10;
+      }
+
+      function showAutoclickerWarning() {
+        if (document.getElementById("autoclickToast")) return;
+        const toast = document.createElement("div");
+        toast.id = "autoclickToast";
+        toast.style.cssText = `
+          position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+          z-index: 9999; background: white;
+          border: 4px solid #d11b3d; border-radius: 22px;
+          padding: 14px 24px; font-size: 15px; font-weight: 900;
+          color: #d11b3d; font-family: inherit;
+          box-shadow: 0 16px 40px rgba(20,30,60,0.22); white-space: nowrap;
+          animation: slideDown 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        `;
+        toast.textContent = "⚠ Autoclicker detected! Stepping paused for 5 seconds.";
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
       }
 
       // Reads old localStorage format on first launch (one-time migration to Supabase)
@@ -1263,12 +1282,19 @@
         const egg = state.eggState;
         if (egg.hatched || egg.loading) return;
 
+        // Autoclicker guard — block input during cooldown
+        if (_autoclickerCooldown) return;
+        if (checkAutoclicker()) {
+          showAutoclickerWarning();
+          _autoclickerCooldown = true;
+          _clickTimestamps.length = 0;
+          setTimeout(() => { _autoclickerCooldown = false; }, 5000);
+          return;
+        }
+
         state.globalClicks++;
         _pendingClicks++;
         document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
-        // Batch clicks and flush atomically — prevents concurrent overwrites across devices
-        clearTimeout(_clickFlushTimer);
-        _clickFlushTimer = setTimeout(_flushGlobalClicks, 1500);
 
         const nextSteps = egg.currentSteps + 1;
 
@@ -1886,6 +1912,8 @@
           await loadState();
           render();
           initRealtimeSync();
+          // Sync shared state to Supabase every 2 seconds — only fires when there's something to send
+          setInterval(_syncToSupabase, 2000);
 
           // Wire up persistent buttons
           document.getElementById("normalDexBtn").addEventListener("click", () => setDexView("normal"));
