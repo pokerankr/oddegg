@@ -1216,7 +1216,10 @@
           if (typeof saved?.catchingCharmUnlocked === "boolean") state.catchingCharmUnlocked = saved.catchingCharmUnlocked;
           if (saved?.unlockedDex && typeof saved.unlockedDex === "object")           Object.assign(state.unlockedDex, saved.unlockedDex);
           if (saved?.unlockedShinyDex && typeof saved.unlockedShinyDex === "object") Object.assign(state.unlockedShinyDex, saved.unlockedShinyDex);
-          setTimeout(_pushToSupabase, 100); // upload migrated data
+          // Remove old key immediately — prevents re-migration if dex is later cleared
+          localStorage.removeItem(STORAGE_KEY);
+          _stateDirty = true;
+          setTimeout(_syncToSupabase, 100);
         } catch {}
       }
 
@@ -1226,6 +1229,11 @@
           const rawEgg = localStorage.getItem(STORAGE_KEY + "-egg");
           if (rawEgg) state.eggState = JSON.parse(rawEgg);
         } catch {}
+        // Clean up old combined localStorage key if Supabase is now in use —
+        // prevents stale local data from overriding the shared dex on refresh
+        if (localStorage.getItem(STORAGE_KEY + "-egg") || localStorage.getItem(STORAGE_KEY + "-ui")) {
+          localStorage.removeItem(STORAGE_KEY);
+        }
         // Load UI state from localStorage
         try {
           const rawUi = localStorage.getItem(STORAGE_KEY + "-ui");
@@ -1252,9 +1260,8 @@
             if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
             if (typeof data.global_clicks           === "number")  state.globalClicks          = data.global_clicks;
-            // If Supabase row exists but is empty (fresh table), migrate from localStorage
-            if (!state.dex.length && !state.shinyDex.length) _migrateFromLocalStorage();
           } else {
+            // No Supabase row yet — one-time migration from old localStorage format
             _migrateFromLocalStorage();
           }
         } catch {
