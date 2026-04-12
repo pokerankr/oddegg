@@ -1280,17 +1280,24 @@
         }
       }
 
-      // Recovery: if status stays 'claiming' too long without a claimer here, reset the egg
+      // Recovery: if status stays 'claiming' too long without a claimer here,
+      // reset it back to 'hatched' so auto-claim can run and properly add the
+      // pokemon to the dex (generateAndSaveEgg would skip that step)
       function _startStuckClaimTimer() {
         if (_stuckClaimTimer) return;
         _stuckClaimTimer = setTimeout(async () => {
           _stuckClaimTimer = null;
-          if (state.eggState?.status === 'claiming' && !_isClaimer) {
-            console.warn("[OddEgg] Claim stuck — resetting egg");
-            await generateAndSaveEgg();
-            render();
-          }
-        }, 20000);
+          if (state.eggState?.status !== 'claiming' || _isClaimer) return;
+          // Reset to 'hatched' — only if still claiming (WHERE clause prevents double-update)
+          await db.from("egg_state")
+            .update({ status: 'hatched' })
+            .eq("id", 1)
+            .eq("status", "claiming");
+          // Fetch and apply so _applyEggRow detects the hatched transition
+          // and restarts the auto-claim timer
+          const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+          if (eggRow) { _applyEggRow(eggRow); render(); }
+        }, 12000);
       }
 
       function _clearStuckClaimTimer() {
