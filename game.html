@@ -1259,7 +1259,7 @@
             if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
             if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
-            if (typeof data.global_clicks           === "number")  state.globalClicks          = data.global_clicks;
+            if (typeof data.global_clicks           === "number")  state.globalClicks          = Math.max(state.globalClicks, data.global_clicks);
           } else {
             // No Supabase row yet — one-time migration from old localStorage format
             _migrateFromLocalStorage();
@@ -1967,7 +1967,7 @@
               if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
               if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
               if (typeof data.global_clicks === "number") {
-                state.globalClicks = data.global_clicks;
+                state.globalClicks = Math.max(state.globalClicks, data.global_clicks);
                 const el = document.getElementById("globalClickCount");
                 if (el) el.textContent = fmt(state.globalClicks);
               }
