@@ -1548,9 +1548,10 @@
         const btn = document.getElementById("claimBtn");
         if (btn) btn.disabled = true;
         const { data: won, error } = await db.rpc("try_claim_egg");
+        console.log("[OddEgg] try_claim_egg →", { won, error });
         if (error || !won) {
-          // Lost the race — another player claimed it; realtime will update the UI
           _isClaimer = false;
+          render();
           return;
         }
         _isClaimer = true;
