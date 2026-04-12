@@ -4,6 +4,14 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.4.1] — 2026-04-12
+### Realtime Sync
+- Dex panel, recent log, charm bar, and step counter now update live across all connected devices — no refresh needed
+- When another player catches a Pokémon, it appears in your dex instantly
+- Your current egg is never interrupted by another player's activity
+
+---
+
 ## [0.4.0] — 2026-04-12
 ### Supabase Integration (Shared State)
 - Dex, recent log, charms, and global step count now save to Supabase

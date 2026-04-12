@@ -1859,6 +1859,7 @@
 
           await loadState();
           render();
+          initRealtimeSync();
 
           // Wire up persistent buttons
           document.getElementById("normalDexBtn").addEventListener("click", () => setDexView("normal"));
@@ -1876,6 +1877,47 @@
               </div>
             </div>`;
         }
+      }
+
+      // ─── Realtime sync ───────────────────────────────────────────────────────
+      function initRealtimeSync() {
+        db.channel("shared_game_state_changes")
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "shared_game_state" },
+            (payload) => {
+              const data = payload.new;
+              if (!data) return;
+
+              // Apply shared state — never touch eggState so current player's egg is undisturbed
+              if (Array.isArray(data.dex))              state.dex            = data.dex;
+              if (Array.isArray(data.shiny_dex))        state.shinyDex       = data.shiny_dex;
+              if (Array.isArray(data.recent_log))       state.recentLog      = data.recent_log;
+              if (Array.isArray(data.shiny_recent_log)) state.shinyRecentLog = data.shiny_recent_log;
+              if (data.found_counts && typeof data.found_counts === "object")
+                state.foundCounts = data.found_counts;
+              if (data.shiny_found_counts && typeof data.shiny_found_counts === "object")
+                state.shinyFoundCounts = data.shiny_found_counts;
+              if (data.unlocked_dex && typeof data.unlocked_dex === "object")
+                Object.assign(state.unlockedDex, data.unlocked_dex);
+              if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object")
+                Object.assign(state.unlockedShinyDex, data.unlocked_shiny_dex);
+              if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
+              if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
+              if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
+              if (typeof data.global_clicks === "number") {
+                state.globalClicks = data.global_clicks;
+                const el = document.getElementById("globalClickCount");
+                if (el) el.textContent = fmt(state.globalClicks);
+              }
+
+              // Re-render only the dex side — main egg view stays untouched
+              renderDex();
+              renderCharmBar();
+              if (state.fullDexOpen) renderFullDexOverlay();
+            }
+          )
+          .subscribe();
       }
 
       init();
