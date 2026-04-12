@@ -920,9 +920,10 @@
       const SESSION_ID      = crypto.randomUUID(); // per-tab claim identity
       let _pendingEggSteps  = 0;                   // egg steps queued for Supabase flush
       let _isClaimer        = false;               // true if this tab won the claim race
-      let _autoClaimTimer   = null;                // fires if egg goes unclaimed for 10s
-      let _autoClaimTick    = null;                // 1s interval driving the countdown display
+      let _autoClaimTimer     = null;              // fires if egg goes unclaimed for 10s
+      let _autoClaimTick      = null;              // 1s interval driving the countdown display
       let _autoClaimRemaining = 0;                 // seconds left on the countdown
+      let _stuckClaimTimer    = null;              // recovery: resets egg if stuck in 'claiming'
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1255,17 +1256,42 @@
         const { data: won } = await db.rpc("try_claim_egg");
         if (!won) return; // another player just beat us to it
         _isClaimer = true;
-        const pokemon = state.eggState.pokemon;
-        if (!pokemon) { _isClaimer = false; return; }
-        // For ditto morph (2nd+ ditto) pick a random uncaught pokemon automatically
-        const alreadyHaveDitto = Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
-        if (pokemon.slug === "ditto" && alreadyHaveDitto) {
-          const unlockMap = getUnlockMap(pokemon.isShiny);
-          const available = EGG_POOL.filter(s => !unlockMap[s]);
-          dittoChosenSlug = available.length > 0 ? randomFrom(available) : randomFrom(EGG_POOL);
+        try {
+          const pokemon = state.eggState.pokemon;
+          if (!pokemon) throw new Error("pokemon missing");
+          // For ditto morph (2nd+ ditto) pick a random uncaught pokemon automatically
+          const alreadyHaveDitto = Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
+          if (pokemon.slug === "ditto" && alreadyHaveDitto) {
+            const unlockMap = getUnlockMap(pokemon.isShiny);
+            const available = EGG_POOL.filter(s => !unlockMap[s]);
+            dittoChosenSlug = available.length > 0 ? randomFrom(available) : randomFrom(EGG_POOL);
+          }
+          // claimerInput won't be in the DOM — handleClaimHatch reads "" → "Anonymous Trainer"
+          await handleClaimHatch();
+        } catch (e) {
+          console.error("[OddEgg] Auto-claim failed:", e);
+          _isClaimer = false;
+          // Reset the egg so the next client can try
+          await generateAndSaveEgg();
+          render();
         }
-        // claimerInput won't be in the DOM — handleClaimHatch reads "" → "Anonymous Trainer"
-        await handleClaimHatch();
+      }
+
+      // Recovery: if status stays 'claiming' too long without a claimer here, reset the egg
+      function _startStuckClaimTimer() {
+        if (_stuckClaimTimer) return;
+        _stuckClaimTimer = setTimeout(async () => {
+          _stuckClaimTimer = null;
+          if (state.eggState?.status === 'claiming' && !_isClaimer) {
+            console.warn("[OddEgg] Claim stuck — resetting egg");
+            await generateAndSaveEgg();
+            render();
+          }
+        }, 20000);
+      }
+
+      function _clearStuckClaimTimer() {
+        if (_stuckClaimTimer) { clearTimeout(_stuckClaimTimer); _stuckClaimTimer = null; }
       }
 
       // Maps an egg_state DB row to state.eggState
@@ -1295,11 +1321,16 @@
             : null,
           error: "",
         };
-        // Manage auto-claim timer based on status transitions
+        // Manage timers based on status transitions
         if (row.status === 'hatched' && prevStatus !== 'hatched') {
           _startAutoClaimTimer();
-        } else if (row.status !== 'hatched') {
+          _clearStuckClaimTimer();
+        } else if (row.status === 'claiming' && prevStatus !== 'claiming') {
           _clearAutoClaimTimer();
+          if (!_isClaimer) _startStuckClaimTimer(); // safety net if claimer disappears
+        } else if (row.status === 'hatching') {
+          _clearAutoClaimTimer();
+          _clearStuckClaimTimer();
         }
       }
 
@@ -1599,7 +1630,6 @@
         const btn = document.getElementById("claimBtn");
         if (btn) btn.disabled = true;
         const { data: won, error } = await db.rpc("try_claim_egg");
-        console.log("[OddEgg] try_claim_egg →", { won, error });
         if (error || !won) {
           _isClaimer = false;
           render();
