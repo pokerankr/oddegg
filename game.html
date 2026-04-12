@@ -1525,10 +1525,10 @@
         const egg = state.eggState;
         if (!egg || egg.status !== 'hatching') return;
         _pendingEggSteps = 0;
-        // Send enough steps to guarantee a hatch regardless of current DB value
-        await db.rpc("increment_egg_steps", { amount: MAX_STEPS });
-        // RPC may return void — fetch authoritative state directly so we don't
-        // depend on realtime to update this player's view
+        // Jump directly to the predetermined target — accurate step count, guaranteed hatch
+        await db.from("egg_state")
+          .update({ status: 'hatched', current_steps: egg.targetSteps })
+          .eq("id", 1);
         const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
         if (eggRow) { _applyEggRow(eggRow); render(); }
       }
