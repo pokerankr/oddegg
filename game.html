@@ -1229,9 +1229,14 @@
       function _applyEggRow(row) {
         if (!row) return;
         const isActive = row.status === 'hatched' || row.status === 'claiming';
+        // Preserve optimistic local steps when still hatching — prevents backwards jitter
+        // (same Math.max pattern used for globalClicks)
+        const prevSteps = state.eggState?.currentSteps ?? 0;
         state.eggState = {
           targetSteps:  row.target_steps,
-          currentSteps: row.current_steps,
+          currentSteps: (!isActive && row.status === state.eggState?.status)
+            ? Math.max(prevSteps, row.current_steps)
+            : row.current_steps,
           targetSlug:   row.target_slug,
           isSpecial:    row.is_special,
           isShiny:      row.is_shiny,
@@ -1521,12 +1526,11 @@
         if (!egg || egg.status !== 'hatching') return;
         _pendingEggSteps = 0;
         // Send enough steps to guarantee a hatch regardless of current DB value
-        const { data } = await db.rpc("increment_egg_steps", { amount: MAX_STEPS });
-        if (data) {
-          const row = Array.isArray(data) ? data[0] : data;
-          if (row && typeof row === 'object' && 'status' in row) { _applyEggRow(row); render(); }
-        }
-        // Realtime will also fire if the DB update broadcasts the change
+        await db.rpc("increment_egg_steps", { amount: MAX_STEPS });
+        // RPC may return void — fetch authoritative state directly so we don't
+        // depend on realtime to update this player's view
+        const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+        if (eggRow) { _applyEggRow(eggRow); render(); }
       }
 
       function setDexView(view) {
