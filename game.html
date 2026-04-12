@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OddEgg</title>
+    <style>
+      :root {
+        --ink: #1f2940;
+        --ink-2: #31415f;
+        --screen: #f8fbff;
+        --screen-border: #313f59;
+        --accent: #ffcb05;
+        --accent-2: #2a75bb;
+        --cream: #fff8e8;
+        --slate: #6b7280;
+        --danger: #d11b3d;
+        --shadow: rgba(20, 30, 50, 0.18);
+        --shiny-1: #fff3a6;
+        --shiny-2: #ffd95e;
+        --shiny-3: #b88300;
+        --gold-1: #fff0a0;
+        --gold-2: #ffc800;
+        --gold-3: #a86800;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(255,255,255,0.45) 0 8%, transparent 8.5%),
+          radial-gradient(circle at 82% 18%, rgba(255,255,255,0.35) 0 7%, transparent 7.5%),
+          radial-gradient(circle at 55% 14%, rgba(255,255,255,0.25) 0 6%, transparent 6.5%),
+          linear-gradient(180deg, #a7dcff 0%, #d8f0ff 40%, #eaf8ff 58%, #dff8cf 58%, #bde89b 100%);
+      }
+
+      .page {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.85fr);
+        gap: 22px;
+        align-items: start;
+      }
+
+      /* ── Screen shell ── */
+      .screen-shell {
+        background: linear-gradient(180deg, #ffefbf 0%, #ffe28e 100%);
+        border: 6px solid var(--screen-border);
+        border-radius: 34px;
+        box-shadow: 0 22px 50px rgba(25, 35, 60, 0.22);
+        overflow: hidden;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        background: linear-gradient(180deg, #fefefe 0%, #edf5ff 100%);
+        border-bottom: 4px solid var(--screen-border);
+      }
+
+      .brand { display: flex; align-items: center; gap: 12px; }
+
+      .brand-badge {
+        width: 54px; height: 54px;
+        border-radius: 50%;
+        border: 4px solid var(--screen-border);
+        background: linear-gradient(180deg, #ff5c5c 0 48%, #ffffff 48% 100%);
+        position: relative;
+        box-shadow: inset 0 0 0 4px rgba(255,255,255,0.35);
+        flex-shrink: 0;
+      }
+      .brand-badge::before {
+        content: "";
+        position: absolute; left: 50%; top: 50%;
+        width: 100%; height: 4px;
+        background: var(--screen-border);
+        transform: translate(-50%, -50%);
+      }
+      .brand-badge::after {
+        content: "";
+        position: absolute; left: 50%; top: 50%;
+        width: 14px; height: 14px;
+        border-radius: 50%;
+        background: white;
+        border: 4px solid var(--screen-border);
+        transform: translate(-50%, -50%);
+      }
+
+      .brand-copy small {
+        display: block;
+        font-size: 12px; font-weight: 900;
+        letter-spacing: 0.24em; text-transform: uppercase;
+        color: var(--accent-2);
+      }
+      .brand-copy h1 {
+        margin: 2px 0 0;
+        font-size: clamp(28px, 4vw, 48px);
+        line-height: 0.95; letter-spacing: 0.02em;
+      }
+
+      .topbar-right { display: flex; gap: 12px; align-items: center; }
+
+      .status-chip {
+        border: 4px solid var(--screen-border);
+        border-radius: 18px;
+        background: var(--cream);
+        padding: 10px 16px;
+        text-align: center;
+        box-shadow: 0 8px 18px rgba(35, 50, 80, 0.12);
+      }
+      .status-chip .label {
+        display: block; font-size: 11px; font-weight: 900;
+        letter-spacing: 0.2em; text-transform: uppercase; color: var(--slate);
+      }
+      .status-chip .value {
+        display: block; margin-top: 4px;
+        font-size: 20px; font-weight: 900;
+      }
+
+      /* ── Field ── */
+      .field {
+        position: relative; overflow: hidden;
+        min-height: 560px; padding: 24px 24px 0;
+        background: linear-gradient(180deg, #bfe7ff 0%, #eefbff 58%, #d9f5c7 58%, #b7e692 100%);
+      }
+
+      .cloud, .cloud::before, .cloud::after {
+        position: absolute; background: rgba(255,255,255,0.78); border-radius: 999px;
+      }
+      .cloud { width: 120px; height: 38px; top: 42px; left: 60px; filter: blur(1px); }
+      .cloud::before { content:""; width:56px; height:56px; left:14px; top:-26px; }
+      .cloud::after  { content:""; width:68px; height:68px; right:14px; top:-30px; }
+      .cloud.c2 { top:72px; left:auto; right:70px; width:150px; opacity:0.82; }
+      .cloud.c3 { top:152px; left:140px; width:92px; opacity:0.65; }
+
+      /* ── Battle stage ── */
+      .battle-stage {
+        position: relative; display: flex;
+        align-items: center; justify-content: center;
+        min-height: 340px; z-index: 2;
+      }
+
+      .grass-platform {
+        position: absolute; bottom: 40px;
+        width: min(520px, 82%); height: 128px;
+        border: 4px solid rgba(49,63,89,0.35);
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 28%, #c7f5a8 0%, #96dc73 48%, #66b85a 100%);
+        box-shadow: inset 0 -18px 0 rgba(75,144,70,0.22);
+      }
+      .grass-platform::after {
+        content:""; position: absolute; inset: 18px;
+        border-radius: 50%; border: 3px dashed rgba(255,255,255,0.35);
+      }
+
+      /* ── Egg button ── */
+      .egg-button {
+        position: relative; z-index: 3;
+        background: transparent; border: 0; padding: 0;
+        cursor: pointer; transition: transform 0.15s ease;
+      }
+      .egg-button:hover { transform: translateY(-3px) scale(1.01); }
+      .egg-button:disabled { opacity: 0.8; cursor: wait; }
+
+      .egg-glow {
+        position: absolute;
+        width: 250px; height: 250px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.32) 42%, rgba(255,255,255,0) 72%);
+        filter: blur(4px);
+        pointer-events: none;
+        animation: glowPulse 2.6s ease-in-out infinite;
+        transition: background 0.6s ease;
+      }
+
+      /* Golden egg glow */
+      .egg-button.special .egg-glow {
+        background: radial-gradient(circle, rgba(255,230,80,0.95) 0%, rgba(255,180,0,0.5) 38%, rgba(255,200,50,0.15) 65%, rgba(255,255,255,0) 78%);
+        width: 280px; height: 280px;
+        animation: glowPulseGold 2.2s ease-in-out infinite;
+      }
+      .egg-button.special .egg-image {
+        filter: drop-shadow(0 20px 16px rgba(180, 120, 0, 0.3)) drop-shadow(0 0 28px rgba(255, 200, 0, 0.45));
+      }
+
+      /* Blue shiny egg glow */
+      .egg-button.shiny .egg-glow {
+        background: radial-gradient(circle, rgba(160,220,255,0.95) 0%, rgba(60,150,255,0.55) 38%, rgba(80,170,255,0.15) 65%, rgba(255,255,255,0) 78%);
+        width: 280px; height: 280px;
+        animation: glowPulseBlue 2.2s ease-in-out infinite;
+      }
+      .egg-button.shiny .egg-image {
+        filter: drop-shadow(0 20px 16px rgba(0, 80, 200, 0.28)) drop-shadow(0 0 28px rgba(80, 160, 255, 0.55));
+      }
+
+      @keyframes glowPulse {
+        0%, 100% { transform: scale(0.96); opacity: 0.85; }
+        50% { transform: scale(1.03); opacity: 1; }
+      }
+      @keyframes glowPulseGold {
+        0%, 100% { transform: scale(0.94); opacity: 0.9; }
+        50% { transform: scale(1.06); opacity: 1; }
+      }
+      @keyframes glowPulseBlue {
+        0%, 100% { transform: scale(0.94); opacity: 0.88; }
+        50% { transform: scale(1.07); opacity: 1; }
+      }
+
+      .egg-image {
+        position: relative; z-index: 2;
+        width: min(235px, 42vw); max-width: 235px;
+        height: auto; display: block;
+        user-select: none; -webkit-user-drag: none;
+        image-rendering: auto;
+        filter: drop-shadow(0 20px 16px rgba(26,38,62,0.18));
+        animation: idleEgg 2.5s ease-in-out infinite;
+      }
+      .egg-image.hatching { animation: hatchShake 0.14s ease-in-out infinite alternate; }
+
+      @keyframes idleEgg {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+      }
+      @keyframes hatchShake {
+        from { transform: translate(-5px, 0) rotate(-2deg); }
+        to   { transform: translate(5px, 0) rotate(2deg); }
+      }
+
+      /* ── Sparkles ── */
+      .sparkles { position: absolute; inset: 0; pointer-events: none; }
+      .spark {
+        position: absolute; width: 14px; height: 14px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.95);
+        box-shadow: 0 0 18px rgba(255,255,255,0.95);
+        animation: sparkle 1.8s ease-in-out infinite;
+      }
+      .special-spark {
+        background: rgba(255,220,50,0.95);
+        box-shadow: 0 0 18px rgba(255,200,0,0.95);
+      }
+      .shiny-spark {
+        background: rgba(120,200,255,0.95);
+        box-shadow: 0 0 18px rgba(60,160,255,0.95);
+      }
+      .spark.s1 { left:33%; top:24%; animation-delay:0s; }
+      .spark.s2 { right:30%; top:20%; animation-delay:0.4s; }
+      .spark.s3 { left:27%; bottom:32%; animation-delay:0.8s; }
+      .spark.s4 { right:25%; bottom:28%; animation-delay:1.1s; }
+      .spark.s5 { left:49%; top:16%; animation-delay:1.35s; }
+      @keyframes sparkle {
+        0%, 100% { transform: scale(0.45); opacity: 0.35; }
+        50% { transform: scale(1); opacity: 1; }
+      }
+
+      /* ── Click counter ── */
+      .click-counter {
+        position: absolute; bottom: 148px; left: 50%;
+        transform: translateX(-50%);
+        z-index: 5;
+        background: rgba(255,255,255,0.92);
+        border: 3px solid var(--screen-border);
+        border-radius: 999px;
+        padding: 6px 16px;
+        font-size: 13px; font-weight: 900;
+        color: var(--ink-2);
+        letter-spacing: 0.06em;
+        box-shadow: 0 4px 12px rgba(30,44,70,0.14);
+        white-space: nowrap;
+      }
+      .click-counter.special-counter {
+        background: linear-gradient(180deg, rgba(255,248,180,0.97) 0%, rgba(255,230,80,0.95) 100%);
+        color: #5f3a00;
+        border-color: var(--gold-3);
+      }
+
+      /* ── Dialog ── */
+      .dialog-wrap {
+        position: relative; z-index: 4;
+        margin-top: -8px; padding: 0 18px 18px;
+      }
+      .dialog {
+        background: var(--screen);
+        border: 5px solid var(--screen-border);
+        border-radius: 24px;
+        box-shadow: 0 14px 26px rgba(30,44,70,0.18);
+        padding: 18px;
+      }
+      .dialog-top {
+        display: flex; justify-content: space-between;
+        gap: 14px; align-items: start;
+      }
+      .dialog-text {
+        font-size: clamp(16px, 2.2vw, 24px);
+        line-height: 1.35; font-weight: 900;
+      }
+      .dialog-sub {
+        margin-top: 10px; color: var(--ink-2);
+        font-size: 14px; line-height: 1.55;
+      }
+      .controls {
+        display: flex; flex-wrap: wrap;
+        gap: 12px; margin-top: 18px;
+      }
+
+      /* ── Buttons ── */
+      button {
+        border: 4px solid var(--screen-border);
+        border-radius: 18px; padding: 14px 20px;
+        font-size: 17px; font-weight: 900;
+        cursor: pointer;
+        transition: transform 0.12s ease, filter 0.12s ease, opacity 0.12s ease;
+        font-family: inherit;
+      }
+      button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+      button:active { transform: translateY(1px); }
+      button:disabled { opacity: 0.65; cursor: not-allowed; }
+
+      .step-btn {
+        background: linear-gradient(180deg, #ffdc57 0%, #f6b913 100%);
+        color: #3c2b00; min-width: 190px;
+        box-shadow: 0 8px 0 #c28e00;
+      }
+      .step-btn.special-step {
+        background: linear-gradient(180deg, var(--gold-1) 0%, var(--gold-2) 100%);
+        box-shadow: 0 8px 0 var(--gold-3);
+        color: #4a2800;
+      }
+      .util-btn {
+        background: linear-gradient(180deg, #ffffff 0%, #dce8f7 100%);
+        color: var(--ink); box-shadow: 0 8px 0 #8da4bf;
+      }
+      .dev-btn {
+        background: linear-gradient(180deg, #ffe0e0 0%, #ffb3b3 100%);
+        color: #7a0000; box-shadow: 0 8px 0 #cc7070;
+        font-size: 13px; padding: 10px 14px;
+      }
+      .success-btn {
+        background: linear-gradient(180deg, #95f28a 0%, #49c851 100%);
+        color: #103710; box-shadow: 0 8px 0 #2e8d34;
+      }
+      .shiny-btn {
+        background: linear-gradient(180deg, var(--shiny-1) 0%, var(--shiny-2) 100%);
+        color: #5f4500; box-shadow: 0 8px 0 var(--shiny-3);
+      }
+      .toggle-btn {
+        border-width: 3px; border-radius: 14px;
+        padding: 10px 14px; font-size: 14px;
+        box-shadow: 0 6px 0 #8da4bf;
+        background: linear-gradient(180deg, #ffffff 0%, #dce8f7 100%);
+        color: var(--ink);
+      }
+      .toggle-btn.active {
+        background: linear-gradient(180deg, #d9f7ff 0%, #8acbff 100%);
+        box-shadow: 0 6px 0 #4d89be;
+      }
+      .toggle-btn.shiny-toggle.active {
+        background: linear-gradient(180deg, var(--shiny-1) 0%, var(--shiny-2) 100%);
+        box-shadow: 0 6px 0 var(--shiny-3);
+      }
+
+      .error {
+        margin-top: 14px; padding: 12px 14px;
+        border-radius: 16px; border: 4px solid #8b0d28;
+        background: #ffdbe3; color: #7e0b28;
+        font-size: 14px; font-weight: 900;
+      }
+
+      /* ── Reveal stage ── */
+      .reveal-stage {
+        position: relative; z-index: 3;
+        display: flex; justify-content: center;
+        align-items: center; min-height: 400px;
+      }
+      .reveal-orb {
+        position: absolute; width: 420px; height: 420px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,247,179,0.65) 36%, rgba(255,255,255,0) 72%);
+        filter: blur(5px);
+      }
+      .reveal-orb.special-orb {
+        background: radial-gradient(circle, rgba(255,255,255,0.98) 0%, rgba(255,230,80,0.7) 30%, rgba(255,180,0,0.25) 58%, rgba(255,255,255,0) 75%);
+        width: 480px; height: 480px;
+      }
+      .reveal-orb.shiny-orb {
+        background: radial-gradient(circle, rgba(255,255,255,0.98) 0%, rgba(140,210,255,0.78) 28%, rgba(60,150,255,0.28) 56%, rgba(255,255,255,0) 75%);
+        width: 480px; height: 480px;
+      }
+      .pokemon-art {
+        position: relative; z-index: 2;
+        width: min(300px, 62vw); height: auto;
+        object-fit: contain;
+        filter: drop-shadow(0 22px 18px rgba(22,31,48,0.18));
+        animation: revealBob 2.2s ease-in-out infinite;
+      }
+      @keyframes revealBob {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
+      }
+
+      /* ── Info card ── */
+      .info-card {
+        margin-top: 16px; border: 5px solid var(--screen-border);
+        border-radius: 22px; background: rgba(255,255,255,0.96);
+        padding: 16px;
+      }
+      .info-card .kicker {
+        font-size: 11px; font-weight: 900;
+        letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent-2);
+      }
+      .info-card .kicker.legendary-kicker { color: #a86800; }
+      .info-card .name {
+        margin-top: 8px;
+        font-size: clamp(26px, 4vw, 40px);
+        line-height: 1; font-weight: 900;
+      }
+      .info-card .dexno {
+        margin-top: 8px; color: var(--slate);
+        font-size: 15px; font-weight: 800;
+      }
+      .shiny-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin-top: 12px; padding: 8px 12px;
+        border-radius: 999px; border: 3px solid var(--screen-border);
+        background: linear-gradient(180deg, var(--shiny-1) 0%, var(--shiny-2) 100%);
+        color: #5f4500; font-size: 13px; font-weight: 900;
+        letter-spacing: 0.08em; text-transform: uppercase;
+      }
+      .legendary-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin-top: 10px; padding: 7px 12px;
+        border-radius: 999px; border: 3px solid var(--gold-3);
+        background: linear-gradient(180deg, var(--gold-1) 0%, var(--gold-2) 100%);
+        color: #4a2800; font-size: 12px; font-weight: 900;
+        letter-spacing: 0.08em; text-transform: uppercase;
+      }
+
+      /* ── Claim box ── */
+      .claim-box {
+        margin-top: 16px; border: 5px solid var(--screen-border);
+        border-radius: 22px; background: #fffef7; padding: 16px;
+      }
+      .claim-box label {
+        display: block; font-size: 12px; font-weight: 900;
+        letter-spacing: 0.18em; text-transform: uppercase; color: var(--slate);
+      }
+      .claim-box input {
+        width: 100%; margin-top: 12px;
+        border: 4px solid var(--screen-border);
+        border-radius: 16px; padding: 14px 16px;
+        font-size: 16px; font-weight: 700; color: var(--ink);
+        background: white; font-family: inherit;
+      }
+      .claim-box input:focus { outline: none; border-color: var(--accent-2); }
+
+      /* ── Loading ── */
+      .loading-screen {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        min-height: 400px; gap: 18px;
+        padding: 32px;
+      }
+      .loading-egg {
+        font-size: 64px;
+        animation: idleEgg 1.8s ease-in-out infinite;
+      }
+      .loading-text {
+        font-size: 18px; font-weight: 900;
+        color: var(--ink-2); letter-spacing: 0.06em;
+      }
+
+      /* ── Dex shell ── */
+      .dex-shell {
+        background: linear-gradient(180deg, #ef5350 0%, #d63b35 100%);
+        border: 6px solid var(--screen-border);
+        border-radius: 34px; overflow: hidden;
+        box-shadow: 0 22px 50px rgba(25,35,60,0.22);
+      }
+      .dex-top {
+        padding: 18px 18px 14px;
+        border-bottom: 5px solid var(--screen-border);
+        background: linear-gradient(180deg, #ff8c88 0%, #f15b55 100%);
+      }
+      .dex-lights { display: flex; gap: 8px; margin-bottom: 14px; }
+      .light-big, .light-small { border-radius: 50%; border: 3px solid var(--screen-border); }
+      .light-big {
+        width: 44px; height: 44px;
+        background: radial-gradient(circle at 35% 35%, #dbf7ff 0%, #79d2ff 48%, #2b87cd 100%);
+      }
+      .light-small { width: 18px; height: 18px; }
+      .light-small.red    { background: #ff6c65; }
+      .light-small.yellow { background: #ffd046; }
+      .light-small.green  { background: #73db72; }
+      .dex-title { color: white; font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; }
+      .dex-subtitle { margin-top: 6px; color: rgba(255,255,255,0.92); font-size: 26px; font-weight: 900; line-height: 1; }
+      .dex-body { padding: 14px; }
+      .dex-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+      .dex-count-group { flex: 0 0 auto; }
+      .dex-screen {
+        background: linear-gradient(180deg, #eaf8d8 0%, #d5efb9 100%);
+        border: 5px solid var(--screen-border);
+        border-radius: 28px; padding: 14px; min-height: 520px;
+      }
+      .dex-meta { display: flex; flex-direction: column; gap: 14px; margin-bottom: 14px; }
+      .dex-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+      .counter {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 64px; padding: 8px 10px;
+        border: 4px solid var(--screen-border);
+        border-radius: 16px; background: white;
+        font-size: 22px; font-weight: 900;
+      }
+      .clear-btn {
+        background: linear-gradient(180deg, #fff 0%, #d9e4f3 100%);
+        color: var(--ink); box-shadow: 0 6px 0 #8da4bf;
+        grid-column: 1 / -1;
+      }
+      .full-dex-btn {
+        background: linear-gradient(180deg, #d8f7ff 0%, #7fd1ff 100%);
+        color: #143e66; box-shadow: 0 6px 0 #4686b0;
+        grid-column: 1 / -1;
+      }
+      .dex-list { display: grid; gap: 10px; max-height: 560px; overflow: auto; padding-right: 4px; }
+      .dex-list::-webkit-scrollbar { width: 10px; }
+      .dex-list::-webkit-scrollbar-thumb { background: rgba(49,63,89,0.28); border-radius: 999px; }
+      .empty {
+        border: 4px dashed rgba(49,63,89,0.4);
+        border-radius: 20px; padding: 22px;
+        background: rgba(255,255,255,0.6); text-align: center;
+        font-size: 14px; font-weight: 800; color: var(--ink-2);
+      }
+      .recent-title { font-size: 13px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); }
+
+      /* ── Dex entries ── */
+      .entry {
+        display: grid; grid-template-columns: 60px 1fr;
+        gap: 12px; align-items: center;
+        border: 4px solid rgba(49,63,89,0.35);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.82);
+        padding: 10px 12px;
+      }
+      .entry.shiny-entry {
+        background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,244,184,0.94) 100%);
+      }
+      .entry.special-entry {
+        background: linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(255,240,160,0.9) 100%);
+        border-color: rgba(168,104,0,0.5);
+      }
+      .entry img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 8px 8px rgba(22,31,48,0.12)); }
+      .entry-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+      .entry-title h3 { margin: 0; font-size: 15px; line-height: 1.1; font-weight: 900; }
+      .pill {
+        border: 3px solid var(--screen-border); border-radius: 999px;
+        background: white; padding: 3px 7px;
+        font-size: 11px; font-weight: 900; color: var(--ink-2);
+      }
+      .entry-meta { margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+      .entry-steps { margin-top: 3px; font-size: 11px; font-weight: 900; color: var(--accent-2); letter-spacing: 0.05em; text-transform: uppercase; }
+      .entry-date { margin-top: 1px; font-size: 11px; color: var(--slate); font-weight: 700; }
+      .entry-found { margin-top: 4px; font-size: 10px; color: var(--ink-2); font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+
+      /* ── Full Dex Overlay ── */
+      .full-dex-overlay {
+        position: fixed; inset: 0; z-index: 200;
+        display: none; background: rgba(18,28,44,0.72);
+        padding: 24px; overflow: auto;
+      }
+      .full-dex-overlay.open { display: block; }
+      .full-dex-shell {
+        max-width: 1280px; margin: 0 auto;
+        border: 6px solid var(--screen-border); border-radius: 34px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #f25b55 0%, #d63b35 100%);
+        box-shadow: 0 22px 50px rgba(25,35,60,0.32);
+      }
+      .full-dex-top {
+        padding: 18px; border-bottom: 5px solid var(--screen-border);
+        background: linear-gradient(180deg, #ff8c88 0%, #f15b55 100%);
+        display: flex; justify-content: space-between; gap: 12px; align-items: center;
+        flex-wrap: wrap;
+      }
+      .full-dex-title { color: white; font-size: 28px; font-weight: 900; line-height: 1; }
+      .full-dex-sub { margin-top: 6px; color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; }
+      .full-dex-top-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      .close-dex-btn { background: linear-gradient(180deg, #ffffff 0%, #dce8f7 100%); color: var(--ink); box-shadow: 0 8px 0 #8da4bf; }
+      .full-dex-body { padding: 18px; }
+      .full-dex-search {
+        width: 100%; margin-bottom: 16px;
+        border: 4px solid var(--screen-border); border-radius: 16px;
+        padding: 12px 16px; font-size: 15px; font-weight: 700;
+        color: var(--ink); background: white; font-family: inherit;
+      }
+      .full-dex-search:focus { outline: none; border-color: var(--accent-2); }
+      .dex-pagination {
+        display: flex; align-items: center; justify-content: center;
+        gap: 10px; margin-top: 16px; flex-wrap: wrap;
+      }
+      .dex-page-btn {
+        background: linear-gradient(180deg, #ffffff 0%, #dce8f7 100%);
+        color: var(--ink); box-shadow: 0 6px 0 #8da4bf;
+        border-width: 3px; border-radius: 14px;
+        padding: 8px 14px; font-size: 14px; font-weight: 900;
+      }
+      .dex-page-btn:disabled { opacity: 0.45; }
+      .dex-page-info { font-size: 14px; font-weight: 900; color: rgba(255,255,255,0.92); letter-spacing: 0.06em; }
+      .entry-evolved { margin-top: 3px; font-size: 11px; font-weight: 900; color: #2e8d34; letter-spacing: 0.08em; text-transform: uppercase; }
+
+      /* ── Ditto morph picker ── */
+      .ditto-search {
+        width: 100%; margin: 10px 0 8px;
+        border: 4px solid var(--screen-border); border-radius: 14px;
+        padding: 10px 14px; font-size: 14px; font-weight: 700;
+        color: var(--ink); background: white; font-family: inherit;
+      }
+      .ditto-search:focus { outline: none; border-color: #9b7fe8; }
+      .ditto-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 6px; max-height: 240px; overflow-y: auto;
+        padding: 4px 2px;
+      }
+      .ditto-grid::-webkit-scrollbar { width: 8px; }
+      .ditto-grid::-webkit-scrollbar-thumb { background: rgba(49,63,89,0.25); border-radius: 999px; }
+      .ditto-tile {
+        border: 3px solid rgba(49,63,89,0.3); border-radius: 14px;
+        background: rgba(255,255,255,0.85); padding: 6px 4px;
+        text-align: center; cursor: pointer;
+        transition: border-color 0.12s, background 0.12s;
+      }
+      .ditto-tile:hover { border-color: #9b7fe8; background: rgba(237,224,255,0.7); }
+      .ditto-tile-selected { border-color: #7c3aed !important; background: rgba(220,200,255,0.85) !important; }
+      .ditto-tile-caught { opacity: 0.55; }
+      .ditto-tile img { width: 48px; height: 48px; object-fit: contain; display: block; margin: 0 auto; }
+      .ditto-tile-name { font-size: 9px; font-weight: 900; color: var(--ink-2); margin-top: 2px; line-height: 1.2; }
+      .ditto-tile-tag  { font-size: 8px; font-weight: 900; color: #2e8d34; letter-spacing: 0.05em; text-transform: uppercase; }
+      .ditto-selection {
+        display: flex; align-items: center; gap: 10px;
+        margin-top: 10px; padding: 8px 12px;
+        border: 3px solid #9b7fe8; border-radius: 14px;
+        background: rgba(237,224,255,0.5);
+      }
+      .ditto-selection img { width: 40px; height: 40px; object-fit: contain; }
+      .ditto-selection span { font-size: 15px; font-weight: 900; color: #3d1a6e; }
+      #catchingCharmItem.charm-unlocked {
+        background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(237,224,255,0.9) 100%);
+        border-color: rgba(155,127,232,0.5);
+      }
+      .full-dex-screen {
+        background: linear-gradient(180deg, #eaf8d8 0%, #d5efb9 100%);
+        border: 5px solid var(--screen-border); border-radius: 28px; padding: 18px;
+      }
+      .full-dex-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+      .dex-slot {
+        border: 4px solid rgba(49,63,89,0.55); border-radius: 20px;
+        background: rgba(255,255,255,0.88); padding: 12px;
+        min-height: 190px; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; text-align: center;
+      }
+      .dex-slot.locked { background: rgba(255,255,255,0.48); color: var(--slate); }
+      .dex-slot.shiny-slot { background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,244,184,0.94) 100%); }
+      .dex-slot.special-slot { background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,240,150,0.9) 100%); border-color: rgba(168,104,0,0.6); }
+      .dex-slot img { width: 90px; height: 90px; object-fit: contain; filter: drop-shadow(0 8px 8px rgba(22,31,48,0.12)); }
+      .slot-number { font-size: 11px; font-weight: 900; color: var(--ink-2); letter-spacing: 0.1em; text-transform: uppercase; }
+      .slot-name { margin-top: 8px; font-size: 16px; font-weight: 900; line-height: 1.15; }
+      .slot-status { margin-top: 6px; font-size: 11px; font-weight: 900; color: var(--slate); letter-spacing: 0.08em; text-transform: uppercase; }
+      .slot-found { margin-top: 6px; font-size: 10px; font-weight: 900; color: var(--ink-2); letter-spacing: 0.05em; text-transform: uppercase; }
+      .locked-icon {
+        width: 90px; height: 90px; border-radius: 18px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 40px; font-weight: 900;
+        border: 4px dashed rgba(49,63,89,0.35);
+        background: rgba(255,255,255,0.38);
+      }
+
+      /* ── Charm bar ── */
+      .charm-bar {
+        display: flex; flex-direction: column; gap: 8px;
+        padding: 10px 14px 0;
+      }
+      .charm-item {
+        display: flex; align-items: center; gap: 10px;
+        border: 3px solid rgba(49,63,89,0.3); border-radius: 16px;
+        padding: 8px 12px;
+        transition: all 0.4s ease;
+      }
+      .charm-item.charm-locked {
+        background: rgba(255,255,255,0.35);
+        filter: grayscale(1); opacity: 0.55;
+      }
+      .charm-item.charm-unlocked {
+        background: rgba(255,255,255,0.88);
+        border-color: rgba(49,63,89,0.5);
+        filter: none; opacity: 1;
+        box-shadow: 0 3px 10px rgba(30,44,70,0.12);
+      }
+      #ovalCharmItem.charm-unlocked {
+        background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(220,255,210,0.9) 100%);
+        border-color: rgba(46,141,52,0.5);
+      }
+      #shinyCharmItem.charm-unlocked {
+        background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(200,235,255,0.9) 100%);
+        border-color: rgba(60,150,255,0.5);
+        animation: shinyCharmPulse 3s ease-in-out infinite;
+      }
+      @keyframes shinyCharmPulse {
+        0%, 100% { box-shadow: 0 3px 10px rgba(60,150,255,0.2); }
+        50%       { box-shadow: 0 3px 18px rgba(60,150,255,0.5); }
+      }
+      .charm-img {
+        width: 36px; height: 36px; object-fit: contain; flex-shrink: 0;
+      }
+      .charm-name {
+        font-size: 12px; font-weight: 900; color: var(--ink);
+        letter-spacing: 0.06em; text-transform: uppercase;
+      }
+      .charm-desc {
+        font-size: 11px; font-weight: 700; color: var(--slate); margin-top: 1px;
+      }
+
+      /* ── Charm toast ── */
+      .charm-toast {
+        position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(100px);
+        z-index: 9999;
+        display: flex; align-items: center; gap: 14px;
+        background: white; border: 4px solid var(--screen-border);
+        border-radius: 22px; padding: 14px 20px;
+        box-shadow: 0 16px 40px rgba(20,30,60,0.22);
+        opacity: 0; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+        min-width: 280px;
+      }
+      .charm-toast.charm-toast-show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+      .shiny-charm-toast { border-color: #3c96ff; background: linear-gradient(135deg, #fff 0%, #e0f2ff 100%); }
+      .charm-toast-img { width: 52px; height: 52px; object-fit: contain; }
+      .charm-toast-title { font-size: 16px; font-weight: 900; color: var(--ink); }
+      .charm-toast-desc  { font-size: 13px; font-weight: 700; color: var(--slate); margin-top: 3px; }
+
+      /* ── Responsive ── */
+      @media (max-width: 1040px) {
+        .layout { grid-template-columns: 1fr; }
+        .field { min-height: 500px; }
+        .full-dex-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      }
+      @media (max-width: 760px) {
+        .full-dex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (max-width: 640px) {
+        .page { padding: 14px; }
+        .topbar { padding: 14px; flex-wrap: wrap; }
+        .brand-copy h1 { font-size: 28px; }
+        .field { padding: 18px 14px 0; min-height: 440px; }
+        .dialog-wrap { padding: 0 10px 12px; }
+        .dialog { padding: 14px; }
+        .dialog-top { flex-direction: column; }
+        .controls { flex-direction: column; }
+        button { width: 100%; }
+        .egg-image { width: min(210px, 56vw); max-width: 210px; }
+        .full-dex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="layout">
+        <section class="screen-shell">
+          <div class="topbar">
+            <div class="brand">
+              <div class="brand-badge"></div>
+              <div class="brand-copy">
+                <small>OddEgg.com</small>
+                <h1>Take a Step</h1>
+              </div>
+            </div>
+            <div class="topbar-right">
+              <div class="status-chip" id="stepCountChip">
+                <span class="label">Total Steps</span>
+                <span class="value" id="globalClickCount">0</span>
+              </div>
+              <div class="status-chip">
+                <span class="label">Mode</span>
+                <span class="value" id="modeValue">All Generations</span>
+              </div>
+            </div>
+          </div>
+          <div id="mainView">
+            <div class="loading-screen">
+              <div class="loading-egg">🥚</div>
+              <div class="loading-text">Loading Pokémon data…</div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="dex-shell">
+          <div class="dex-top">
+            <div class="dex-lights">
+              <div class="light-big"></div>
+              <div class="light-small red"></div>
+              <div class="light-small yellow"></div>
+              <div class="light-small green"></div>
+            </div>
+            <div class="dex-title">OddEgg Record</div>
+            <div class="dex-subtitle" id="dexPanelTitle">Living Dex</div>
+          </div>
+          <div class="dex-body">
+            <div class="charm-bar" id="charmBar">
+              <div class="charm-item" id="ovalCharmItem">
+                <img src="ovalcharm.png" class="charm-img" alt="Oval Charm" />
+                <div class="charm-info">
+                  <div class="charm-name">Oval Charm</div>
+                  <div class="charm-desc" id="ovalCharmDesc">Catch 100 Pokémon to unlock</div>
+                </div>
+              </div>
+              <div class="charm-item" id="shinyCharmItem">
+                <img src="shinycharm.png" class="charm-img" alt="Shiny Charm" />
+                <div class="charm-info">
+                  <div class="charm-name">Shiny Charm</div>
+                  <div class="charm-desc" id="shinyCharmDesc">Catch 512 Pokémon to unlock</div>
+                </div>
+              </div>
+              <div class="charm-item" id="catchingCharmItem">
+                <img src="catchingcharm.png" class="charm-img" alt="Catching Charm" />
+                <div class="charm-info">
+                  <div class="charm-name">Catching Charm</div>
+                  <div class="charm-desc" id="catchingCharmDesc">Find your first Ditto to unlock</div>
+                </div>
+              </div>
+            </div>
+            <div class="dex-screen">
+              <div class="dex-meta">
+                <div class="dex-controls">
+                  <button class="toggle-btn active" id="normalDexBtn">Base Dex</button>
+                  <button class="toggle-btn shiny-toggle" id="shinyDexBtn">✨ Shiny</button>
+                  <button class="full-dex-btn" id="fullDexBtn">Open Full Dex</button>
+                  <button class="clear-btn" id="clearDexBtn">Clear Dex</button>
+                </div>
+                <div class="recent-title" id="recentTitle">Recently Found</div>
+              </div>
+              <div class="dex-list" id="dexList"></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div id="fullDexOverlay" class="full-dex-overlay"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      // ─── Supabase ─────────────────────────────────────────────────────────────
+      const SUPABASE_URL = "https://wwrqmuzwwsfrjyqaspav.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_5DCXwRPFIF2HLvKZUjnubA_crwVkRJQ";
+      const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      // ─── Config ──────────────────────────────────────────────────────────────
+      const MAX_STEPS   = 1_000_000;
+      const SHINY_ODDS  = 2;
+      const STORAGE_KEY = "oddegg-v1";
+      const EGG_IMAGE   = "https://www.pngkey.com/png/full/30-307419_image-egg-standard-k-pokemon-egg-clipart.png";
+
+      // ─── Data (populated after fetch) ────────────────────────────────────────
+      let POKEMON_DATA   = {};
+      let EGG_POOL       = []; // base-form slugs only
+      let ALL_DEX_SLOTS  = []; // every slug in dex order (by id)
+      let PROFANITY_LIST = []; // loaded from profanity.json
+
+      // ─── Profanity filter ────────────────────────────────────────────────────
+      // Normalises leet-speak / symbol substitutions before checking
+      function normalizeForFilter(str) {
+        return str.toLowerCase()
+          .replace(/ph/g, "f")
+          .replace(/[@4]/g, "a")
+          .replace(/\$|5/g, "s")
+          .replace(/[!1|]/g, "i")
+          .replace(/3/g, "e")
+          .replace(/0/g, "o")
+          .replace(/7/g, "t")
+          .replace(/8/g, "b")
+          .replace(/9/g, "g")
+          .replace(/[^a-z ]/g, "")   // strip remaining non-alpha (keeps spaces)
+          .replace(/(.)\1{2,}/g, "$1$1"); // collapse runs of 3+ identical chars
+      }
+
+      function containsProfanity(input) {
+        if (!PROFANITY_LIST.length) return false;
+        const norm = normalizeForFilter(input);
+        const compact = norm.replace(/ /g, ""); // also check with spaces removed
+        return PROFANITY_LIST.some(word => {
+          const w = normalizeForFilter(word);
+          return norm.includes(w) || compact.includes(w.replace(/ /g, ""));
+        });
+      }
+      let fullDexPage      = 0;
+      const DEX_PAGE_SIZE  = 40;
+      let devEggSlug       = null;  // null = all gens; set to a slug for dev testing
+      let devDittoMode     = false; // force every egg to be a ditto
+      let dittoChosenSlug  = null;  // set when trainer picks a pokemon for ditto to morph into
+      let _saveTimer       = null;  // debounce handle for Supabase writes
+
+      // ─── Helpers ─────────────────────────────────────────────────────────────
+      function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+      function randomFrom(arr)     { return arr[randomInt(0, arr.length - 1)]; }
+      function fmt(n)              { return Number(n).toLocaleString(); }
+      function formatDate(iso) {
+        try { return new Date(iso).toLocaleString(); } catch { return iso; }
+      }
+
+      // ─── Charm helpers ───────────────────────────────────────────────────────
+      function getDexCount() {
+        return ALL_DEX_SLOTS.filter(s => state.unlockedDex[s] || state.unlockedShinyDex[s]).length;
+      }
+
+      // Returns a weighted egg pool: completed lines appear 15× less often
+      function getWeightedEggPool() {
+        if (!state.ovalCharmUnlocked) return EGG_POOL;
+        const pool = [];
+        for (const slug of EGG_POOL) {
+          const line = POKEMON_DATA[slug].line;
+          const complete = hasLivingDexComplete(line, false);
+          const weight = complete ? 1 : 15;
+          for (let i = 0; i < weight; i++) pool.push(slug);
+        }
+        return pool;
+      }
+
+      // Checks thresholds and returns array of newly unlocked charm names
+      function checkCharmUnlocks() {
+        const count = getDexCount();
+        const newlyUnlocked = [];
+        if (!state.catchingCharmUnlocked && (state.unlockedDex["ditto"] || state.unlockedShinyDex["ditto"])) {
+          state.catchingCharmUnlocked = true;
+          newlyUnlocked.push("catching");
+        }
+        if (!state.ovalCharmUnlocked && count >= 100) {
+          state.ovalCharmUnlocked = true;
+          newlyUnlocked.push("oval");
+        }
+        if (!state.shinyCharmUnlocked && count >= 512) {
+          state.shinyCharmUnlocked = true;
+          newlyUnlocked.push("shiny");
+        }
+        return newlyUnlocked;
+      }
+
+      function showCharmToast(charmKey) {
+        const cfg = {
+          catching: { name: "Catching Charm", img: "catchingcharm.png", desc: "Ditto now appears 4× more often!", cls: "" },
+          oval:     { name: "Oval Charm",     img: "ovalcharm.png",     desc: "Completed lines are now less common in eggs!", cls: "" },
+          shiny:    { name: "Shiny Charm",    img: "shinycharm.png",    desc: "Shiny odds improved to 1 in 128!", cls: " shiny-charm-toast" },
+        }[charmKey];
+        if (!cfg) return;
+
+        const toast = document.createElement("div");
+        toast.className = "charm-toast" + cfg.cls;
+        toast.innerHTML = `
+          <img src="${cfg.img}" class="charm-toast-img" alt="${cfg.name}" />
+          <div>
+            <div class="charm-toast-title">✨ ${cfg.name} Obtained!</div>
+            <div class="charm-toast-desc">${cfg.desc}</div>
+          </div>`;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add("charm-toast-show"));
+        setTimeout(() => {
+          toast.classList.remove("charm-toast-show");
+          setTimeout(() => toast.remove(), 600);
+        }, 4000);
+      }
+
+      // ─── State ───────────────────────────────────────────────────────────────
+      function buildFreshEgg() {
+        if (!EGG_POOL.length) return { targetSteps:10, currentSteps:0, targetSlug:null, isSpecial:false, isShiny:false, isDitto:false, hatched:false, loading:false, pokemon:null, error:"" };
+        const pool = getWeightedEggPool();
+
+        // Ditto roll — separate from normal pool, scales with catching charm
+        const dittoOdds = state.catchingCharmUnlocked ? 256 : 1025;
+        const isDitto   = devDittoMode || (!devEggSlug && Boolean(POKEMON_DATA["ditto"]) && randomInt(1, dittoOdds) === 1);
+        const slug      = isDitto ? "ditto" : (devEggSlug || randomFrom(pool));
+        const data      = POKEMON_DATA[slug];
+        const effectiveShinyOdds = state.shinyCharmUnlocked ? 128 : SHINY_ODDS;
+        const isShiny = randomInt(1, effectiveShinyOdds) === 1;
+        // Random thresholds for hatching dialogue stages (as fractions of targetSteps)
+        const hint1At = Math.random() * (0.44 - 0.15) + 0.15; // 15–44%
+        const hint2At = Math.random() * (0.74 - 0.45) + 0.45; // 45–74%
+        return {
+          targetSteps:  randomInt(1, MAX_STEPS),
+          currentSteps: 0,
+          targetSlug:   slug,
+          isSpecial:    data.isSpecial,
+          isShiny,
+          isDitto,
+          hatched:  false,
+          loading:  false,
+          pokemon:  null,
+          error:    "",
+          hint1At,
+          hint2At,
+        };
+      }
+
+      let state = {
+        eggState:           null,
+        dex:                [],   // normal living dex
+        shinyDex:           [],   // shiny living dex
+        recentLog:          [],
+        shinyRecentLog:     [],
+        foundCounts:        {},   // lineSlug → count
+        shinyFoundCounts:   {},
+        unlockedDex:        {},   // slug → bool
+        unlockedShinyDex:   {},
+        claimer:            "",
+        activeDexView:      "normal",
+        fullDexOpen:        false,
+        globalClicks:       0,
+        ovalCharmUnlocked:    false,
+        shinyCharmUnlocked:   false,
+        catchingCharmUnlocked: false,
+      };
+
+      // ─── Derived helpers ─────────────────────────────────────────────────────
+      function getDexArray(isShiny)   { return isShiny ? state.shinyDex    : state.dex; }
+      function getFoundCounts(isShiny){ return isShiny ? state.shinyFoundCounts : state.foundCounts; }
+      function getUnlockMap(isShiny)  { return isShiny ? state.unlockedShinyDex : state.unlockedDex; }
+
+      function unlockPokemon(slug, isShiny) { getUnlockMap(isShiny)[slug] = true; }
+
+      function getLineMembers(lineSlug) {
+        return Object.values(POKEMON_DATA).filter(p => p.line === lineSlug);
+      }
+
+      function hasLivingDexComplete(lineSlug, isShiny) {
+        const members  = getLineMembers(lineSlug);
+        const dexArray = getDexArray(isShiny);
+        return members.length > 0 && members.every(m => dexArray.some(e => e.slug === m.slug));
+      }
+
+      function buildPokemonRecord(slug, isShiny = false) {
+        const d = POKEMON_DATA[slug];
+        return { id:d.id, name:d.name, slug, line:d.line,
+                 image: isShiny ? d.shinyImage : d.image,
+                 isShiny, isSpecial: d.isSpecial };
+      }
+
+      // ─── Auto-merge ──────────────────────────────────────────────────────────
+      // Fires after every dex add. Returns an array of evolution events so callers
+      // can log each step individually. Each event: { fromSlug, toSlugs[] }
+      function autoMerge(lineSlug, isShiny) {
+        const dexArray = getDexArray(isShiny);
+        let changed = true;
+        const events = [];
+
+        while (changed) {
+          changed = false;
+
+          // All Pokémon in this line that have at least one evolution
+          const evolvable = Object.values(POKEMON_DATA)
+            .filter(p => p.line === lineSlug && p.next.length > 0);
+
+          for (const pokemon of evolvable) {
+            // Collect indices of this slug in the dex (in order)
+            const indices = [];
+            for (let i = 0; i < dexArray.length; i++) {
+              if (dexArray[i].slug === pokemon.slug) indices.push(i);
+            }
+            if (indices.length < 2) continue;
+
+            const firstIdx  = indices[0];
+            const secondIdx = indices[1];
+            const sourceEntry = dexArray[firstIdx];
+
+            // ── NINCADA special case: produces BOTH next forms ──
+            if (pokemon.slug === "nincada") {
+              const ninjask = buildPokemonRecord("ninjask",  isShiny);
+              const shedinja = buildPokemonRecord("shedinja", isShiny);
+              dexArray[firstIdx] = { ...sourceEntry, ...ninjask,  evolvedAt: new Date().toISOString() };
+              dexArray.splice(secondIdx, 1); // remove 2nd Nincada (secondIdx > firstIdx ✓)
+              const insertAt = firstIdx + 1;
+              dexArray.splice(insertAt, 0, { ...sourceEntry, ...shedinja, evolvedAt: new Date().toISOString() });
+              unlockPokemon("ninjask",  isShiny);
+              unlockPokemon("shedinja", isShiny);
+              events.push({ fromSlug: pokemon.slug, toSlugs: ["ninjask", "shedinja"] });
+            }
+            // ── Split evolution: pick random open slot ──
+            else if (pokemon.next.length > 1) {
+              const openSlots = pokemon.next.filter(s => !dexArray.some(e => e.slug === s));
+              if (openSlots.length === 0) continue; // all branches already in dex
+              const targetSlug = randomFrom(openSlots);
+              const evolved    = buildPokemonRecord(targetSlug, isShiny);
+              dexArray[firstIdx] = { ...sourceEntry, ...evolved, evolvedAt: new Date().toISOString() };
+              dexArray.splice(secondIdx, 1);
+              unlockPokemon(targetSlug, isShiny);
+              events.push({ fromSlug: pokemon.slug, toSlugs: [targetSlug] });
+            }
+            // ── Linear evolution ──
+            else {
+              const targetSlug = pokemon.next[0];
+              const evolved    = buildPokemonRecord(targetSlug, isShiny);
+              dexArray[firstIdx] = { ...sourceEntry, ...evolved, evolvedAt: new Date().toISOString() };
+              dexArray.splice(secondIdx, 1);
+              unlockPokemon(targetSlug, isShiny);
+              events.push({ fromSlug: pokemon.slug, toSlugs: [targetSlug] });
+            }
+
+            changed = true;
+            break; // restart while loop to handle cascades
+          }
+        }
+
+        return events;
+      }
+
+      // ─── Persistence ─────────────────────────────────────────────────────────
+      // ─── Persistence: Supabase (shared) + localStorage (egg + UI) ───────────
+      function saveState(immediate = false) {
+        // Egg stays local — each player keeps their own in-progress egg
+        try { localStorage.setItem(STORAGE_KEY + "-egg", JSON.stringify(state.eggState)); } catch {}
+        // UI-only state stays local (dex view tab, claimer name being typed)
+        try { localStorage.setItem(STORAGE_KEY + "-ui", JSON.stringify({ activeDexView: state.activeDexView, claimer: state.claimer })); } catch {}
+
+        // Shared state → Supabase. Debounced during rapid clicking; flush immediately on hatches/resets.
+        clearTimeout(_saveTimer);
+        if (immediate) {
+          _pushToSupabase();
+        } else {
+          _saveTimer = setTimeout(_pushToSupabase, 2000);
+        }
+      }
+
+      function _pushToSupabase() {
+        db.from("shared_game_state").upsert({
+          id: 1,
+          dex:                     state.dex,
+          shiny_dex:               state.shinyDex,
+          recent_log:              state.recentLog,
+          shiny_recent_log:        state.shinyRecentLog,
+          found_counts:            state.foundCounts,
+          shiny_found_counts:      state.shinyFoundCounts,
+          unlocked_dex:            state.unlockedDex,
+          unlocked_shiny_dex:      state.unlockedShinyDex,
+          oval_charm_unlocked:     state.ovalCharmUnlocked,
+          shiny_charm_unlocked:    state.shinyCharmUnlocked,
+          catching_charm_unlocked: state.catchingCharmUnlocked,
+          global_clicks:           state.globalClicks,
+        }); // fire and forget
+      }
+
+      // Reads old localStorage format on first launch (one-time migration to Supabase)
+      function _migrateFromLocalStorage() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const saved = JSON.parse(raw);
+          if (saved?.eggState && !state.eggState)   state.eggState       = saved.eggState;
+          if (Array.isArray(saved?.dex))             state.dex            = saved.dex;
+          if (Array.isArray(saved?.shinyDex))        state.shinyDex       = saved.shinyDex;
+          if (Array.isArray(saved?.recentLog))       state.recentLog      = saved.recentLog;
+          if (Array.isArray(saved?.shinyRecentLog))  state.shinyRecentLog = saved.shinyRecentLog;
+          if (typeof saved?.globalClicks === "number") state.globalClicks = saved.globalClicks;
+          if (saved?.foundCounts && typeof saved.foundCounts === "object")           state.foundCounts      = saved.foundCounts;
+          if (saved?.shinyFoundCounts && typeof saved.shinyFoundCounts === "object") state.shinyFoundCounts = saved.shinyFoundCounts;
+          if (typeof saved?.ovalCharmUnlocked     === "boolean") state.ovalCharmUnlocked     = saved.ovalCharmUnlocked;
+          if (typeof saved?.shinyCharmUnlocked    === "boolean") state.shinyCharmUnlocked    = saved.shinyCharmUnlocked;
+          if (typeof saved?.catchingCharmUnlocked === "boolean") state.catchingCharmUnlocked = saved.catchingCharmUnlocked;
+          if (saved?.unlockedDex && typeof saved.unlockedDex === "object")           Object.assign(state.unlockedDex, saved.unlockedDex);
+          if (saved?.unlockedShinyDex && typeof saved.unlockedShinyDex === "object") Object.assign(state.unlockedShinyDex, saved.unlockedShinyDex);
+          setTimeout(_pushToSupabase, 100); // upload migrated data
+        } catch {}
+      }
+
+      async function loadState() {
+        // Load egg from localStorage (stays per-player for now)
+        try {
+          const rawEgg = localStorage.getItem(STORAGE_KEY + "-egg");
+          if (rawEgg) state.eggState = JSON.parse(rawEgg);
+        } catch {}
+        // Load UI state from localStorage
+        try {
+          const rawUi = localStorage.getItem(STORAGE_KEY + "-ui");
+          if (rawUi) {
+            const ui = JSON.parse(rawUi);
+            if (ui?.activeDexView)         state.activeDexView = ui.activeDexView;
+            if (typeof ui?.claimer === "string") state.claimer = ui.claimer;
+          }
+        } catch {}
+
+        // Load shared state from Supabase
+        try {
+          const { data } = await db.from("shared_game_state").select("*").eq("id", 1).single();
+          if (data) {
+            if (Array.isArray(data.dex))              state.dex            = data.dex;
+            if (Array.isArray(data.shiny_dex))        state.shinyDex       = data.shiny_dex;
+            if (Array.isArray(data.recent_log))       state.recentLog      = data.recent_log;
+            if (Array.isArray(data.shiny_recent_log)) state.shinyRecentLog = data.shiny_recent_log;
+            if (data.found_counts && typeof data.found_counts === "object")           state.foundCounts      = data.found_counts;
+            if (data.shiny_found_counts && typeof data.shiny_found_counts === "object") state.shinyFoundCounts = data.shiny_found_counts;
+            if (data.unlocked_dex && typeof data.unlocked_dex === "object")           Object.assign(state.unlockedDex, data.unlocked_dex);
+            if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object") Object.assign(state.unlockedShinyDex, data.unlocked_shiny_dex);
+            if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
+            if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
+            if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
+            if (typeof data.global_clicks           === "number")  state.globalClicks          = data.global_clicks;
+            // If Supabase row exists but is empty (fresh table), migrate from localStorage
+            if (!state.dex.length && !state.shinyDex.length) _migrateFromLocalStorage();
+          } else {
+            _migrateFromLocalStorage();
+          }
+        } catch {
+          // Supabase unavailable — fall back to old localStorage format
+          _migrateFromLocalStorage();
+        }
+
+        // Ensure dex members are marked unlocked
+        state.dex.forEach(e      => unlockPokemon(e.slug, false));
+        state.shinyDex.forEach(e => unlockPokemon(e.slug, true));
+
+        // Ensure eggState exists
+        if (!state.eggState) state.eggState = buildFreshEgg();
+
+        // Re-run merges in case data changed
+        const processedLines = new Set();
+        [...state.dex, ...state.shinyDex].forEach(e => {
+          if (!processedLines.has(e.line + "|0")) { autoMerge(e.line, false); processedLines.add(e.line + "|0"); }
+          if (!processedLines.has(e.line + "|1")) { autoMerge(e.line, true);  processedLines.add(e.line + "|1"); }
+        });
+      }
+
+      // ─── Event handlers ──────────────────────────────────────────────────────
+      function handleTakeStep() {
+        const egg = state.eggState;
+        if (egg.hatched || egg.loading) return;
+
+        state.globalClicks++;
+        document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
+
+        const nextSteps = egg.currentSteps + 1;
+
+        if (nextSteps < egg.targetSteps) {
+          egg.currentSteps = nextSteps;
+          egg.error = "";
+          saveState();
+          // Just update the counter display — no full re-render needed
+          const counterEl = document.getElementById("clickCounter");
+          if (counterEl) counterEl.textContent = fmt(egg.currentSteps) + " steps";
+          return;
+        }
+
+        // Hatch!
+        egg.currentSteps = nextSteps;
+        egg.loading = true;
+        egg.error   = "";
+        saveState();
+        render();
+
+        setTimeout(() => {
+          const baseSlug = egg.targetSlug;
+          const isShiny  = egg.isShiny;
+
+          egg.hatched = true;
+          egg.loading = false;
+          egg.pokemon = {
+            ...buildPokemonRecord(baseSlug, isShiny),
+            stepsToHatch: egg.currentSteps,
+          };
+          saveState();
+          render();
+        }, 500);
+      }
+
+      // Shared helper: add a pokemon slug to the dex + log evolution events
+      function addPokemonToDex(slug, isShiny, baseEntry) {
+        const lineSlug = POKEMON_DATA[slug].line;
+        if (hasLivingDexComplete(lineSlug, isShiny)) return;
+        getDexArray(isShiny).unshift(baseEntry);
+        const evoEvents = autoMerge(lineSlug, isShiny);
+        getDexArray(isShiny).forEach(e => unlockPokemon(e.slug, isShiny));
+        for (const ev of evoEvents) {
+          const fromName = POKEMON_DATA[ev.fromSlug]?.name || ev.fromSlug;
+          for (const toSlug of ev.toSlugs) {
+            const evolvedEntry = {
+              ...buildPokemonRecord(toSlug, isShiny),
+              discoveredBy: baseEntry.discoveredBy,
+              stepsToHatch: baseEntry.stepsToHatch,
+              claimedAt:    new Date().toISOString(),
+              evolvedFrom:  fromName,
+            };
+            state.recentLog.unshift(evolvedEntry);
+            state.recentLog = state.recentLog.slice(0, 12);
+            if (isShiny) {
+              state.shinyRecentLog.unshift(evolvedEntry);
+              state.shinyRecentLog = state.shinyRecentLog.slice(0, 8);
+            }
+          }
+        }
+      }
+
+      function handleClaimHatch() {
+        const pokemon = state.eggState.pokemon;
+        if (!pokemon) return;
+
+        const rawName = (document.getElementById("claimerInput")?.value || "").trim();
+        if (rawName && containsProfanity(rawName)) {
+          const errEl = document.getElementById("claimError");
+          if (errEl) { errEl.textContent = "That name isn't allowed. Please choose another."; errEl.style.display = "block"; }
+          return;
+        }
+
+        const isShiny      = pokemon.isShiny;
+        const discoveredBy = rawName || "Anonymous Trainer";
+        const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
+
+        // ── Ditto morph path (2nd ditto onwards) ──────────────────────────────
+        if (pokemon.slug === "ditto" && Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"])) {
+          if (!dittoChosenSlug) return; // must pick a pokemon first
+
+          // Record ditto in found counts + unlock
+          const dittoLineKey = POKEMON_DATA["ditto"].line || "ditto";
+          state.foundCounts[dittoLineKey] = (state.foundCounts[dittoLineKey] || 0) + 1;
+          if (isShiny) state.shinyFoundCounts[dittoLineKey] = (state.shinyFoundCounts[dittoLineKey] || 0) + 1;
+          unlockPokemon("ditto", isShiny);
+
+          // Add ditto to recent log with morph annotation
+          const dittoEntry = { ...pokemon, discoveredBy, stepsToHatch, claimedAt: new Date().toISOString(), morphedInto: dittoChosenSlug };
+          state.recentLog.unshift(dittoEntry);
+          state.recentLog = state.recentLog.slice(0, 12);
+          if (isShiny) { state.shinyRecentLog.unshift(dittoEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+
+          // Add chosen pokemon to dex + recent log
+          const chosenData = POKEMON_DATA[dittoChosenSlug];
+          // Always increment normal foundCounts (entry goes into state.recentLog for normal view)
+          state.foundCounts[chosenData.line] = (state.foundCounts[chosenData.line] || 0) + 1;
+          if (isShiny) state.shinyFoundCounts[chosenData.line] = (state.shinyFoundCounts[chosenData.line] || 0) + 1;
+          unlockPokemon(dittoChosenSlug, isShiny);
+          const chosenEntry = { ...buildPokemonRecord(dittoChosenSlug, isShiny), discoveredBy, stepsToHatch, claimedAt: new Date().toISOString(), transformedFromDitto: true };
+          state.recentLog.unshift(chosenEntry);
+          state.recentLog = state.recentLog.slice(0, 12);
+          if (isShiny) { state.shinyRecentLog.unshift(chosenEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+          addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
+
+          dittoChosenSlug  = null;
+          state.claimer    = "";
+          state.eggState   = buildFreshEgg();
+          const newCharms  = checkCharmUnlocks();
+          saveState(true); render(); newCharms.forEach(showCharmToast);
+          return;
+        }
+
+        // ── Normal hatch path ─────────────────────────────────────────────────
+        const lineSlug = pokemon.line;
+        getFoundCounts(isShiny)[lineSlug] = (getFoundCounts(isShiny)[lineSlug] || 0) + 1;
+        unlockPokemon(pokemon.slug, isShiny);
+
+        const entry = { ...pokemon, discoveredBy, stepsToHatch, claimedAt: new Date().toISOString() };
+        state.recentLog.unshift(entry);
+        state.recentLog = state.recentLog.slice(0, 12);
+        if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+
+        addPokemonToDex(pokemon.slug, isShiny, entry);
+
+        state.claimer  = "";
+        state.eggState = buildFreshEgg();
+        const newCharms = checkCharmUnlocks();
+        saveState(true); render(); newCharms.forEach(showCharmToast);
+      }
+
+      function handleResetDex() {
+        if (!confirm("Clear the entire dex? This cannot be undone.")) return;
+        state.dex             = [];
+        state.shinyDex        = [];
+        state.recentLog       = [];
+        state.shinyRecentLog  = [];
+        state.foundCounts     = {};
+        state.shinyFoundCounts= {};
+        state.unlockedDex     = {};
+        state.unlockedShinyDex= {};
+        ALL_DEX_SLOTS.forEach(s => { state.unlockedDex[s] = false; state.unlockedShinyDex[s] = false; });
+        state.fullDexOpen     = false;
+        saveState(true);
+        render();
+      }
+
+      function toggleDevMode() {
+        devEggSlug = devEggSlug ? null : "charmander";
+        document.getElementById("modeValue").textContent = devEggSlug ? "Charmander Only" : "All Generations";
+        state.eggState = buildFreshEgg();
+        saveState();
+        render();
+      }
+
+      function toggleDittoMode() {
+        devDittoMode = !devDittoMode;
+        document.getElementById("modeValue").textContent = devDittoMode ? "Ditto Mode" : "All Generations";
+        state.eggState = buildFreshEgg();
+        saveState();
+        render();
+      }
+
+      function handleDevSkip() {
+        // Fast-forward egg to 1 click before hatching
+        state.eggState.currentSteps = state.eggState.targetSteps - 1;
+        saveState();
+        render();
+      }
+
+      function setDexView(view) {
+        state.activeDexView = view;
+        saveState();
+        renderDex();
+        renderFullDexOverlay();
+      }
+
+      function openFullDex()  { state.fullDexOpen = true; fullDexPage = 0; renderFullDexOverlay(); }
+      function closeFullDex() { state.fullDexOpen = false; renderFullDexOverlay(); }
+
+      // ─── Render: Main View ───────────────────────────────────────────────────
+      function renderMainView() {
+        const view = document.getElementById("mainView");
+        const egg  = state.eggState;
+        const sparkClass = egg.isShiny ? "spark shiny-spark" : egg.isSpecial ? "spark special-spark" : "spark";
+
+        if (!egg.hatched) {
+          const progress = egg.currentSteps / egg.targetSteps; // 0 → 1 (unknown to player)
+          const specialClass = egg.isShiny ? " shiny" : egg.isSpecial ? " special" : "";
+          const stepBtnClass = egg.isSpecial ? "step-btn special-step" : "step-btn";
+          const counterClass = egg.isSpecial ? "click-counter special-counter" : "click-counter";
+          const hint1At = egg.hint1At ?? 0.15;
+          const hint2At = egg.hint2At ?? 0.45;
+          let eggTypeHint, subText;
+          if (egg.loading) {
+            eggTypeHint = "The egg is hatching!";
+            subText     = "Something is stirring inside…";
+          } else if (egg.currentSteps === 0) {
+            eggTypeHint = egg.isSpecial ? "A mysterious golden egg is waiting…" : "An Odd Egg is waiting.";
+            subText     = egg.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
+          } else if (progress < hint1At) {
+            eggTypeHint = "It looks as though this Egg will take a long time yet to hatch.";
+            subText     = egg.isSpecial ? "Whatever is inside, it pulses with strange energy." : "Keep stepping — every step counts.";
+          } else if (progress < hint2At) {
+            eggTypeHint = "What Pokémon will hatch from this Egg? It doesn't seem close to hatching.";
+            subText     = "It's warming up… but it still has a ways to go.";
+          } else if (progress < 0.75) {
+            eggTypeHint = "It appears to move occasionally. It may be close to hatching.";
+            subText     = "Keep going — something is stirring inside.";
+          } else {
+            eggTypeHint = "Sounds can be heard coming from inside! This Egg will hatch soon!";
+            subText     = "Just a few more steps…";
+          }
+
+          view.innerHTML = `
+            <div class="field">
+              <div class="cloud"></div>
+              <div class="cloud c2"></div>
+              <div class="cloud c3"></div>
+              <div class="battle-stage">
+                <div class="grass-platform"></div>
+                <div class="sparkles">
+                  <div class="${sparkClass} s1"></div>
+                  <div class="${sparkClass} s2"></div>
+                  <div class="${sparkClass} s3"></div>
+                  <div class="${sparkClass} s4"></div>
+                  <div class="${sparkClass} s5"></div>
+                </div>
+                <button class="egg-button${specialClass}" id="eggTapBtn" ${egg.loading ? "disabled" : ""} aria-label="Take a Step">
+                  <div class="egg-glow"></div>
+                  <img class="egg-image ${egg.loading ? "hatching" : ""}" src="${egg.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
+                </button>
+                <div class="${counterClass}" id="clickCounter">${fmt(egg.currentSteps)} steps</div>
+              </div>
+              <div class="dialog-wrap">
+                <div class="dialog">
+                  <div class="dialog-top">
+                    <div>
+                      <div class="dialog-text">${eggTypeHint}</div>
+                      <div class="dialog-sub">${subText}</div>
+                    </div>
+                  </div>
+                  <div class="controls">
+                    <button class="${stepBtnClass}" id="stepBtn" ${egg.loading ? "disabled" : ""}>${egg.loading ? "Hatching…" : "Take a Step"}</button>
+                    <button class="dev-btn" id="devSkipBtn" title="Dev: skip to last step">⚡ Skip</button>
+                    <button class="dev-btn${devEggSlug ? ' active' : ''}" id="devModeBtn" title="Dev: lock egg pool to one species" style="${devEggSlug ? 'background:linear-gradient(180deg,#ffe0a0 0%,#ffc060 100%);color:#5f3a00;box-shadow:0 8px 0 #b07000;' : ''}">${devEggSlug ? `🔒 ${devEggSlug.charAt(0).toUpperCase()+devEggSlug.slice(1)} Only` : '🔓 All Gens'}</button>
+                    <button class="dev-btn" id="devDittoBtn" title="Dev: force every egg to be Ditto" style="${devDittoMode ? 'background:linear-gradient(180deg,#ede0ff 0%,#c8a0f0 100%);color:#3d1a6e;box-shadow:0 8px 0 #7c3aed;' : ''}">🔮 Ditto${devDittoMode ? " ON" : ""}</button>
+                  </div>
+                  ${egg.error ? `<div class="error">${egg.error}</div>` : ""}
+                </div>
+              </div>
+            </div>
+          `;
+
+          document.getElementById("stepBtn").addEventListener("click", handleTakeStep);
+          document.getElementById("eggTapBtn").addEventListener("click", handleTakeStep);
+          document.getElementById("devSkipBtn").addEventListener("click", handleDevSkip);
+          document.getElementById("devModeBtn").addEventListener("click", toggleDevMode);
+          document.getElementById("devDittoBtn").addEventListener("click", toggleDittoMode);
+          return;
+        }
+
+        // ── Hatched state ──
+        const pokemon     = egg.pokemon;
+        const pData        = POKEMON_DATA[pokemon.slug];
+        const orbClass     = pokemon.isShiny ? "reveal-orb shiny-orb" : pokemon.isSpecial ? "reveal-orb special-orb" : "reveal-orb";
+
+        // ── Ditto morph path ──────────────────────────────────────────────────
+        if (pokemon.slug === "ditto" && Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"])) {
+          dittoChosenSlug = null;
+          // Build a grid of all pokemon the trainer doesn't have yet
+          const isShiny   = pokemon.isShiny;
+          const unlockMap = getUnlockMap(isShiny);
+          const allSlots  = EGG_POOL.slice().sort((a, b) => POKEMON_DATA[a].id - POKEMON_DATA[b].id);
+          const gridHTML  = allSlots.map(slug => {
+            const d       = POKEMON_DATA[slug];
+            const caught  = Boolean(unlockMap[slug]);
+            return `<div class="ditto-tile${caught ? " ditto-tile-caught" : ""}" data-slug="${slug}" title="${d.name}">
+              <img src="${isShiny ? d.shinyImage : d.image}" alt="${d.name}" />
+              <div class="ditto-tile-name">${d.name}</div>
+              ${caught ? `<div class="ditto-tile-tag">Caught</div>` : ""}
+            </div>`;
+          }).join("");
+
+          view.innerHTML = `
+            <div class="field">
+              <div class="cloud"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+              <div class="reveal-stage">
+                <div class="${orbClass}"></div>
+                <img class="pokemon-art" src="${pokemon.image}" alt="Ditto" />
+              </div>
+              <div class="dialog-wrap">
+                <div class="dialog">
+                  <div class="dialog-text">A wild Ditto appeared! Choose a Pokémon for it to transform into.</div>
+                  <div class="dialog-sub" style="margin-top:6px;">Any Pokémon you pick will be added to your Living Dex.</div>
+                  <input class="ditto-search" id="dittoSearch" placeholder="Search Pokémon…" autocomplete="off" />
+                  <div class="ditto-grid" id="dittoGrid">${gridHTML}</div>
+                  <div class="ditto-selection" id="dittoSelection" style="display:none;">
+                    <img id="dittoSelImg" /><span id="dittoSelName"></span>
+                  </div>
+                  <div class="claim-box" style="margin-top:10px;">
+                    <label>Who triggered the hatch?</label>
+                    <input id="claimerInput" placeholder="Enter your name" value="${state.claimer}" />
+                    <div id="claimError" class="error" style="display:none;margin-top:10px;"></div>
+                    <div class="controls">
+                      <button class="success-btn" id="dittoConfirmBtn" disabled>Transform!</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+
+          // Wire ditto tile clicks
+          document.getElementById("dittoGrid").addEventListener("click", e => {
+            const tile = e.target.closest(".ditto-tile");
+            if (!tile) return;
+            dittoChosenSlug = tile.dataset.slug;
+            document.querySelectorAll(".ditto-tile").forEach(t => t.classList.remove("ditto-tile-selected"));
+            tile.classList.add("ditto-tile-selected");
+            const d = POKEMON_DATA[dittoChosenSlug];
+            const selImg  = document.getElementById("dittoSelImg");
+            const selName = document.getElementById("dittoSelName");
+            selImg.src = pokemon.isShiny ? d.shinyImage : d.image;
+            selName.textContent = d.name;
+            document.getElementById("dittoSelection").style.display = "flex";
+            document.getElementById("dittoConfirmBtn").disabled = false;
+          });
+
+          // Search filter
+          document.getElementById("dittoSearch").addEventListener("input", e => {
+            const q = e.target.value.toLowerCase().trim();
+            document.querySelectorAll(".ditto-tile").forEach(tile => {
+              tile.style.display = (!q || POKEMON_DATA[tile.dataset.slug].name.toLowerCase().includes(q)) ? "" : "none";
+            });
+          });
+
+          document.getElementById("dittoConfirmBtn").addEventListener("click", handleClaimHatch);
+          const claimerInput = document.getElementById("claimerInput");
+          if (claimerInput) {
+            claimerInput.addEventListener("input", e => {
+              state.claimer = e.target.value; saveState();
+              const errEl = document.getElementById("claimError");
+              if (errEl) errEl.style.display = "none";
+            });
+          }
+          return;
+        }
+
+        // ── Normal hatched UI ─────────────────────────────────────────────────
+        const lineComplete = hasLivingDexComplete(pokemon.line, pokemon.isShiny);
+        const kicker       = pokemon.isSpecial
+          ? (pData?.isLegendary ? "Legendary Discovery!" : "Mythical Discovery!")
+          : (pokemon.slug === "ditto" ? "Transform!" : "Discovery!");
+        const primaryText  = lineComplete
+          ? (pokemon.isShiny ? `Count This Shiny ${pokemon.name}` : `Count This ${pokemon.name}`)
+          : (pokemon.isShiny ? "Add to Shiny Dex" : "Add to Dex");
+        const btnClass     = pokemon.isShiny ? "shiny-btn" : "success-btn";
+
+        view.innerHTML = `
+          <div class="field">
+            <div class="cloud"></div>
+            <div class="cloud c2"></div>
+            <div class="cloud c3"></div>
+            <div class="reveal-stage">
+              <div class="${orbClass}"></div>
+              <img class="pokemon-art" src="${pokemon.image}" alt="${pokemon.name}" />
+            </div>
+            <div class="dialog-wrap">
+              <div class="dialog">
+                <div class="dialog-text">The Odd Egg hatched into ${pokemon.isShiny ? "✨ Shiny " : ""}${pokemon.name}!</div>
+                <div class="info-card">
+                  <div class="kicker ${pokemon.isSpecial ? 'legendary-kicker' : ''}">${kicker}</div>
+                  <div class="name">${pokemon.isShiny ? "✨ " : ""}${pokemon.name}</div>
+                  <div class="dexno">Dex #${String(pokemon.id).padStart(4, "0")}</div>
+                  ${pokemon.isShiny   ? `<div class="shiny-badge">✨ Shiny Hatch</div>` : ""}
+                  ${pokemon.isSpecial ? `<div class="legendary-badge">⭐ ${pData?.isLegendary ? "Legendary" : "Mythical"}</div>` : ""}
+                  ${pokemon.slug === "ditto" ? `<div class="legendary-badge" style="border-color:#9b7fe8;background:linear-gradient(180deg,#ede0ff 0%,#c8a0f0 100%);color:#3d1a6e;">🔮 First Ditto!</div>` : ""}
+                </div>
+                <div class="claim-box">
+                  ${lineComplete
+                    ? `<label>Living Dex Complete</label>
+                       <div class="dialog-sub" style="margin-top:12px;">You already have the full ${pokemon.isShiny ? "shiny " : ""}${pokemon.name} line. This hatch increases the No. found count.</div>`
+                    : `<label>Who triggered the hatch?</label>
+                       <input id="claimerInput" placeholder="Enter your name" value="${state.claimer}" />
+                       <div id="claimError" class="error" style="display:none;margin-top:10px;"></div>`
+                  }
+                  <div class="controls">
+                    <button class="${btnClass}" id="addDexBtn">${pokemon.slug === "ditto" ? "Claim Ditto!" : primaryText}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById("addDexBtn").addEventListener("click", handleClaimHatch);
+        const claimerInput = document.getElementById("claimerInput");
+        if (claimerInput) {
+          claimerInput.addEventListener("input", e => {
+            state.claimer = e.target.value;
+            saveState();
+            const errEl = document.getElementById("claimError");
+            if (errEl) errEl.style.display = "none";
+          });
+        }
+      }
+
+      // ─── Render: Dex panel ───────────────────────────────────────────────────
+      function renderDex() {
+        const isShiny     = state.activeDexView === "shiny";
+        const dexArray    = isShiny ? state.shinyRecentLog : state.recentLog;
+        const foundCounts = getFoundCounts(isShiny);
+
+        document.getElementById("dexPanelTitle").textContent = isShiny ? "Shiny Dex" : "Living Dex";
+        document.getElementById("recentTitle").textContent   = isShiny ? "Recent Shinies" : "Recently Found";
+        document.getElementById("fullDexBtn").textContent    = isShiny ? "Open Full Shiny" : "Open Full Dex";
+        document.getElementById("normalDexBtn").classList.toggle("active", !isShiny);
+        document.getElementById("shinyDexBtn").classList.toggle("active",  isShiny);
+
+        const dexList = document.getElementById("dexList");
+        if (!dexArray.length) {
+          dexList.innerHTML = `<div class="empty">${isShiny
+            ? "No shiny hatches yet. The odds are 1 in 512 — keep clicking!"
+            : "No hatches yet. Start stepping to fill the living dex!"}</div>`;
+          return;
+        }
+
+        dexList.innerHTML = dexArray.map(entry => {
+          const count    = (entry.isShiny ? state.shinyFoundCounts : state.foundCounts)[entry.line] || 0;
+          const isBase   = POKEMON_DATA[entry.slug]?.isBase;
+          const entryClass = entry.isSpecial ? " special-entry" : entry.isShiny ? " shiny-entry" : "";
+          return `
+            <div class="entry${entryClass}">
+              <img src="${entry.image}" alt="${entry.name}" />
+              <div>
+                <div class="entry-title">
+                  <h3>${entry.name}${entry.isShiny ? " ✨" : ""}</h3>
+                  <span class="pill">#${String(entry.id).padStart(4, "0")}</span>
+                  ${entry.isSpecial ? `<span class="pill">⭐</span>` : ""}
+                </div>
+                <div class="entry-meta">Found by ${entry.discoveredBy}</div>
+                <div class="entry-date">${formatDate(entry.claimedAt)}</div>
+                <div class="entry-steps">${fmt(entry.stepsToHatch || 0)} steps</div>
+                ${entry.evolvedFrom  ? `<div class="entry-evolved">Evolved from ${entry.evolvedFrom}</div>` : ""}
+                ${entry.morphedInto        ? `<div class="entry-evolved" style="color:#7c3aed;">→ ${POKEMON_DATA[entry.morphedInto]?.name ?? entry.morphedInto}</div>` : ""}
+                ${entry.transformedFromDitto ? `<div class="entry-evolved" style="color:#7c3aed;">Transformed from Ditto</div>` : ""}
+                ${isBase ? `<div class="entry-found">No. found: ${count}</div>` : ""}
+              </div>
+            </div>`;
+        }).join("");
+      }
+
+      // ─── Render: Full Dex Overlay ────────────────────────────────────────────
+      function renderFullDexOverlay() {
+        const overlay = document.getElementById("fullDexOverlay");
+        if (!overlay) return;
+        if (!state.fullDexOpen) { overlay.className = "full-dex-overlay"; overlay.innerHTML = ""; return; }
+
+        const isShiny    = state.activeDexView === "shiny";
+        const unlockMap  = getUnlockMap(isShiny);
+        const foundCounts= getFoundCounts(isShiny);
+        const totalPages = Math.ceil(ALL_DEX_SLOTS.length / DEX_PAGE_SIZE);
+        if (fullDexPage >= totalPages) fullDexPage = totalPages - 1;
+        if (fullDexPage < 0) fullDexPage = 0;
+
+        const pageSlots = ALL_DEX_SLOTS.slice(fullDexPage * DEX_PAGE_SIZE, (fullDexPage + 1) * DEX_PAGE_SIZE);
+
+        overlay.className = "full-dex-overlay open";
+        overlay.innerHTML = `
+          <div class="full-dex-shell">
+            <div class="full-dex-top">
+              <div>
+                <div class="full-dex-title">${isShiny ? "Full Shiny Dex" : "Full Living Dex"}</div>
+                <div class="full-dex-sub">${ALL_DEX_SLOTS.filter(s => unlockMap[s]).length} / ${ALL_DEX_SLOTS.length} caught</div>
+              </div>
+              <div class="full-dex-top-right">
+                <input class="full-dex-search" id="dexSearch" placeholder="Search Pokémon…" />
+                <button class="close-dex-btn" id="closeFullDexBtn">Close</button>
+              </div>
+            </div>
+            <div class="full-dex-body">
+              <div class="full-dex-screen">
+                <div class="full-dex-grid" id="fullDexGrid">
+                  ${renderDexGrid(pageSlots, unlockMap, isShiny, getDexArray(isShiny))}
+                </div>
+                <div class="dex-pagination" id="dexPagination">
+                  <button class="dex-page-btn" id="dexPrevBtn" ${fullDexPage === 0 ? "disabled" : ""}>&laquo; Prev</button>
+                  <span class="dex-page-info">Page ${fullDexPage + 1} / ${totalPages}</span>
+                  <button class="dex-page-btn" id="dexNextBtn" ${fullDexPage >= totalPages - 1 ? "disabled" : ""}>Next &raquo;</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById("closeFullDexBtn").addEventListener("click", closeFullDex);
+        overlay.addEventListener("click", e => { if (e.target === overlay) closeFullDex(); });
+
+        document.getElementById("dexPrevBtn").addEventListener("click", () => { fullDexPage--; renderFullDexOverlay(); });
+        document.getElementById("dexNextBtn").addEventListener("click", () => { fullDexPage++; renderFullDexOverlay(); });
+
+        // Search filter — searches full list, hides pagination while active
+        document.getElementById("dexSearch").addEventListener("input", e => {
+          const q = e.target.value.toLowerCase().trim();
+          const filtered = q
+            ? ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q))
+            : pageSlots;
+          document.getElementById("fullDexGrid").innerHTML = renderDexGrid(filtered, unlockMap, isShiny, getDexArray(isShiny));
+          document.getElementById("dexPagination").style.display = q ? "none" : "flex";
+        });
+      }
+
+      function renderDexGrid(slots, unlockMap, isShiny, dexArray) {
+        // "Caught" = slot is currently in the living dex
+        // "Seen"   = encountered before but merged/evolved away
+        const activeSlugs = new Set((dexArray || []).map(e => e.slug));
+        return slots.map(slug => {
+          const data         = POKEMON_DATA[slug];
+          const unlocked     = Boolean(unlockMap[slug]);
+          const inDex        = activeSlugs.has(slug);
+          const isBase       = data.isBase;
+          const normalCount  = state.foundCounts[data.line] || 0;
+          const shinyCount   = state.shinyFoundCounts[data.line] || 0;
+          const slotClass = unlocked
+            ? `dex-slot${isShiny ? " shiny-slot" : ""}${data.isSpecial ? " special-slot" : ""}`
+            : "dex-slot locked";
+          const status = inDex ? "Caught" : "Seen";
+
+          return unlocked ? `
+            <div class="${slotClass}">
+              <div class="slot-number">#${String(data.id).padStart(4,"0")}</div>
+              <img src="${isShiny ? data.shinyImage : data.image}" alt="${data.name}" loading="lazy" />
+              <div class="slot-name">${data.name}${isShiny ? " ✨" : ""}${data.isSpecial ? " ⭐" : ""}</div>
+              <div class="slot-status">${status}</div>
+              ${isBase && normalCount > 0 ? `<div class="slot-found">No. found: ${normalCount}</div>` : ""}
+              ${isBase && shinyCount  > 0 ? `<div class="slot-found" style="color:#b88300;">✨ Shiny: ${shinyCount}</div>` : ""}
+            </div>` : `
+            <div class="${slotClass}">
+              <div class="slot-number">#${String(data.id).padStart(4,"0")}</div>
+              <div class="locked-icon">?</div>
+              <div class="slot-name">Locked</div>
+              <div class="slot-status">Keep hatching</div>
+            </div>`;
+        }).join("");
+      }
+
+      // ─── Render: Charm bar ───────────────────────────────────────────────────
+      function renderCharmBar() {
+        const count = getDexCount();
+
+        const ovalItem = document.getElementById("ovalCharmItem");
+        const ovalDesc = document.getElementById("ovalCharmDesc");
+        if (ovalItem && ovalDesc) {
+          ovalItem.classList.toggle("charm-unlocked", state.ovalCharmUnlocked);
+          ovalItem.classList.toggle("charm-locked",  !state.ovalCharmUnlocked);
+          ovalDesc.textContent = state.ovalCharmUnlocked
+            ? "Completed lines hatch less often"
+            : `${count} / 100 caught`;
+        }
+
+        const shinyItem = document.getElementById("shinyCharmItem");
+        const shinyDesc = document.getElementById("shinyCharmDesc");
+        if (shinyItem && shinyDesc) {
+          shinyItem.classList.toggle("charm-unlocked", state.shinyCharmUnlocked);
+          shinyItem.classList.toggle("charm-locked",  !state.shinyCharmUnlocked);
+          shinyDesc.textContent = state.shinyCharmUnlocked
+            ? "Shiny odds: 1 in 128"
+            : `${count} / 512 caught`;
+        }
+
+        const catchItem = document.getElementById("catchingCharmItem");
+        const catchDesc = document.getElementById("catchingCharmDesc");
+        if (catchItem && catchDesc) {
+          catchItem.classList.toggle("charm-unlocked", state.catchingCharmUnlocked);
+          catchItem.classList.toggle("charm-locked",  !state.catchingCharmUnlocked);
+          catchDesc.textContent = state.catchingCharmUnlocked
+            ? "Ditto odds: 1 in 256"
+            : "Find your first Ditto to unlock";
+        }
+      }
+
+      // ─── Render (top-level) ──────────────────────────────────────────────────
+      function render() {
+        renderMainView();
+        renderDex();
+        renderFullDexOverlay();
+        renderCharmBar();
+        document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
+      }
+
+      // ─── Init ────────────────────────────────────────────────────────────────
+      async function init() {
+        try {
+          const [pokeResponse, profanityResponse] = await Promise.all([
+            fetch("./pokemon-data.json"),
+            fetch("./profanity.json"),
+          ]);
+          if (!pokeResponse.ok) throw new Error(`HTTP ${pokeResponse.status}`);
+          POKEMON_DATA = await pokeResponse.json();
+          if (profanityResponse.ok) {
+            PROFANITY_LIST = await profanityResponse.json();
+          }
+
+          // Build derived data
+          ALL_DEX_SLOTS = Object.keys(POKEMON_DATA).sort((a, b) => POKEMON_DATA[a].id - POKEMON_DATA[b].id);
+          EGG_POOL      = Object.values(POKEMON_DATA).filter(p => p.isBase).map(p => p.slug);
+
+          // Init unlock maps
+          ALL_DEX_SLOTS.forEach(s => {
+            if (!state.unlockedDex[s])      state.unlockedDex[s]      = false;
+            if (!state.unlockedShinyDex[s]) state.unlockedShinyDex[s] = false;
+          });
+
+          await loadState();
+          render();
+
+          // Wire up persistent buttons
+          document.getElementById("normalDexBtn").addEventListener("click", () => setDexView("normal"));
+          document.getElementById("shinyDexBtn").addEventListener("click",  () => setDexView("shiny"));
+          document.getElementById("fullDexBtn").addEventListener("click",   openFullDex);
+          document.getElementById("clearDexBtn").addEventListener("click",  handleResetDex);
+
+        } catch (err) {
+          document.getElementById("mainView").innerHTML = `
+            <div style="padding:32px;">
+              <div class="error">
+                ⚠ Could not load pokemon-data.json.<br><br>
+                Make sure the file is in the same folder as game.html, then open this page using a local server (e.g. VS Code Live Server, or run <code>npx serve .</code> in the terminal).<br><br>
+                <small>${err.message}</small>
+              </div>
+            </div>`;
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>
