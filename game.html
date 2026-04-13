@@ -2008,14 +2008,12 @@
 
       async function toggleDevMode() {
         devEggSlug = devEggSlug ? null : "charmander";
-        document.getElementById("modeValue").textContent = devEggSlug ? "Charmander Only" : "All Generations";
         await generateAndSaveEgg();
         render();
       }
 
       async function toggleDittoMode() {
         devDittoMode = !devDittoMode;
-        document.getElementById("modeValue").textContent = devDittoMode ? "Ditto Mode" : "All Generations";
         await generateAndSaveEgg();
         render();
       }
@@ -2054,6 +2052,9 @@
           return;
         }
         _isClaimer = true;
+        // Optimistically mark as claiming so render shows the correct UI (morph picker / claiming state)
+        // before the realtime event arrives — prevents the Claim button from re-enabling itself
+        state.eggState = { ...state.eggState, status: 'claiming' };
         const pokemon = state.eggState.pokemon;
         const alreadyHaveDitto = Boolean(pokemon?.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
         if (pokemon?.slug === "ditto" && alreadyHaveDitto) {
