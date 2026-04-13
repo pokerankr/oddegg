@@ -154,6 +154,7 @@
 
       .grass-platform {
         position: absolute; bottom: 40px;
+        left: 50%; transform: translateX(-50%);
         width: min(520px, 82%); height: 128px;
         border: 4px solid rgba(49,63,89,0.35);
         border-radius: 50%;
@@ -220,7 +221,7 @@
 
       .egg-image {
         position: relative; z-index: 2;
-        width: min(235px, 42vw); max-width: 235px;
+        width: 200px; max-width: min(235px, 55%);
         height: auto; display: block;
         user-select: none; -webkit-user-drag: none;
         image-rendering: auto;
@@ -1731,18 +1732,23 @@
       }
 
       // ─── Event handlers ──────────────────────────────────────────────────────
+      // True on phones/tablets — autoclicker detection doesn't apply to touch
+      const _isTouchDevice = window.matchMedia('(pointer:coarse)').matches;
+
       function handleTakeStep() {
         const egg = state.eggState;
         if (!egg || egg.status !== 'hatching') return;
 
-        // Autoclicker guard — block input during cooldown
-        if (_autoclickerCooldown) return;
-        if (checkAutoclicker()) {
-          showAutoclickerWarning();
-          _autoclickerCooldown = true;
-          _clickTimestamps.length = 0;
-          setTimeout(() => { _autoclickerCooldown = false; }, 5000);
-          return;
+        // Autoclicker guard — skip on touch devices (tapping is naturally fast)
+        if (!_isTouchDevice) {
+          if (_autoclickerCooldown) return;
+          if (checkAutoclicker()) {
+            showAutoclickerWarning();
+            _autoclickerCooldown = true;
+            _clickTimestamps.length = 0;
+            setTimeout(() => { _autoclickerCooldown = false; }, 5000);
+            return;
+          }
         }
 
         state.globalClicks++;
