@@ -945,7 +945,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.0</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.1</span>
             </div>
           </div>
           <div id="mainView">
@@ -1096,6 +1096,16 @@
       let _stuckClaimTimer    = null;              // recovery: resets egg if stuck in 'claiming'
       let _hatchAnimPlaying   = false;             // true during the burst animation
       let _hatchAnimTimer     = null;
+      let _revealActive       = false;             // claimer is showing the 5s reveal screen
+      let _revealPokemon      = null;              // pokemon displayed during reveal
+      let _revealTrainerName  = null;              // trainer who claimed, shown in reveal
+      let _revealCountdown    = 0;                 // seconds remaining on reveal countdown
+      let _revealTimer        = null;              // fires generateAndSaveEgg after reveal
+      let _revealTickTimer    = null;              // 1s interval updating countdown display
+      let _isCurrentClaimer   = false;             // this tab won the current claim
+      let _dittoTrainerName   = null;              // saved trainer name for deferred ditto claim
+      let _autoDittoTimer     = null;              // auto-pick timer for ditto picker
+      let _dittoCountdown     = 0;                 // seconds left on ditto picker
       let _soundMuted         = localStorage.getItem("oddegg-muted") === "true";
       let _presenceChannel    = null;
       let _onlineTrainers     = [];
@@ -1708,6 +1718,16 @@
 
       // Generates egg params locally, saves to Supabase, and updates local state
       async function generateAndSaveEgg() {
+        // Clear any pending reveal or Ditto picker state
+        if (_revealTimer)    { clearTimeout(_revealTimer);    _revealTimer   = null; }
+        if (_revealTickTimer){ clearInterval(_revealTickTimer);_revealTickTimer = null; }
+        if (_autoDittoTimer) { clearTimeout(_autoDittoTimer); _autoDittoTimer = null; }
+        _revealActive      = false;
+        _revealPokemon     = null;
+        _revealTrainerName = null;
+        _isCurrentClaimer  = false;
+        dittoChosenSlug    = null;
+
         const fresh = buildFreshEgg();
         state.eggState = { ...fresh, status: 'hatching' };
         if (!fresh.targetSlug) return; // EGG_POOL not ready yet
@@ -1785,18 +1805,40 @@
                 const { data: won } = await db.rpc("try_claim_egg");
                 if (won) {
                   _clearAutoClaimTimer();
-                  const pokemon = state.eggState.pokemon;
+                  _isCurrentClaimer = true;
+                  const pokemon     = state.eggState.pokemon;
                   const trainerName = state.trainerName || generateNPCTrainerName();
-                  // 2nd+ Ditto: pick random morph automatically
                   const alreadyHaveDitto = Boolean(pokemon?.isShiny
                     ? state.unlockedShinyDex["ditto"]
                     : state.unlockedDex["ditto"]);
+
                   if (pokemon?.slug === "ditto" && alreadyHaveDitto) {
-                    const unlockMap = getUnlockMap(pokemon.isShiny);
-                    const available = EGG_POOL.filter(s => !unlockMap[s]);
-                    dittoChosenSlug = available.length > 0 ? randomFrom(available) : randomFrom(EGG_POOL);
+                    // Give this trainer 30s to pick a morph — show the picker
+                    _dittoTrainerName = trainerName;
+                    _dittoCountdown   = 30;
+                    dittoChosenSlug   = null;
+                    render(); // shows picker
+                    // Countdown tick
+                    const dittoTick = setInterval(() => {
+                      _dittoCountdown = Math.max(0, _dittoCountdown - 1);
+                      const el = document.getElementById("dittoCountdown");
+                      if (el) el.textContent = `Auto-picking in ${_dittoCountdown}s…`;
+                    }, 1000);
+                    // Auto-pick after 30s
+                    _autoDittoTimer = setTimeout(async () => {
+                      clearInterval(dittoTick);
+                      _autoDittoTimer = null;
+                      const unlockMap = getUnlockMap(pokemon.isShiny);
+                      const available = EGG_POOL.filter(s => !unlockMap[s]);
+                      dittoChosenSlug = available.length > 0 ? randomFrom(available) : randomFrom(EGG_POOL);
+                      const newCharms = _processDittoClaim(_dittoTrainerName);
+                      _startReveal(newCharms, 5);
+                    }, 30000);
+                    // Wire confirm button (called when user picks)
+                    // Handled in render — see Ditto picker section
+                  } else {
+                    await handleClaimHatch(trainerName);
                   }
-                  await handleClaimHatch(trainerName);
                 }
                 // If !won: another client won the tie — their realtime push moves us forward
               } else {
@@ -1941,66 +1983,104 @@
         }
       }
 
+      // ─── Claim helpers ────────────────────────────────────────────────────────
+
+      // Processes dex/log/charm updates for a normal (non-Ditto) hatch.
+      // Does NOT call generateAndSaveEgg — caller is responsible for that.
+      function _processClaim(trainerName) {
+        const pokemon = state.eggState.pokemon || _revealPokemon;
+        if (!pokemon) return [];
+        const isShiny    = pokemon.isShiny;
+        const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
+        getFoundCounts(isShiny)[pokemon.line] = (getFoundCounts(isShiny)[pokemon.line] || 0) + 1;
+        unlockPokemon(pokemon.slug, isShiny);
+        const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString() };
+        state.recentLog.unshift(entry);
+        state.recentLog = state.recentLog.slice(0, 12);
+        if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        addPokemonToDex(pokemon.slug, isShiny, entry);
+        state.claimer = "";
+        saveState(true);
+        return checkCharmUnlocks();
+      }
+
+      // Processes dex/log/charm updates for a Ditto morph claim.
+      // Requires dittoChosenSlug to be set. Does NOT call generateAndSaveEgg.
+      function _processDittoClaim(trainerName) {
+        const pokemon = state.eggState.pokemon || _revealPokemon;
+        if (!pokemon || !dittoChosenSlug) return [];
+        const isShiny      = pokemon.isShiny;
+        const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
+        // Record ditto itself
+        const dittoLineKey = POKEMON_DATA["ditto"].line || "ditto";
+        state.foundCounts[dittoLineKey]      = (state.foundCounts[dittoLineKey] || 0) + 1;
+        if (isShiny) state.shinyFoundCounts[dittoLineKey] = (state.shinyFoundCounts[dittoLineKey] || 0) + 1;
+        unlockPokemon("ditto", isShiny);
+        const dittoEntry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), morphedInto: dittoChosenSlug };
+        state.recentLog.unshift(dittoEntry);
+        state.recentLog = state.recentLog.slice(0, 12);
+        if (isShiny) { state.shinyRecentLog.unshift(dittoEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        // Record chosen morph
+        const chosenData = POKEMON_DATA[dittoChosenSlug];
+        state.foundCounts[chosenData.line]      = (state.foundCounts[chosenData.line] || 0) + 1;
+        if (isShiny) state.shinyFoundCounts[chosenData.line] = (state.shinyFoundCounts[chosenData.line] || 0) + 1;
+        unlockPokemon(dittoChosenSlug, isShiny);
+        const chosenEntry = { ...buildPokemonRecord(dittoChosenSlug, isShiny), discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), transformedFromDitto: true };
+        state.recentLog.unshift(chosenEntry);
+        state.recentLog = state.recentLog.slice(0, 12);
+        if (isShiny) { state.shinyRecentLog.unshift(chosenEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
+        dittoChosenSlug = null;
+        state.claimer   = "";
+        saveState(true);
+        return checkCharmUnlocks();
+      }
+
+      // Shows the hatched-pokemon reveal screen for `seconds`, then generates a new egg.
+      function _startReveal(newCharms, seconds = 5) {
+        _revealPokemon   = state.eggState.pokemon;
+        _revealActive    = true;
+        _revealCountdown = seconds;
+        render();
+
+        if (_revealTickTimer) clearInterval(_revealTickTimer);
+        _revealTickTimer = setInterval(() => {
+          _revealCountdown = Math.max(0, _revealCountdown - 1);
+          const el = document.getElementById("revealCountdown");
+          if (el) el.textContent = `New egg in ${_revealCountdown}s…`;
+          if (_revealCountdown <= 0) { clearInterval(_revealTickTimer); _revealTickTimer = null; }
+        }, 1000);
+
+        if (_revealTimer) clearTimeout(_revealTimer);
+        _revealTimer = setTimeout(async () => {
+          _revealTimer        = null;
+          _revealActive       = false;
+          _isCurrentClaimer   = false;
+          _revealPokemon      = null;
+          _revealTrainerName  = null;
+          await generateAndSaveEgg();
+          render();
+          newCharms.forEach(showCharmToast);
+        }, seconds * 1000);
+      }
+
       async function handleClaimHatch(discoveredBy = null) {
         const pokemon = state.eggState.pokemon;
         if (!pokemon) return;
-
-        const isShiny = pokemon.isShiny;
-        discoveredBy  = discoveredBy || state.trainerName || generateNPCTrainerName();
-        const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
+        discoveredBy = discoveredBy || state.trainerName || generateNPCTrainerName();
 
         // ── Ditto morph path (2nd ditto onwards) ──────────────────────────────
-        if (pokemon.slug === "ditto" && Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"])) {
-          if (!dittoChosenSlug) return; // must pick a pokemon first
-
-          // Record ditto in found counts + unlock
-          const dittoLineKey = POKEMON_DATA["ditto"].line || "ditto";
-          state.foundCounts[dittoLineKey] = (state.foundCounts[dittoLineKey] || 0) + 1;
-          if (isShiny) state.shinyFoundCounts[dittoLineKey] = (state.shinyFoundCounts[dittoLineKey] || 0) + 1;
-          unlockPokemon("ditto", isShiny);
-
-          // Add ditto to recent log with morph annotation
-          const dittoEntry = { ...pokemon, discoveredBy, stepsToHatch, claimedAt: new Date().toISOString(), morphedInto: dittoChosenSlug };
-          state.recentLog.unshift(dittoEntry);
-          state.recentLog = state.recentLog.slice(0, 12);
-          if (isShiny) { state.shinyRecentLog.unshift(dittoEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
-
-          // Add chosen pokemon to dex + recent log
-          const chosenData = POKEMON_DATA[dittoChosenSlug];
-          // Always increment normal foundCounts (entry goes into state.recentLog for normal view)
-          state.foundCounts[chosenData.line] = (state.foundCounts[chosenData.line] || 0) + 1;
-          if (isShiny) state.shinyFoundCounts[chosenData.line] = (state.shinyFoundCounts[chosenData.line] || 0) + 1;
-          unlockPokemon(dittoChosenSlug, isShiny);
-          const chosenEntry = { ...buildPokemonRecord(dittoChosenSlug, isShiny), discoveredBy, stepsToHatch, claimedAt: new Date().toISOString(), transformedFromDitto: true };
-          state.recentLog.unshift(chosenEntry);
-          state.recentLog = state.recentLog.slice(0, 12);
-          if (isShiny) { state.shinyRecentLog.unshift(chosenEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
-          addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
-
-          dittoChosenSlug  = null;
-          state.claimer    = "";
-          const newCharms  = checkCharmUnlocks();
-          await generateAndSaveEgg();
-          saveState(true); render(); newCharms.forEach(showCharmToast);
+        const alreadyHaveDitto = Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
+        if (pokemon.slug === "ditto" && alreadyHaveDitto) {
+          if (!dittoChosenSlug) return; // must pick first
+          const newCharms = _processDittoClaim(discoveredBy);
+          _startReveal(newCharms, 5);
           return;
         }
 
         // ── Normal hatch path ─────────────────────────────────────────────────
-        const lineSlug = pokemon.line;
-        getFoundCounts(isShiny)[lineSlug] = (getFoundCounts(isShiny)[lineSlug] || 0) + 1;
-        unlockPokemon(pokemon.slug, isShiny);
-
-        const entry = { ...pokemon, discoveredBy, stepsToHatch, claimedAt: new Date().toISOString() };
-        state.recentLog.unshift(entry);
-        state.recentLog = state.recentLog.slice(0, 12);
-        if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
-
-        addPokemonToDex(pokemon.slug, isShiny, entry);
-
-        state.claimer  = "";
-        const newCharms = checkCharmUnlocks();
-        await generateAndSaveEgg();
-        saveState(true); render(); newCharms.forEach(showCharmToast);
+        const newCharms = _processClaim(discoveredBy);
+        _startReveal(newCharms, 5);
       }
 
       function handleResetDex() {
@@ -2086,6 +2166,106 @@
                 </div>
               </div>
             </div>`;
+          return;
+        }
+
+        // ── Reveal screen — claimer sees hatched pokemon + countdown ──
+        if (_revealActive && _revealPokemon) {
+          const p         = _revealPokemon;
+          const pd        = POKEMON_DATA[p.slug];
+          const orbClass  = p.isShiny ? "reveal-orb shiny-orb" : p.isSpecial ? "reveal-orb special-orb" : "reveal-orb";
+          const kicker    = p.isSpecial
+            ? (pd?.isLegendary ? "Legendary Discovery!" : "Mythical Discovery!")
+            : (p.slug === "ditto" ? "Transform!" : "Discovery!");
+          view.innerHTML = `
+            <div class="field">
+              <div class="cloud"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+              <div class="reveal-stage">
+                <div class="${orbClass}"></div>
+                <img class="pokemon-art" src="${p.image}" alt="${p.name}" />
+              </div>
+              <div class="dialog-wrap">
+                <div class="dialog">
+                  <div class="dialog-text">The Odd Egg hatched into ${p.isShiny ? "✨ Shiny " : ""}${p.name}!</div>
+                  <div class="info-card">
+                    <div class="kicker ${p.isSpecial ? 'legendary-kicker' : ''}">${kicker}</div>
+                    <div class="name">${p.isShiny ? "✨ " : ""}${p.name}</div>
+                    <div class="dexno">Dex #${String(p.id).padStart(4, "0")}</div>
+                    ${p.isShiny   ? `<div class="shiny-badge">✨ Shiny Hatch</div>` : ""}
+                    ${p.isSpecial ? `<div class="legendary-badge">⭐ ${pd?.isLegendary ? "Legendary" : "Mythical"}</div>` : ""}
+                  </div>
+                  <div class="claim-box" style="text-align:center;">
+                    <div class="dialog-sub" style="padding:12px 0;" id="revealCountdown">New egg in ${_revealCountdown}s…</div>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+          return;
+        }
+
+        // ── Ditto morph picker — claimer only, 2nd+ ditto ─────────────────────
+        if (_isCurrentClaimer && egg?.pokemon?.slug === "ditto") {
+          const pokemon   = egg.pokemon;
+          const isShiny   = pokemon.isShiny;
+          const orbClass  = isShiny ? "reveal-orb shiny-orb" : "reveal-orb";
+          const unlockMap = getUnlockMap(isShiny);
+          const allSlots  = EGG_POOL.slice().sort((a, b) => POKEMON_DATA[a].id - POKEMON_DATA[b].id);
+          const gridHTML  = allSlots.map(slug => {
+            const d      = POKEMON_DATA[slug];
+            const caught = Boolean(unlockMap[slug]);
+            return `<div class="ditto-tile${caught ? " ditto-tile-caught" : ""}" data-slug="${slug}" title="${d.name}">
+              <img src="${isShiny ? d.shinyImage : d.image}" alt="${d.name}" />
+              <div class="ditto-tile-name">${d.name}</div>
+              ${caught ? `<div class="ditto-tile-tag">Caught</div>` : ""}
+            </div>`;
+          }).join("");
+          view.innerHTML = `
+            <div class="field">
+              <div class="cloud"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+              <div class="reveal-stage">
+                <div class="${orbClass}"></div>
+                <img class="pokemon-art" src="${pokemon.image}" alt="Ditto" />
+              </div>
+              <div class="dialog-wrap">
+                <div class="dialog">
+                  <div class="dialog-text">A wild Ditto appeared! Choose a Pokémon for it to transform into.</div>
+                  <div class="dialog-sub" style="margin-top:6px;">Any Pokémon you pick will be added to the Living Dex.</div>
+                  <input class="ditto-search" id="dittoSearch" placeholder="Search Pokémon…" autocomplete="off" />
+                  <div class="ditto-grid" id="dittoGrid">${gridHTML}</div>
+                  <div class="ditto-selection" id="dittoSelection" style="display:none;">
+                    <img id="dittoSelImg" /><span id="dittoSelName"></span>
+                  </div>
+                  <div class="controls" style="margin-top:12px;">
+                    <button class="success-btn" id="dittoConfirmBtn" disabled>Transform!</button>
+                  </div>
+                  <div id="dittoCountdown" style="margin-top:8px;font-size:13px;color:var(--slate);text-align:center;">Auto-picking in ${_dittoCountdown}s…</div>
+                </div>
+              </div>
+            </div>`;
+          document.getElementById("dittoGrid").addEventListener("click", e => {
+            const tile = e.target.closest(".ditto-tile");
+            if (!tile) return;
+            dittoChosenSlug = tile.dataset.slug;
+            document.querySelectorAll(".ditto-tile").forEach(t => t.classList.remove("ditto-tile-selected"));
+            tile.classList.add("ditto-tile-selected");
+            const d = POKEMON_DATA[dittoChosenSlug];
+            document.getElementById("dittoSelImg").src = isShiny ? d.shinyImage : d.image;
+            document.getElementById("dittoSelName").textContent = d.name;
+            document.getElementById("dittoSelection").style.display = "flex";
+            document.getElementById("dittoConfirmBtn").disabled = false;
+          });
+          document.getElementById("dittoSearch").addEventListener("input", e => {
+            const q = e.target.value.toLowerCase().trim();
+            document.querySelectorAll(".ditto-tile").forEach(tile => {
+              tile.style.display = (!q || POKEMON_DATA[tile.dataset.slug].name.toLowerCase().includes(q)) ? "" : "none";
+            });
+          });
+          document.getElementById("dittoConfirmBtn").addEventListener("click", async () => {
+            if (!dittoChosenSlug) return;
+            if (_autoDittoTimer) { clearTimeout(_autoDittoTimer); _autoDittoTimer = null; }
+            const newCharms = _processDittoClaim(_dittoTrainerName);
+            _startReveal(newCharms, 5);
+          });
           return;
         }
 
@@ -2550,10 +2730,11 @@
               if (data.status !== prevStatus) {
                 if (data.status === 'hatched' && prevStatus === 'hatching') {
                   _playHatchSequence();
-                } else {
+                } else if (!_revealActive && !_isCurrentClaimer) {
+                  // Don't interrupt the claimer's reveal or Ditto picker on their own tab
                   render();
                 }
-              } else if (data.status === 'hatching') {
+              } else if (data.status === 'hatching' && !_revealActive) {
                 const el = document.getElementById("clickCounter");
                 if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
                 _updateEggDialogue();
@@ -2570,9 +2751,9 @@
             // On reconnect, skip the hatch animation even if we missed the hatch event —
             // the egg may already be claimed elsewhere and showing the animation would be
             // misleading. Just render the current state directly.
-            if (eggRow.status !== prevStatus) {
+            if (eggRow.status !== prevStatus && !_revealActive && !_isCurrentClaimer) {
               render();
-            } else if (eggRow.status === 'hatching') {
+            } else if (eggRow.status === 'hatching' && !_revealActive) {
               const el = document.getElementById("clickCounter");
               if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
             }
