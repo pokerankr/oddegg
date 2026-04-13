@@ -1457,7 +1457,12 @@
         _clearAutoClaimTimer();
         if (!state.eggState || state.eggState.status !== 'hatched') return;
         const { data: won } = await db.rpc("try_claim_egg");
-        if (!won) return; // another player just beat us to it
+        if (!won) {
+          // Someone else already claimed — re-fetch current state so we don't stay stuck
+          const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+          if (eggRow) { _applyEggRow(eggRow); render(); }
+          return;
+        }
         _isClaimer = true;
         try {
           const pokemon = state.eggState.pokemon;
