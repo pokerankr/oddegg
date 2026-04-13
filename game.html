@@ -1365,18 +1365,20 @@
         _autoClaimRemaining = 0;
       }
 
-      function _startAutoClaimTimer() {
+      function _startAutoClaimTimer(seconds = 10) {
         _clearAutoClaimTimer();
-        _autoClaimRemaining = 10;
+        const ms = Math.max(0, seconds * 1000);
+        if (ms <= 0) { _autoClaimExpired(); return; }
+        _autoClaimRemaining = Math.ceil(seconds);
         _autoClaimTick = setInterval(() => {
-          _autoClaimRemaining--;
+          _autoClaimRemaining = Math.max(0, _autoClaimRemaining - 1);
           const el = document.getElementById("autoClaimCountdown");
           if (el) el.textContent = _autoClaimRemaining > 0
             ? `Auto-claiming in ${_autoClaimRemaining}s…`
             : "Auto-claiming…";
           if (_autoClaimRemaining <= 0) _clearAutoClaimTimer();
         }, 1000);
-        _autoClaimTimer = setTimeout(_autoClaimExpired, 10000);
+        _autoClaimTimer = setTimeout(_autoClaimExpired, ms);
       }
 
       async function _autoClaimExpired() {
@@ -1584,9 +1586,15 @@
           error: "",
         };
         // Manage timers based on status transitions
-        if (row.status === 'hatched' && prevStatus !== 'hatched') {
-          _startAutoClaimTimer();
+        if (row.status === 'hatched') {
           _clearStuckClaimTimer();
+          if (!_isClaimer && !_autoClaimTimer) {
+            // Always compute remaining time from server hatched_at so refreshes
+            // don't reset the countdown — the clock is authoritative
+            const hatchedAt = row.hatched_at ? new Date(row.hatched_at).getTime() : Date.now();
+            const remaining = Math.max(0, 10 - (Date.now() - hatchedAt) / 1000);
+            _startAutoClaimTimer(remaining);
+          }
         } else if (row.status === 'claiming' && prevStatus !== 'claiming') {
           _clearAutoClaimTimer();
           if (!_isClaimer) _startStuckClaimTimer(); // safety net if claimer disappears
@@ -1612,6 +1620,8 @@
             p_hint1_at:     fresh.hint1At,
             p_hint2_at:     fresh.hint2At,
           });
+          // Clear hatched_at so it doesn't bleed into the next egg's countdown
+          await db.from("egg_state").update({ hatched_at: null }).eq("id", 1);
         } catch (e) {
           console.error("[OddEgg] generateAndSaveEgg failed:", e);
         }
@@ -1871,7 +1881,7 @@
         _pendingEggSteps = 0;
         // Jump directly to the predetermined target — accurate step count, guaranteed hatch
         await db.from("egg_state")
-          .update({ status: 'hatched', current_steps: egg.targetSteps })
+          .update({ status: 'hatched', current_steps: egg.targetSteps, hatched_at: new Date().toISOString() })
           .eq("id", 1);
         const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
         if (eggRow) { _applyEggRow(eggRow); render(); }
