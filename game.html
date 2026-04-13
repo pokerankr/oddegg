@@ -1057,6 +1057,25 @@
       let EGG_POOL       = []; // base-form slugs only
       let ALL_DEX_SLOTS  = []; // every slug in dex order (by id)
       let PROFANITY_LIST = []; // loaded from profanity.json
+      let RANDOM_NAMES   = []; // loaded from randomnames.txt
+
+      const TRAINER_CLASSES = [
+        "Ace Trainer", "Artist", "Baker", "Battle Girl", "Beauty",
+        "Bird Keeper", "Black Belt", "Bug Catcher", "Bug Maniac", "Biker",
+        "Camper", "Chef", "Clown", "Collector", "Cowgirl", "Cyclist",
+        "Doctor", "Dragon Tamer", "Engineer", "Expert", "Fisherman",
+        "Gentleman", "Guitarist", "Hiker", "Kindler", "Lady", "Lass",
+        "Ninja Boy", "Nurse", "Picnicker", "Pokéfan", "Pokémaniac",
+        "Pokémon Breeder", "Psychic", "Ranger", "Rich Boy", "Roughneck",
+        "Ruin Maniac", "Sailor", "School Kid", "Scientist", "Skier",
+        "Swimmer", "Triathlete", "Tuber", "Veteran", "Worker", "Youngster",
+      ];
+
+      function generateNPCTrainerName() {
+        const cls  = randomFrom(TRAINER_CLASSES);
+        const name = RANDOM_NAMES.length ? randomFrom(RANDOM_NAMES) : "Red";
+        return `${cls} ${name}`;
+      }
 
       // ─── Profanity filter ────────────────────────────────────────────────────
       // Normalises leet-speak / symbol substitutions before checking
@@ -1909,7 +1928,7 @@
         if (!pokemon) return;
 
         const isShiny      = pokemon.isShiny;
-        const discoveredBy = state.trainerName || "Anonymous Trainer";
+        const discoveredBy = state.trainerName || generateNPCTrainerName();
         const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
 
         // ── Ditto morph path (2nd ditto onwards) ──────────────────────────────
@@ -2452,14 +2471,19 @@
       // ─── Init ────────────────────────────────────────────────────────────────
       async function init() {
         try {
-          const [pokeResponse, profanityResponse] = await Promise.all([
+          const [pokeResponse, profanityResponse, namesResponse] = await Promise.all([
             fetch("./pokemon-data.json"),
             fetch("./profanity.json"),
+            fetch("./randomnames.txt"),
           ]);
           if (!pokeResponse.ok) throw new Error(`HTTP ${pokeResponse.status}`);
           POKEMON_DATA = await pokeResponse.json();
           if (profanityResponse.ok) {
             PROFANITY_LIST = await profanityResponse.json();
+          }
+          if (namesResponse.ok) {
+            const namesText = await namesResponse.text();
+            RANDOM_NAMES = namesText.split('\n').map(n => n.trim()).filter(Boolean);
           }
 
           // Build derived data
