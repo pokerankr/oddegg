@@ -2630,6 +2630,41 @@
           .subscribe();
       }
 
+      // Re-sync from DB whenever the tab/app comes back into view (handles mobile backgrounding)
+      document.addEventListener("visibilitychange", async () => {
+        if (document.visibilityState !== "visible") return;
+        try {
+          const [{ data: gameRow }, { data: eggRow }] = await Promise.all([
+            db.from("shared_game_state").select("*").eq("id", 1).single(),
+            db.from("egg_state").select("*").eq("id", 1).single(),
+          ]);
+          if (gameRow) {
+            if (Array.isArray(gameRow.dex))              state.dex            = gameRow.dex;
+            if (Array.isArray(gameRow.shiny_dex))        state.shinyDex       = gameRow.shiny_dex;
+            if (Array.isArray(gameRow.recent_log))       state.recentLog      = gameRow.recent_log;
+            if (Array.isArray(gameRow.shiny_recent_log)) state.shinyRecentLog = gameRow.shiny_recent_log;
+            if (gameRow.found_counts       && typeof gameRow.found_counts       === "object") state.foundCounts      = gameRow.found_counts;
+            if (gameRow.shiny_found_counts && typeof gameRow.shiny_found_counts === "object") state.shinyFoundCounts = gameRow.shiny_found_counts;
+            if (gameRow.unlocked_dex       && typeof gameRow.unlocked_dex       === "object") Object.assign(state.unlockedDex, gameRow.unlocked_dex);
+            if (gameRow.unlocked_shiny_dex && typeof gameRow.unlocked_shiny_dex === "object") Object.assign(state.unlockedShinyDex, gameRow.unlocked_shiny_dex);
+            if (typeof gameRow.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = gameRow.oval_charm_unlocked;
+            if (typeof gameRow.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = gameRow.shiny_charm_unlocked;
+            if (typeof gameRow.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = gameRow.catching_charm_unlocked;
+            if (typeof gameRow.global_clicks           === "number")  state.globalClicks          = Math.max(state.globalClicks, gameRow.global_clicks);
+          }
+          if (eggRow) {
+            const prevStatus = state.eggState?.status;
+            _applyEggRow(eggRow);
+            // If a hatch happened while we were away, skip the animation and go straight to reveal
+            if (prevStatus === 'hatching' && state.eggState.status !== 'hatching') {
+              _hatchAnimPlaying = false;
+              if (_hatchAnimTimer) { clearTimeout(_hatchAnimTimer); _hatchAnimTimer = null; }
+            }
+          }
+          render();
+        } catch { /* silently ignore — we'll sync on the next realtime event */ }
+      });
+
       init();
     </script>
   </body>
