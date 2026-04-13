@@ -762,6 +762,49 @@
       .charm-toast-title { font-size: 16px; font-weight: 900; color: var(--ink); }
       .charm-toast-desc  { font-size: 13px; font-weight: 700; color: var(--slate); margin-top: 3px; }
 
+      /* ── Hatch burst animation ── */
+      @keyframes hatchBurst {
+        0%   { transform: scale(1)    rotate(0deg);  opacity: 1; }
+        15%  { transform: scale(1.08) rotate(-5deg); opacity: 1; }
+        30%  { transform: scale(1.06) rotate(5deg);  opacity: 1; }
+        50%  { transform: scale(1.12) rotate(-4deg); opacity: 1; }
+        70%  { transform: scale(1.1)  rotate(4deg);  opacity: 1; }
+        88%  { transform: scale(1.6); opacity: 0.6; }
+        100% { transform: scale(2.4); opacity: 0; }
+      }
+      .egg-button.hatching-burst {
+        animation: hatchBurst 1.3s ease-in-out forwards !important;
+        transition: none !important;
+      }
+      .hatch-flash-overlay {
+        position: absolute; inset: 0; z-index: 8;
+        background: white; pointer-events: none; opacity: 0;
+        animation: hatchFlashFade 0.55s ease-out 0.75s forwards;
+      }
+      @keyframes hatchFlashFade {
+        0%   { opacity: 0; }
+        45%  { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
+      /* ── Mute button ── */
+      .mute-btn {
+        background: linear-gradient(180deg, #fff 0%, #dce8f7 100%);
+        color: var(--ink); box-shadow: 0 6px 0 #8da4bf;
+        border-width: 3px; border-radius: 14px;
+        padding: 8px 12px; font-size: 18px; line-height: 1;
+        min-width: unset; width: auto !important;
+      }
+
+      /* ── Online trainers chip ── */
+      .online-chip { cursor: default; position: relative; }
+      .online-dot {
+        display: inline-block; width: 8px; height: 8px;
+        border-radius: 50%; background: #4ade80;
+        margin-right: 5px; vertical-align: middle;
+        box-shadow: 0 0 6px #4ade80;
+      }
+
       /* ── Dex top info row (title + charm icons) ── */
       .dex-top-info {
         display: flex; justify-content: space-between;
@@ -913,6 +956,10 @@
               </div>
             </div>
             <div class="topbar-right">
+              <div class="status-chip online-chip" id="onlineChip" title="No one else online">
+                <span class="label"><span class="online-dot"></span>Online</span>
+                <span class="value" id="onlineCount">1</span>
+              </div>
               <div class="status-chip trainer-chip" id="trainerChip" title="Change trainer name">
                 <span class="label">Trainer</span>
                 <span class="value" id="trainerNameDisplay">—</span>
@@ -921,10 +968,7 @@
                 <span class="label">Total Steps</span>
                 <span class="value" id="globalClickCount">0</span>
               </div>
-              <div class="status-chip">
-                <span class="label">Mode</span>
-                <span class="value" id="modeValue">All Generations</span>
-              </div>
+              <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
             </div>
           </div>
           <div id="mainView">
@@ -1056,6 +1100,11 @@
       let _autoClaimTick      = null;              // 1s interval driving the countdown display
       let _autoClaimRemaining = 0;                 // seconds left on the countdown
       let _stuckClaimTimer    = null;              // recovery: resets egg if stuck in 'claiming'
+      let _hatchAnimPlaying   = false;             // true during the burst animation
+      let _hatchAnimTimer     = null;
+      let _soundMuted         = localStorage.getItem("oddegg-muted") === "true";
+      let _presenceChannel    = null;
+      let _onlineTrainers     = [];
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1435,6 +1484,67 @@
         if (_stuckClaimTimer) { clearTimeout(_stuckClaimTimer); _stuckClaimTimer = null; }
       }
 
+      // ─── Sound ───────────────────────────────────────────────────────────────
+      function playPokemonCry(pokemonId) {
+        if (_soundMuted) return;
+        try {
+          const audio = new Audio(
+            `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemonId}.ogg`
+          );
+          audio.volume = 0.55;
+          audio.play().catch(() => {}); // silently ignore autoplay blocks
+        } catch {}
+      }
+
+      function toggleMute() {
+        _soundMuted = !_soundMuted;
+        localStorage.setItem("oddegg-muted", _soundMuted);
+        const btn = document.getElementById("muteBtn");
+        if (btn) btn.textContent = _soundMuted ? "🔇" : "🔊";
+      }
+
+      // ─── Hatch burst animation ────────────────────────────────────────────────
+      function _playHatchSequence() {
+        if (_hatchAnimTimer) return;
+        _hatchAnimPlaying = true;
+        render(); // shows egg burst screen
+        _hatchAnimTimer = setTimeout(() => {
+          _hatchAnimTimer    = null;
+          _hatchAnimPlaying  = false;
+          render(); // shows full reveal
+          if (state.eggState?.pokemon) playPokemonCry(state.eggState.pokemon.id);
+        }, 1350);
+      }
+
+      // ─── Online trainers (Supabase Presence) ─────────────────────────────────
+      function initPresence() {
+        _presenceChannel = db.channel("oddegg-presence", {
+          config: { presence: { key: SESSION_ID } },
+        });
+        _presenceChannel
+          .on("presence", { event: "sync" }, () => {
+            const ps = _presenceChannel.presenceState();
+            _onlineTrainers = Object.values(ps).flat().map(p => p.name).filter(Boolean);
+            renderOnlineTrainers();
+          })
+          .subscribe(async status => {
+            if (status === "SUBSCRIBED") {
+              await _presenceChannel.track({ name: state.trainerName || "Anonymous Trainer" });
+            }
+          });
+      }
+
+      function renderOnlineTrainers() {
+        const countEl = document.getElementById("onlineCount");
+        const chip    = document.getElementById("onlineChip");
+        if (!countEl || !chip) return;
+        const count = _onlineTrainers.length || 1; // always at least self
+        countEl.textContent = count;
+        chip.title = _onlineTrainers.length
+          ? _onlineTrainers.join(", ")
+          : state.trainerName || "Just you";
+      }
+
       // ─── Trainer ID modal ────────────────────────────────────────────────────
       function showTrainerModal() {
         const modal = document.getElementById("trainerModal");
@@ -1462,6 +1572,8 @@
         localStorage.setItem("oddegg-trainer-name", state.trainerName);
         const display = document.getElementById("trainerNameDisplay");
         if (display) display.textContent = state.trainerName;
+        if (_presenceChannel) _presenceChannel.track({ name: state.trainerName });
+        renderOnlineTrainers();
         closeTrainerModal();
       }
 
@@ -1652,7 +1764,7 @@
               const wasHatching = state.eggState?.status === 'hatching';
               _applyEggRow(row);
               if (wasHatching && state.eggState.status !== 'hatching') {
-                render(); // egg just hatched — show reveal to this player immediately
+                _playHatchSequence(); // egg just hatched — play burst then reveal
               } else {
                 const el = document.getElementById("clickCounter");
                 if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
@@ -1932,6 +2044,36 @@
         const view = document.getElementById("mainView");
         const egg  = state.eggState;
         const sparkClass = egg?.isShiny ? "spark shiny-spark" : egg?.isSpecial ? "spark special-spark" : "spark";
+
+        // ── Hatch burst animation ──
+        if (_hatchAnimPlaying && egg) {
+          const eggSrc      = egg.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE;
+          const specialClass = egg.isShiny ? " shiny" : egg.isSpecial ? " special" : "";
+          view.innerHTML = `
+            <div class="field">
+              <div class="cloud"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+              <div class="battle-stage">
+                <div class="grass-platform"></div>
+                <div class="sparkles">
+                  <div class="${sparkClass} s1"></div><div class="${sparkClass} s2"></div>
+                  <div class="${sparkClass} s3"></div><div class="${sparkClass} s4"></div>
+                  <div class="${sparkClass} s5"></div>
+                </div>
+                <button class="egg-button${specialClass} hatching-burst" disabled>
+                  <div class="egg-glow"></div>
+                  <img class="egg-image" src="${eggSrc}" alt="Egg hatching" draggable="false" />
+                </button>
+                <div class="hatch-flash-overlay"></div>
+              </div>
+              <div class="dialog-wrap">
+                <div class="dialog">
+                  <div class="dialog-text">The Egg is hatching!</div>
+                  <div class="dialog-sub">Something is emerging…</div>
+                </div>
+              </div>
+            </div>`;
+          return;
+        }
 
         if (!egg || egg.status === 'hatching') {
           const progress = (egg?.currentSteps ?? 0) / (egg?.targetSteps ?? 1);
@@ -2368,6 +2510,16 @@
             setTimeout(showTrainerModal, 600);
           }
 
+          // Mute button
+          const muteBtn = document.getElementById("muteBtn");
+          if (muteBtn) {
+            muteBtn.textContent = _soundMuted ? "🔇" : "🔊";
+            muteBtn.addEventListener("click", toggleMute);
+          }
+
+          // Online trainers presence
+          initPresence();
+
           // Ho-Oh Easter egg scheduler (desktop only)
           startHoOhScheduler();
 
@@ -2440,7 +2592,11 @@
               // During active stepping the status stays 'hatching' — just update the counter
               // text so we don't rebuild the DOM and disrupt rapid taps.
               if (data.status !== prevStatus) {
-                render();
+                if (data.status === 'hatched' && prevStatus === 'hatching') {
+                  _playHatchSequence();
+                } else {
+                  render();
+                }
               } else if (data.status === 'hatching') {
                 const el = document.getElementById("clickCounter");
                 if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
