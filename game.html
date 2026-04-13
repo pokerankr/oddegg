@@ -558,27 +558,47 @@
         box-shadow: 0 22px 50px rgba(25,35,60,0.32);
       }
       .full-dex-top {
-        padding: 18px; border-bottom: 5px solid var(--screen-border);
+        padding: 16px 20px; border-bottom: 5px solid var(--screen-border);
         background: linear-gradient(180deg, #ff8c88 0%, #f15b55 100%);
-        display: flex; justify-content: space-between; gap: 12px; align-items: center;
-        flex-wrap: wrap;
+        display: flex; align-items: center; gap: 16px;
       }
-      .full-dex-title { color: white; font-size: 28px; font-weight: 900; line-height: 1; }
-      .full-dex-sub { margin-top: 6px; color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; }
-      .full-dex-top-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-      .close-dex-btn { background: linear-gradient(180deg, #ffffff 0%, #dce8f7 100%); color: var(--ink); box-shadow: 0 8px 0 #8da4bf; }
-      .dex-view-toggle { display: flex; gap: 0; border-radius: 10px; overflow: hidden; border: 3px solid rgba(255,255,255,0.5); }
-      .dex-toggle-btn { background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.85); border: none; padding: 6px 14px; font-size: 13px; font-weight: 900; font-family: inherit; cursor: pointer; transition: background 0.15s; }
-      .dex-toggle-btn.active { background: rgba(255,255,255,0.9); color: var(--ink); }
-      .dex-toggle-btn:hover:not(.active) { background: rgba(255,255,255,0.32); }
+      .full-dex-title { color: white; font-size: 22px; font-weight: 900; line-height: 1; white-space: nowrap; }
+      .full-dex-sub { margin-top: 4px; color: rgba(255,255,255,0.82); font-size: 11px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; white-space: nowrap; }
+      .full-dex-top-right { display: flex; gap: 10px; align-items: center; margin-left: auto; flex-shrink: 0; }
+      .close-dex-btn { background: linear-gradient(180deg, #ffffff 0%, #dce8f7 100%); color: var(--ink); box-shadow: 0 6px 0 #8da4bf; white-space: nowrap; flex-shrink: 0; }
+      .dex-view-toggle {
+        position: relative; display: inline-flex; flex-shrink: 0;
+        background: rgba(0,0,0,0.22); border-radius: 28px;
+        border: 3px solid rgba(255,255,255,0.35); padding: 4px;
+        cursor: pointer; user-select: none;
+      }
+      .dex-toggle-slider {
+        position: absolute; top: 4px; bottom: 4px; left: 4px;
+        width: calc(50% - 4px);
+        background: white; border-radius: 22px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        pointer-events: none;
+      }
+      .dex-view-toggle.is-shiny .dex-toggle-slider { transform: translateX(100%); }
+      .dex-toggle-opt {
+        position: relative; z-index: 1; flex: 1;
+        padding: 7px 18px; text-align: center;
+        font-size: 13px; font-weight: 900; font-family: inherit;
+        color: rgba(255,255,255,0.65); white-space: nowrap;
+        transition: color 0.22s; border: none; background: none; cursor: pointer;
+      }
+      .dex-view-toggle:not(.is-shiny) .dex-toggle-opt:first-of-type,
+      .dex-view-toggle.is-shiny .dex-toggle-opt:last-of-type { color: var(--ink); }
       .full-dex-body { padding: 18px; }
       .full-dex-search {
-        width: 100%; margin-bottom: 16px;
-        border: 4px solid var(--screen-border); border-radius: 16px;
-        padding: 12px 16px; font-size: 15px; font-weight: 700;
-        color: var(--ink); background: white; font-family: inherit;
+        flex: 1 1 180px; min-width: 120px; max-width: 340px;
+        border: 3px solid rgba(255,255,255,0.6); border-radius: 12px;
+        padding: 9px 14px; font-size: 15px; font-weight: 700;
+        color: var(--ink); background: rgba(255,255,255,0.95); font-family: inherit;
       }
-      .full-dex-search:focus { outline: none; border-color: var(--accent-2); }
+      .full-dex-search:focus { outline: none; border-color: white; background: white; }
+      .full-dex-search::placeholder { color: #999; }
       .dex-pagination {
         display: flex; align-items: center; justify-content: center;
         gap: 10px; margin-top: 16px; flex-wrap: wrap;
@@ -2346,15 +2366,14 @@
         overlay.innerHTML = `
           <div class="full-dex-shell">
             <div class="full-dex-top">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <div>
-                  <div class="full-dex-title">${isShiny ? "✨ Shiny Dex" : "Living Dex"}</div>
-                  <div class="full-dex-sub">${ALL_DEX_SLOTS.filter(s => unlockMap[s]).length} / ${ALL_DEX_SLOTS.length} caught</div>
-                </div>
-                <div class="dex-view-toggle">
-                  <button class="dex-toggle-btn${!isShiny ? ' active' : ''}" id="toggleBase">Base</button>
-                  <button class="dex-toggle-btn${isShiny ? ' active' : ''}" id="toggleShiny">✨ Shiny</button>
-                </div>
+              <div style="flex-shrink:0;">
+                <div class="full-dex-title">${isShiny ? "✨ Shiny Dex" : "Living Dex"}</div>
+                <div class="full-dex-sub">${ALL_DEX_SLOTS.filter(s => unlockMap[s]).length} / ${ALL_DEX_SLOTS.length} caught</div>
+              </div>
+              <div class="dex-view-toggle${isShiny ? ' is-shiny' : ''}" id="dexViewToggle">
+                <div class="dex-toggle-slider"></div>
+                <button class="dex-toggle-opt" id="toggleBase">Base</button>
+                <button class="dex-toggle-opt" id="toggleShiny">✨ Shiny</button>
               </div>
               <div class="full-dex-top-right">
                 <input class="full-dex-search" id="dexSearch" placeholder="Search Pokémon…" />
@@ -2380,6 +2399,11 @@
         overlay.addEventListener("click", e => { if (e.target === overlay) closeFullDex(); });
         document.getElementById("toggleBase").addEventListener("click",  () => setDexView("normal"));
         document.getElementById("toggleShiny").addEventListener("click", () => setDexView("shiny"));
+        document.getElementById("dexViewToggle").addEventListener("click", e => {
+          if (!e.target.classList.contains("dex-toggle-opt")) {
+            setDexView(isShiny ? "normal" : "shiny"); // clicking the pill itself toggles
+          }
+        });
 
         document.getElementById("dexPrevBtn").addEventListener("click", () => { fullDexPage--; renderFullDexOverlay(); });
         document.getElementById("dexNextBtn").addEventListener("click", () => { fullDexPage++; renderFullDexOverlay(); });
