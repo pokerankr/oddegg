@@ -925,7 +925,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.6.3</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.6.5</span>
             </div>
           </div>
           <div id="mainView">
@@ -1003,7 +1003,7 @@
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // ─── Config ──────────────────────────────────────────────────────────────
-      const MAX_STEPS   = 100;
+      const MAX_STEPS   = 10;
       const SHINY_ODDS  = 2;
       const STORAGE_KEY = "oddegg-v1";
       const EGG_IMAGE   = "https://www.pngkey.com/png/full/30-307419_image-egg-standard-k-pokemon-egg-clipart.png";
@@ -1621,6 +1621,7 @@
             state.eggState.currentSteps += bonus;
             const counterEl = document.getElementById("clickCounter");
             if (counterEl) counterEl.textContent = fmt(state.eggState.currentSteps) + " steps";
+            _updateEggDialogue();
           }
           showHoohToast(bonus);
           hooh.style.transition = "none";
@@ -1723,6 +1724,37 @@
         }
       }
 
+      // Updates the dialogue text in-place based on current step progress — called without a full render
+      function _updateEggDialogue() {
+        const egg = state.eggState;
+        if (!egg || egg.status !== 'hatching') return;
+        const txtEl = document.getElementById("eggDialogText");
+        const subEl = document.getElementById("eggDialogSub");
+        if (!txtEl || !subEl) return;
+        const progress = egg.currentSteps / (egg.targetSteps || 1);
+        const hint1At  = egg.hint1At ?? 0.15;
+        const hint2At  = egg.hint2At ?? 0.45;
+        let txt, sub;
+        if (egg.currentSteps === 0) {
+          txt = egg.isSpecial ? "A mysterious golden egg is waiting…" : "An Odd Egg is waiting.";
+          sub = egg.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
+        } else if (progress < hint1At) {
+          txt = "It looks as though this Egg will take a long time yet to hatch.";
+          sub = egg.isSpecial ? "Whatever is inside, it pulses with strange energy." : "Keep stepping — every step counts.";
+        } else if (progress < hint2At) {
+          txt = "What Pokémon will hatch from this Egg? It doesn't seem close to hatching.";
+          sub = "It's warming up… but it still has a ways to go.";
+        } else if (progress < 0.75) {
+          txt = "It appears to move occasionally. It may be close to hatching.";
+          sub = "Keep going — something is stirring inside.";
+        } else {
+          txt = "Sounds can be heard coming from inside! This Egg will hatch soon!";
+          sub = "Just a few more steps…";
+        }
+        if (txtEl.textContent !== txt) txtEl.textContent = txt;
+        if (subEl.textContent !== sub) subEl.textContent = sub;
+      }
+
       // Flushes pending egg steps to Supabase — called on a fast timer
       function _flushEggSteps() {
         if (_pendingEggSteps === 0) return;
@@ -1748,6 +1780,7 @@
               } else {
                 const el = document.getElementById("clickCounter");
                 if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
+                _updateEggDialogue();
               }
             }
           }
@@ -1854,6 +1887,7 @@
         document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
         const counterEl = document.getElementById("clickCounter");
         if (counterEl) counterEl.textContent = fmt(egg.currentSteps) + " steps";
+        _updateEggDialogue();
         // Hatch is detected server-side via increment_egg_steps and broadcast via realtime
       }
 
@@ -2105,14 +2139,12 @@
                 <div class="dialog">
                   <div class="dialog-top">
                     <div>
-                      <div class="dialog-text">${eggTypeHint}</div>
-                      <div class="dialog-sub">${subText}</div>
+                      <div class="dialog-text" id="eggDialogText">${eggTypeHint}</div>
+                      <div class="dialog-sub" id="eggDialogSub">${subText}</div>
                     </div>
                   </div>
                   <div class="controls">
                     <button class="${stepBtnClass}" id="stepBtn">Take a Step</button>
-                    <button class="dev-btn" id="devSkipBtn" title="Dev: skip to last step">⚡ Skip</button>
-                    <button class="dev-btn${devEggSlug ? ' active' : ''}" id="devModeBtn" title="Dev: lock egg pool to one species" style="${devEggSlug ? 'background:linear-gradient(180deg,#ffe0a0 0%,#ffc060 100%);color:#5f3a00;box-shadow:0 8px 0 #b07000;' : ''}">${devEggSlug ? `🔒 ${devEggSlug.charAt(0).toUpperCase()+devEggSlug.slice(1)} Only` : '🔓 All Gens'}</button>
                     <button class="dev-btn" id="devDittoBtn" title="Dev: force every egg to be Ditto" style="${devDittoMode ? 'background:linear-gradient(180deg,#ede0ff 0%,#c8a0f0 100%);color:#3d1a6e;box-shadow:0 8px 0 #7c3aed;' : ''}">🔮 Ditto${devDittoMode ? " ON" : ""}</button>
                   </div>
                   ${egg?.error ? `<div class="error">${egg.error}</div>` : ""}
@@ -2123,8 +2155,6 @@
 
           document.getElementById("stepBtn").addEventListener("click", handleTakeStep);
           document.getElementById("eggTapBtn").addEventListener("click", handleTakeStep);
-          document.getElementById("devSkipBtn").addEventListener("click", handleDevSkip);
-          document.getElementById("devModeBtn").addEventListener("click", toggleDevMode);
           document.getElementById("devDittoBtn").addEventListener("click", toggleDittoMode);
           return;
         }
@@ -2613,6 +2643,7 @@
               } else if (data.status === 'hatching') {
                 const el = document.getElementById("clickCounter");
                 if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
+                _updateEggDialogue();
               }
             }
           )
