@@ -945,7 +945,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.6.5</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.0</span>
             </div>
           </div>
           <div id="mainView">
@@ -1090,7 +1090,6 @@
       let _autoclickerCooldown = false;
       const SESSION_ID      = crypto.randomUUID(); // per-tab claim identity
       let _pendingEggSteps  = 0;                   // egg steps queued for Supabase flush
-      let _isClaimer        = false;               // true if this tab won the claim race
       let _autoClaimTimer     = null;              // fires if egg goes unclaimed for 10s
       let _autoClaimTick      = null;              // 1s interval driving the countdown display
       let _autoClaimRemaining = 0;                 // seconds left on the countdown
@@ -1413,19 +1412,10 @@
         _autoClaimRemaining = 0;
       }
 
-      function _startAutoClaimTimer(seconds = 10) {
+      function _startAutoClaimTimer(seconds = 3) {
         _clearAutoClaimTimer();
         const ms = Math.max(0, seconds * 1000);
         if (ms <= 0) { _autoClaimExpired(); return; }
-        _autoClaimRemaining = Math.ceil(seconds);
-        _autoClaimTick = setInterval(() => {
-          _autoClaimRemaining = Math.max(0, _autoClaimRemaining - 1);
-          const el = document.getElementById("autoClaimCountdown");
-          if (el) el.textContent = _autoClaimRemaining > 0
-            ? `Auto-claiming in ${_autoClaimRemaining}s…`
-            : "Auto-claiming…";
-          if (_autoClaimRemaining <= 0) _clearAutoClaimTimer();
-        }, 1000);
         _autoClaimTimer = setTimeout(_autoClaimExpired, ms);
       }
 
@@ -1439,7 +1429,6 @@
           if (eggRow) { _applyEggRow(eggRow); render(); }
           return;
         }
-        _isClaimer = true;
         try {
           const pokemon = state.eggState.pokemon;
           if (!pokemon) throw new Error("pokemon missing");
@@ -1453,7 +1442,6 @@
           await handleClaimHatch(generateNPCTrainerName());
         } catch (e) {
           console.error("[OddEgg] Auto-claim failed:", e);
-          _isClaimer = false;
           // Reset the egg so the next client can try
           await generateAndSaveEgg();
           render();
@@ -1465,9 +1453,9 @@
       // pokemon to the dex (generateAndSaveEgg would skip that step)
       function _startStuckClaimTimer() {
         if (_stuckClaimTimer) return;
-        _stuckClaimTimer = setTimeout(async () => {
+        _stuckClaimTimer = setTimeout(async () => { // 8s recovery window
           _stuckClaimTimer = null;
-          if (state.eggState?.status !== 'claiming' || _isClaimer) return;
+          if (state.eggState?.status !== 'claiming') return;
           // Reset to 'hatched' — only if still claiming (WHERE clause prevents double-update)
           await db.from("egg_state")
             .update({ status: 'hatched' })
@@ -1477,7 +1465,7 @@
           // and restarts the auto-claim timer
           const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
           if (eggRow) { _applyEggRow(eggRow); render(); }
-        }, 12000);
+        }, 8000);
       }
 
       function _clearStuckClaimTimer() {
@@ -1705,16 +1693,13 @@
         // Manage timers based on status transitions
         if (row.status === 'hatched') {
           _clearStuckClaimTimer();
-          if (!_isClaimer && !_autoClaimTimer) {
-            // Always compute remaining time from server hatched_at so refreshes
-            // don't reset the countdown — the clock is authoritative
-            const hatchedAt = row.hatched_at ? new Date(row.hatched_at).getTime() : Date.now();
-            const remaining = Math.max(0, 10 - (Date.now() - hatchedAt) / 1000);
-            _startAutoClaimTimer(remaining);
+          if (!_autoClaimTimer) {
+            // Fallback timer — fires only if the claiming client crashes before completing
+            _startAutoClaimTimer(3);
           }
         } else if (row.status === 'claiming' && prevStatus !== 'claiming') {
           _clearAutoClaimTimer();
-          if (!_isClaimer) _startStuckClaimTimer(); // safety net if claimer disappears
+          _startStuckClaimTimer(); // safety net if claimer disappears
         } else if (row.status === 'hatching') {
           _clearAutoClaimTimer();
           _clearStuckClaimTimer();
@@ -1724,7 +1709,6 @@
       // Generates egg params locally, saves to Supabase, and updates local state
       async function generateAndSaveEgg() {
         const fresh = buildFreshEgg();
-        _isClaimer  = false;
         state.eggState = { ...fresh, status: 'hatching' };
         if (!fresh.targetSlug) return; // EGG_POOL not ready yet
         try {
@@ -1784,7 +1768,7 @@
         }
         const steps = _pendingEggSteps;
         _pendingEggSteps = 0;
-        db.rpc("increment_egg_steps", { amount: steps }).then(({ data, error }) => {
+        db.rpc("increment_egg_steps", { amount: steps }).then(async ({ data, error }) => {
           if (error) {
             console.error("[OddEgg] Egg step flush failed:", error);
             _pendingEggSteps += steps;
@@ -1797,6 +1781,24 @@
               _applyEggRow(row);
               if (wasHatching && state.eggState.status !== 'hatching') {
                 _playHatchSequence(); // egg just hatched — play burst then reveal
+                // Auto-claim as the player whose step caused this hatch
+                const { data: won } = await db.rpc("try_claim_egg");
+                if (won) {
+                  _clearAutoClaimTimer();
+                  const pokemon = state.eggState.pokemon;
+                  const trainerName = state.trainerName || generateNPCTrainerName();
+                  // 2nd+ Ditto: pick random morph automatically
+                  const alreadyHaveDitto = Boolean(pokemon?.isShiny
+                    ? state.unlockedShinyDex["ditto"]
+                    : state.unlockedDex["ditto"]);
+                  if (pokemon?.slug === "ditto" && alreadyHaveDitto) {
+                    const unlockMap = getUnlockMap(pokemon.isShiny);
+                    const available = EGG_POOL.filter(s => !unlockMap[s]);
+                    dittoChosenSlug = available.length > 0 ? randomFrom(available) : randomFrom(EGG_POOL);
+                  }
+                  await handleClaimHatch(trainerName);
+                }
+                // If !won: another client won the tie — their realtime push moves us forward
               } else {
                 const el = document.getElementById("clickCounter");
                 if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
@@ -2051,31 +2053,7 @@
       function openShinyDex() { state.activeDexView = 'shiny';  state.fullDexOpen = true; fullDexPage = 0; renderFullDexOverlay(); }
       function closeFullDex() { state.fullDexOpen = false; renderFullDexOverlay(); }
 
-      // Called when any player taps "Claim It!" — first one wins the race
-      async function handleAttemptClaim() {
-        _clearAutoClaimTimer();
-        const btn = document.getElementById("claimBtn");
-        if (btn) btn.disabled = true;
-        const { data: won, error } = await db.rpc("try_claim_egg");
-        if (error || !won) {
-          _isClaimer = false;
-          render();
-          return;
-        }
-        _isClaimer = true;
-        // Optimistically mark as claiming so render shows the correct UI (morph picker / claiming state)
-        // before the realtime event arrives — prevents the Claim button from re-enabling itself
-        state.eggState = { ...state.eggState, status: 'claiming' };
-        const pokemon = state.eggState.pokemon;
-        const alreadyHaveDitto = Boolean(pokemon?.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
-        if (pokemon?.slug === "ditto" && alreadyHaveDitto) {
-          render(); // show morph picker
-        } else {
-          await handleClaimHatch(); // instant — no name form needed
-        }
-      }
-
-      // ─── Render: Main View ───────────────────────────────────────────────────
+// ─── Render: Main View ───────────────────────────────────────────────────
       function renderMainView() {
         const view = document.getElementById("mainView");
         const egg  = state.eggState;
@@ -2188,98 +2166,16 @@
         const orbClass = pokemon.isShiny ? "reveal-orb shiny-orb" : pokemon.isSpecial ? "reveal-orb special-orb" : "reveal-orb";
         const alreadyHaveDitto = Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
 
-        // ── Ditto morph picker — claimer only, 2nd+ ditto ─────────────────────
-        if (pokemon.slug === "ditto" && alreadyHaveDitto && egg.status === 'claiming' && _isClaimer) {
-          dittoChosenSlug = null;
-          const isShiny   = pokemon.isShiny;
-          const unlockMap = getUnlockMap(isShiny);
-          const allSlots  = EGG_POOL.slice().sort((a, b) => POKEMON_DATA[a].id - POKEMON_DATA[b].id);
-          const gridHTML  = allSlots.map(slug => {
-            const d      = POKEMON_DATA[slug];
-            const caught = Boolean(unlockMap[slug]);
-            return `<div class="ditto-tile${caught ? " ditto-tile-caught" : ""}" data-slug="${slug}" title="${d.name}">
-              <img src="${isShiny ? d.shinyImage : d.image}" alt="${d.name}" />
-              <div class="ditto-tile-name">${d.name}</div>
-              ${caught ? `<div class="ditto-tile-tag">Caught</div>` : ""}
-            </div>`;
-          }).join("");
-
-          view.innerHTML = `
-            <div class="field">
-              <div class="cloud"></div><div class="cloud c2"></div><div class="cloud c3"></div>
-              <div class="reveal-stage">
-                <div class="${orbClass}"></div>
-                <img class="pokemon-art" src="${pokemon.image}" alt="Ditto" />
-              </div>
-              <div class="dialog-wrap">
-                <div class="dialog">
-                  <div class="dialog-text">A wild Ditto appeared! Choose a Pokémon for it to transform into.</div>
-                  <div class="dialog-sub" style="margin-top:6px;">Any Pokémon you pick will be added to your Living Dex.</div>
-                  <input class="ditto-search" id="dittoSearch" placeholder="Search Pokémon…" autocomplete="off" />
-                  <div class="ditto-grid" id="dittoGrid">${gridHTML}</div>
-                  <div class="ditto-selection" id="dittoSelection" style="display:none;">
-                    <img id="dittoSelImg" /><span id="dittoSelName"></span>
-                  </div>
-                  <div class="controls" style="margin-top:12px;">
-                    <button class="success-btn" id="dittoConfirmBtn" disabled>Transform!</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `;
-
-          document.getElementById("dittoGrid").addEventListener("click", e => {
-            const tile = e.target.closest(".ditto-tile");
-            if (!tile) return;
-            dittoChosenSlug = tile.dataset.slug;
-            document.querySelectorAll(".ditto-tile").forEach(t => t.classList.remove("ditto-tile-selected"));
-            tile.classList.add("ditto-tile-selected");
-            const d = POKEMON_DATA[dittoChosenSlug];
-            document.getElementById("dittoSelImg").src = pokemon.isShiny ? d.shinyImage : d.image;
-            document.getElementById("dittoSelName").textContent = d.name;
-            document.getElementById("dittoSelection").style.display = "flex";
-            document.getElementById("dittoConfirmBtn").disabled = false;
-          });
-          document.getElementById("dittoSearch").addEventListener("input", e => {
-            const q = e.target.value.toLowerCase().trim();
-            document.querySelectorAll(".ditto-tile").forEach(tile => {
-              tile.style.display = (!q || POKEMON_DATA[tile.dataset.slug].name.toLowerCase().includes(q)) ? "" : "none";
-            });
-          });
-          document.getElementById("dittoConfirmBtn").addEventListener("click", () => handleClaimHatch());
-          return;
-        }
-
-        // ── Build claim box HTML based on status / who claimed ─────────────────
+        // ── Build reveal — claiming is handled automatically, show brief status ──
         const lineComplete = hasLivingDexComplete(pokemon.line, pokemon.isShiny);
         const kicker       = pokemon.isSpecial
           ? (pData?.isLegendary ? "Legendary Discovery!" : "Mythical Discovery!")
           : (pokemon.slug === "ditto" ? "Transform!" : "Discovery!");
 
-        let claimBoxHTML;
-        if (egg.status === 'hatched') {
-          // Anyone can grab it
-          claimBoxHTML = `
-                <div class="claim-box" style="text-align:center;">
-                  <div class="dialog-sub" style="margin-bottom:14px;">Who wants this Pokémon? Tap to claim!</div>
-                  <div class="controls" style="justify-content:center;">
-                    <button class="success-btn" id="claimBtn" style="font-size:19px;padding:16px 32px;">✋ Claim It!</button>
-                  </div>
-                  <div id="autoClaimCountdown" style="margin-top:10px;font-size:13px;color:var(--slate);">Auto-claiming in ${_autoClaimRemaining || 10}s…</div>
-                </div>`;
-        } else if (egg.status === 'claiming' && _isClaimer) {
-          // This player won — processing instantly
-          claimBoxHTML = `
-                <div class="claim-box" style="text-align:center;">
-                  <div class="dialog-sub" style="padding:12px 0;">⏳ Claiming as ${state.trainerName || "Anonymous Trainer"}…</div>
-                </div>`;
-        } else {
-          // Someone else claimed it
-          claimBoxHTML = `
-                <div class="claim-box" style="text-align:center;">
-                  <div class="dialog-sub" style="padding:12px 0;">⏳ Another trainer is claiming this egg…</div>
-                </div>`;
-        }
+        const claimBoxHTML = `
+              <div class="claim-box" style="text-align:center;">
+                <div class="dialog-sub" style="padding:12px 0;">⏳ Another trainer is claiming this egg…</div>
+              </div>`;
 
         view.innerHTML = `
           <div class="field">
@@ -2306,10 +2202,6 @@
             </div>
           </div>
         `;
-
-        if (egg.status === 'hatched') {
-          document.getElementById("claimBtn").addEventListener("click", handleAttemptClaim);
-        }
       }
 
       // ─── Render: Dex panel ───────────────────────────────────────────────────
@@ -2652,10 +2544,6 @@
               if (!data) return;
               const prevStatus = state.eggState?.status;
               _applyEggRow(data);
-              // If a new egg just started, reset our claim flag
-              if (prevStatus === 'claiming' && data.status === 'hatching') {
-                _isClaimer = false;
-              }
               // Only do a full re-render when the egg status changes (hatch, claim, new egg).
               // During active stepping the status stays 'hatching' — just update the counter
               // text so we don't rebuild the DOM and disrupt rapid taps.
@@ -2679,7 +2567,6 @@
             if (!eggRow) return;
             const prevStatus = state.eggState?.status;
             _applyEggRow(eggRow);
-            if (prevStatus === 'claiming' && eggRow.status === 'hatching') _isClaimer = false;
             // On reconnect, skip the hatch animation even if we missed the hatch event —
             // the egg may already be claimed elsewhere and showing the animation would be
             // misleading. Just render the current state directly.
