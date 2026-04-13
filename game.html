@@ -609,6 +609,10 @@
       .full-dex-sub { margin-top: 6px; color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; }
       .full-dex-top-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
       .close-dex-btn { background: linear-gradient(180deg, #ffffff 0%, #dce8f7 100%); color: var(--ink); box-shadow: 0 8px 0 #8da4bf; }
+      .dex-view-toggle { display: flex; gap: 0; border-radius: 10px; overflow: hidden; border: 3px solid rgba(255,255,255,0.5); }
+      .dex-toggle-btn { background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.85); border: none; padding: 6px 14px; font-size: 13px; font-weight: 900; font-family: inherit; cursor: pointer; transition: background 0.15s; }
+      .dex-toggle-btn.active { background: rgba(255,255,255,0.9); color: var(--ink); }
+      .dex-toggle-btn:hover:not(.active) { background: rgba(255,255,255,0.32); }
       .full-dex-body { padding: 18px; }
       .full-dex-search {
         width: 100%; margin-bottom: 16px;
@@ -1013,8 +1017,7 @@
             <div class="dex-screen">
               <div class="dex-meta">
                 <div class="dex-controls">
-                  <button class="full-dex-btn" id="baseDexBtn">Open Base Dex</button>
-                  <button class="full-dex-btn shiny-dex-btn" id="shinyDexFullBtn">✨ Open Shiny Dex</button>
+                  <button class="full-dex-btn" id="baseDexBtn">Open Pokédex</button>
                   <button class="clear-btn" id="clearDexBtn">Clear Dex</button>
                 </div>
                 <div class="recent-title">Recently Found</div>
@@ -2360,9 +2363,15 @@
         overlay.innerHTML = `
           <div class="full-dex-shell">
             <div class="full-dex-top">
-              <div>
-                <div class="full-dex-title">${isShiny ? "Full Shiny Dex" : "Full Living Dex"}</div>
-                <div class="full-dex-sub">${ALL_DEX_SLOTS.filter(s => unlockMap[s]).length} / ${ALL_DEX_SLOTS.length} caught</div>
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div>
+                  <div class="full-dex-title">${isShiny ? "✨ Shiny Dex" : "Living Dex"}</div>
+                  <div class="full-dex-sub">${ALL_DEX_SLOTS.filter(s => unlockMap[s]).length} / ${ALL_DEX_SLOTS.length} caught</div>
+                </div>
+                <div class="dex-view-toggle">
+                  <button class="dex-toggle-btn${!isShiny ? ' active' : ''}" id="toggleBase">Base</button>
+                  <button class="dex-toggle-btn${isShiny ? ' active' : ''}" id="toggleShiny">✨ Shiny</button>
+                </div>
               </div>
               <div class="full-dex-top-right">
                 <input class="full-dex-search" id="dexSearch" placeholder="Search Pokémon…" />
@@ -2386,6 +2395,8 @@
 
         document.getElementById("closeFullDexBtn").addEventListener("click", closeFullDex);
         overlay.addEventListener("click", e => { if (e.target === overlay) closeFullDex(); });
+        document.getElementById("toggleBase").addEventListener("click",  () => setDexView("normal"));
+        document.getElementById("toggleShiny").addEventListener("click", () => setDexView("shiny"));
 
         document.getElementById("dexPrevBtn").addEventListener("click", () => { fullDexPage--; renderFullDexOverlay(); });
         document.getElementById("dexNextBtn").addEventListener("click", () => { fullDexPage++; renderFullDexOverlay(); });
@@ -2512,8 +2523,7 @@
           setInterval(_flushEggSteps, 500);
 
           // Wire up persistent dex buttons
-          document.getElementById("baseDexBtn").addEventListener("click",      openBaseDex);
-          document.getElementById("shinyDexFullBtn").addEventListener("click", openShinyDex);
+          document.getElementById("baseDexBtn").addEventListener("click", openBaseDex);
           document.getElementById("clearDexBtn").addEventListener("click",     handleResetDex);
 
           // Mobile tab buttons
@@ -2662,9 +2672,10 @@
             const prevStatus = state.eggState?.status;
             _applyEggRow(eggRow);
             if (prevStatus === 'claiming' && eggRow.status === 'hatching') _isClaimer = false;
-            if (eggRow.status === 'hatched' && prevStatus === 'hatching' && !_hatchAnimPlaying) {
-              _playHatchSequence();
-            } else if (eggRow.status !== prevStatus) {
+            // On reconnect, skip the hatch animation even if we missed the hatch event —
+            // the egg may already be claimed elsewhere and showing the animation would be
+            // misleading. Just render the current state directly.
+            if (eggRow.status !== prevStatus) {
               render();
             } else if (eggRow.status === 'hatching') {
               const el = document.getElementById("clickCounter");
