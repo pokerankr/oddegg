@@ -171,6 +171,8 @@
         position: relative; z-index: 3;
         background: transparent; border: 0; padding: 0;
         cursor: pointer; transition: transform 0.15s ease;
+        width: auto !important; display: flex;
+        justify-content: center; align-items: center;
       }
       .egg-button:hover { transform: translateY(-3px) scale(1.01); }
       .egg-button:disabled { opacity: 0.8; cursor: wait; }
@@ -221,7 +223,7 @@
 
       .egg-image {
         position: relative; z-index: 2;
-        width: 200px; max-width: min(235px, 55%);
+        width: min(235px, 42vw); max-width: 235px;
         height: auto; display: block;
         user-select: none; -webkit-user-drag: none;
         image-rendering: auto;
@@ -877,7 +879,7 @@
         .dialog-top { flex-direction: column; }
         .controls { flex-direction: column; }
         button { width: 100%; }
-        .egg-image { width: min(200px, 54vw); max-width: 200px; }
+        .egg-image { width: 180px; max-width: 180px; }
         .full-dex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .dex-screen { min-height: auto; }
         .dex-body { padding: 10px; }
