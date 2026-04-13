@@ -4,6 +4,38 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.6.0] — 2026-04-12
+### Mobile UI + Trainer ID + Ho-Oh + Dex Overhaul
+
+#### Mobile UI Overhaul
+- Tab bar at the bottom on mobile (< 768px): **Egg** tab and **Dex** tab switch between panels
+- Only one panel is visible at a time on phones — no more scrolling through a stacked layout
+
+#### Trainer ID
+- On first visit, a modal asks for your trainer name — stored locally, persists across sessions
+- Your name appears in the topbar; tap it any time to change it
+- All egg claims now use your saved trainer name — no more name form after every hatch
+- Claims are instant: win the race, Pokémon goes to your dex immediately
+
+#### Ho-Oh Easter Egg (desktop only)
+- Ho-Oh flies across the screen at random 2–5 minute intervals
+- Click it while it's flying to earn a 10% step bonus toward the current egg
+- Desktop-only (requires a mouse pointer)
+
+#### Dex Panel Restructure
+- **Recently Found** always shows all activity — shinies and normals combined
+- Replaced the Base/Shiny toggle tabs with two separate buttons: **Open Base Dex** and **✨ Open Shiny Dex**
+- Charm icons moved to the dex header next to "OddEgg Record / Living Dex" — hover for status
+
+#### Profanity Filter
+- Added: peen, genital, genitals, vulva, phallus, dong, schlong, shlong, taint, gooch, fisting, fingering, spunk, labia, clitoris, cockring, and more
+
+#### Restored Normal Odds
+- Steps restored to 1–1,000,000 (were temporarily 1–100 for testing)
+- Shiny odds restored to 1 in 512
+
+---
+
 ## [0.5.0] — 2026-04-12
 ### Shared Egg
 - All players now hatch the **same egg** together — no more separate per-player eggs

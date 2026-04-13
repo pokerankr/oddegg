@@ -535,7 +535,10 @@
       .full-dex-btn {
         background: linear-gradient(180deg, #d8f7ff 0%, #7fd1ff 100%);
         color: #143e66; box-shadow: 0 6px 0 #4686b0;
-        grid-column: 1 / -1;
+      }
+      .full-dex-btn.shiny-dex-btn {
+        background: linear-gradient(180deg, var(--shiny-1) 0%, var(--shiny-2) 100%);
+        color: #5f4500; box-shadow: 0 6px 0 var(--shiny-3);
       }
       .dex-list { display: grid; gap: 10px; max-height: 560px; overflow: auto; padding-right: 4px; }
       .dex-list::-webkit-scrollbar { width: 10px; }
@@ -754,34 +757,149 @@
       .charm-toast-title { font-size: 16px; font-weight: 900; color: var(--ink); }
       .charm-toast-desc  { font-size: 13px; font-weight: 700; color: var(--slate); margin-top: 3px; }
 
+      /* ── Dex top info row (title + charm icons) ── */
+      .dex-top-info {
+        display: flex; justify-content: space-between;
+        align-items: flex-end; gap: 10px;
+      }
+      .dex-charm-row {
+        display: flex; gap: 6px; align-items: center;
+        padding-bottom: 4px;
+      }
+      .dex-charm-icon {
+        position: relative; width: 34px; height: 34px; cursor: help;
+      }
+      .dex-charm-icon img {
+        width: 34px; height: 34px; object-fit: contain;
+        border-radius: 8px; transition: filter 0.3s, opacity 0.3s;
+      }
+      .dex-charm-icon.charm-icon-locked img { filter: grayscale(1); opacity: 0.4; }
+      .dex-charm-icon .charm-tooltip {
+        display: none;
+        position: absolute; bottom: 40px; left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        background: var(--screen-border); color: white;
+        border-radius: 10px; padding: 5px 10px;
+        font-size: 11px; font-weight: 900;
+        pointer-events: none; z-index: 10;
+      }
+      .dex-charm-icon:hover .charm-tooltip { display: block; }
+
+      /* ── Trainer ID modal ── */
+      .trainer-modal-overlay {
+        position: fixed; inset: 0; z-index: 10000;
+        background: rgba(18,28,44,0.82);
+        display: flex; align-items: center; justify-content: center; padding: 24px;
+      }
+      .trainer-modal {
+        background: linear-gradient(180deg, #fffef7 0%, #fff8e8 100%);
+        border: 6px solid var(--screen-border); border-radius: 34px;
+        padding: 32px; max-width: 420px; width: 100%;
+        box-shadow: 0 22px 60px rgba(20,30,60,0.35); text-align: center;
+      }
+      .trainer-modal .t-icon { font-size: 52px; margin-bottom: 14px; }
+      .trainer-modal h2 { margin: 0 0 10px; font-size: 26px; font-weight: 900; }
+      .trainer-modal p { margin: 0 0 20px; font-size: 14px; font-weight: 700; color: var(--slate); line-height: 1.55; }
+      .trainer-modal input {
+        width: 100%; border: 4px solid var(--screen-border); border-radius: 16px;
+        padding: 14px 16px; font-size: 17px; font-weight: 700; color: var(--ink);
+        background: white; font-family: inherit; margin-bottom: 14px;
+      }
+      .trainer-modal input:focus { outline: none; border-color: var(--accent-2); }
+      .trainer-modal-error {
+        color: var(--danger); font-size: 13px; font-weight: 900;
+        margin-bottom: 12px; display: none;
+      }
+      .trainer-chip {
+        cursor: pointer; user-select: none;
+      }
+      .trainer-chip:hover { filter: brightness(0.95); }
+
+      /* ── Mobile tab bar ── */
+      .mobile-tabs {
+        display: none;
+        position: fixed; bottom: 0; left: 0; right: 0;
+        z-index: 500;
+        background: var(--screen); border-top: 4px solid var(--screen-border);
+        height: 64px;
+      }
+      .mobile-tab-btn {
+        flex: 1; border: none; border-radius: 0;
+        background: transparent; color: var(--ink-2);
+        font-size: 11px; font-weight: 900; letter-spacing: 0.08em;
+        text-transform: uppercase; box-shadow: none;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 3px; padding: 8px 0;
+        transition: background 0.15s, color 0.15s;
+      }
+      .mobile-tab-btn .tab-icon { font-size: 24px; line-height: 1; }
+      .mobile-tab-btn.tab-active { color: var(--accent-2); background: rgba(42,117,187,0.1); }
+      .mobile-tab-btn:hover  { transform: none; filter: none; }
+      .mobile-tab-btn:active { transform: none; }
+
+      /* ── Ho-Oh Easter Egg ── */
+      .hooh-fly {
+        position: fixed; z-index: 9998;
+        pointer-events: auto; cursor: pointer;
+        image-rendering: auto; user-select: none;
+        -webkit-user-drag: none;
+        filter: drop-shadow(0 6px 16px rgba(0,0,0,0.45));
+        width: 130px; height: auto;
+      }
+
       /* ── Responsive ── */
       @media (max-width: 1040px) {
         .layout { grid-template-columns: 1fr; }
         .field { min-height: 500px; }
         .full-dex-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       }
+      @media (max-width: 768px) {
+        .mobile-tabs { display: flex; }
+        .page { padding-bottom: 80px; }
+        .screen-shell.mobile-hidden, .dex-shell.mobile-hidden { display: none; }
+      }
       @media (max-width: 760px) {
         .full-dex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
       @media (max-width: 640px) {
-        .page { padding: 14px; }
-        .topbar { padding: 14px; flex-wrap: wrap; }
-        .brand-copy h1 { font-size: 28px; }
-        .field { padding: 18px 14px 0; min-height: 440px; }
+        .page { padding: 14px; padding-bottom: 80px; }
+        .topbar { padding: 12px 14px; flex-wrap: wrap; gap: 10px; }
+        .topbar-right { gap: 8px; }
+        .status-chip { padding: 8px 12px; }
+        .status-chip .value { font-size: 16px; }
+        .brand-copy h1 { font-size: 26px; }
+        .field { padding: 18px 14px 0; min-height: 420px; }
         .dialog-wrap { padding: 0 10px 12px; }
         .dialog { padding: 14px; }
         .dialog-top { flex-direction: column; }
         .controls { flex-direction: column; }
         button { width: 100%; }
-        .egg-image { width: min(210px, 56vw); max-width: 210px; }
+        .egg-image { width: min(200px, 54vw); max-width: 200px; }
         .full-dex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .dex-screen { min-height: auto; }
+        .dex-body { padding: 10px; }
       }
     </style>
   </head>
   <body>
+    <!-- Trainer ID modal -->
+    <div id="trainerModal" class="trainer-modal-overlay" style="display:none;">
+      <div class="trainer-modal">
+        <div class="t-icon">🎮</div>
+        <h2>Welcome, Trainer!</h2>
+        <p>Enter your trainer name. It will be used whenever you claim a hatched Pokémon — no need to type it every time.</p>
+        <input id="trainerNameInput" placeholder="Your trainer name" maxlength="20" autocomplete="off" />
+        <div class="trainer-modal-error" id="trainerModalError"></div>
+        <button class="success-btn" id="trainerNameConfirm" style="width:100%;">Start Adventure!</button>
+        <button class="util-btn" id="trainerNameSkip" style="width:100%;margin-top:10px;font-size:13px;">Play as Anonymous</button>
+      </div>
+    </div>
+
     <div class="page">
       <div class="layout">
-        <section class="screen-shell">
+        <section class="screen-shell" id="eggPanel">
           <div class="topbar">
             <div class="brand">
               <div class="brand-badge"></div>
@@ -791,6 +909,10 @@
               </div>
             </div>
             <div class="topbar-right">
+              <div class="status-chip trainer-chip" id="trainerChip" title="Change trainer name">
+                <span class="label">Trainer</span>
+                <span class="value" id="trainerNameDisplay">—</span>
+              </div>
               <div class="status-chip" id="stepCountChip">
                 <span class="label">Total Steps</span>
                 <span class="value" id="globalClickCount">0</span>
@@ -809,7 +931,7 @@
           </div>
         </section>
 
-        <aside class="dex-shell">
+        <aside class="dex-shell" id="dexPanel">
           <div class="dex-top">
             <div class="dex-lights">
               <div class="light-big"></div>
@@ -817,47 +939,53 @@
               <div class="light-small yellow"></div>
               <div class="light-small green"></div>
             </div>
-            <div class="dex-title">OddEgg Record</div>
-            <div class="dex-subtitle" id="dexPanelTitle">Living Dex</div>
-          </div>
-          <div class="dex-body">
-            <div class="charm-bar" id="charmBar">
-              <div class="charm-item" id="ovalCharmItem">
-                <img src="ovalcharm.png" class="charm-img" alt="Oval Charm" />
-                <div class="charm-info">
-                  <div class="charm-name">Oval Charm</div>
-                  <div class="charm-desc" id="ovalCharmDesc">Catch 100 Pokémon to unlock</div>
-                </div>
+            <div class="dex-top-info">
+              <div>
+                <div class="dex-title">OddEgg Record</div>
+                <div class="dex-subtitle">Living Dex</div>
               </div>
-              <div class="charm-item" id="shinyCharmItem">
-                <img src="shinycharm.png" class="charm-img" alt="Shiny Charm" />
-                <div class="charm-info">
-                  <div class="charm-name">Shiny Charm</div>
-                  <div class="charm-desc" id="shinyCharmDesc">Catch 512 Pokémon to unlock</div>
+              <div class="dex-charm-row" id="dexCharmRow">
+                <div class="dex-charm-icon charm-icon-locked" id="dexOvalCharm">
+                  <img src="ovalcharm.png" alt="Oval Charm" />
+                  <div class="charm-tooltip" id="dexOvalTip">Oval Charm: locked</div>
                 </div>
-              </div>
-              <div class="charm-item" id="catchingCharmItem">
-                <img src="catchingcharm.png" class="charm-img" alt="Catching Charm" />
-                <div class="charm-info">
-                  <div class="charm-name">Catching Charm</div>
-                  <div class="charm-desc" id="catchingCharmDesc">Find your first Ditto to unlock</div>
+                <div class="dex-charm-icon charm-icon-locked" id="dexShinyCharm">
+                  <img src="shinycharm.png" alt="Shiny Charm" />
+                  <div class="charm-tooltip" id="dexShinyTip">Shiny Charm: locked</div>
+                </div>
+                <div class="dex-charm-icon charm-icon-locked" id="dexCatchingCharm">
+                  <img src="catchingcharm.png" alt="Catching Charm" />
+                  <div class="charm-tooltip" id="dexCatchingTip">Catching Charm: locked</div>
                 </div>
               </div>
             </div>
+          </div>
+          <div class="dex-body">
             <div class="dex-screen">
               <div class="dex-meta">
                 <div class="dex-controls">
-                  <button class="toggle-btn active" id="normalDexBtn">Base Dex</button>
-                  <button class="toggle-btn shiny-toggle" id="shinyDexBtn">✨ Shiny</button>
-                  <button class="full-dex-btn" id="fullDexBtn">Open Full Dex</button>
+                  <button class="full-dex-btn" id="baseDexBtn">Open Base Dex</button>
+                  <button class="full-dex-btn shiny-dex-btn" id="shinyDexFullBtn">✨ Open Shiny Dex</button>
                   <button class="clear-btn" id="clearDexBtn">Clear Dex</button>
                 </div>
-                <div class="recent-title" id="recentTitle">Recently Found</div>
+                <div class="recent-title">Recently Found</div>
               </div>
               <div class="dex-list" id="dexList"></div>
             </div>
           </div>
         </aside>
+      </div>
+
+      <!-- Mobile tab bar -->
+      <div class="mobile-tabs" id="mobileTabs">
+        <button class="mobile-tab-btn tab-active" id="tabEgg">
+          <span class="tab-icon">🥚</span>
+          <span>Egg</span>
+        </button>
+        <button class="mobile-tab-btn" id="tabDex">
+          <span class="tab-icon">📖</span>
+          <span>Dex</span>
+        </button>
       </div>
     </div>
 
@@ -871,8 +999,8 @@
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // ─── Config ──────────────────────────────────────────────────────────────
-      const MAX_STEPS   = 100;
-      const SHINY_ODDS  = 2;
+      const MAX_STEPS   = 1000000;
+      const SHINY_ODDS  = 512;
       const STORAGE_KEY = "oddegg-v1";
       const EGG_IMAGE   = "https://www.pngkey.com/png/full/30-307419_image-egg-standard-k-pokemon-egg-clipart.png";
 
@@ -924,9 +1052,6 @@
       let _autoClaimTick      = null;              // 1s interval driving the countdown display
       let _autoClaimRemaining = 0;                 // seconds left on the countdown
       let _stuckClaimTimer    = null;              // recovery: resets egg if stuck in 'claiming'
-      let _claimerNameTimer   = null;              // auto-submits name form after 10s
-      let _claimerNameTick    = null;              // 1s interval for name-form countdown
-      let _claimerNameRemaining = 0;
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1040,6 +1165,7 @@
         unlockedDex:        {},   // slug → bool
         unlockedShinyDex:   {},
         claimer:            "",
+        trainerName:        "",   // stored in localStorage, used for all claims
         activeDexView:      "normal",
         fullDexOpen:        false,
         globalClicks:       0,
@@ -1269,7 +1395,6 @@
             const available = EGG_POOL.filter(s => !unlockMap[s]);
             dittoChosenSlug = available.length > 0 ? randomFrom(available) : randomFrom(EGG_POOL);
           }
-          // claimerInput won't be in the DOM — handleClaimHatch reads "" → "Anonymous Trainer"
           await handleClaimHatch();
         } catch (e) {
           console.error("[OddEgg] Auto-claim failed:", e);
@@ -1304,29 +1429,131 @@
         if (_stuckClaimTimer) { clearTimeout(_stuckClaimTimer); _stuckClaimTimer = null; }
       }
 
-      function _startClaimerNameTimer() {
-        _clearClaimerNameTimer();
-        _claimerNameRemaining = 10;
-        _claimerNameTick = setInterval(() => {
-          _claimerNameRemaining--;
-          const el = document.getElementById("claimerCountdown");
-          if (el) el.textContent = _claimerNameRemaining > 0
-            ? `Auto-submitting in ${_claimerNameRemaining}s…`
-            : "Submitting…";
-          if (_claimerNameRemaining <= 0) _clearClaimerNameTimer();
-        }, 1000);
-        _claimerNameTimer = setTimeout(async () => {
-          _claimerNameTimer = null;
-          if (state.eggState?.status === 'claiming' && _isClaimer) {
-            await handleClaimHatch();
-          }
-        }, 10000);
+      // ─── Trainer ID modal ────────────────────────────────────────────────────
+      function showTrainerModal() {
+        const modal = document.getElementById("trainerModal");
+        if (modal) {
+          modal.style.display = "flex";
+          const input = document.getElementById("trainerNameInput");
+          if (input) { input.value = state.trainerName || ""; input.focus(); }
+        }
       }
 
-      function _clearClaimerNameTimer() {
-        if (_claimerNameTimer) { clearTimeout(_claimerNameTimer); _claimerNameTimer = null; }
-        if (_claimerNameTick)  { clearInterval(_claimerNameTick);  _claimerNameTick  = null; }
-        _claimerNameRemaining = 0;
+      function closeTrainerModal() {
+        const modal = document.getElementById("trainerModal");
+        if (modal) modal.style.display = "none";
+      }
+
+      function confirmTrainerName() {
+        const input = document.getElementById("trainerNameInput");
+        const name  = (input?.value || "").trim();
+        const errEl = document.getElementById("trainerModalError");
+        if (name && containsProfanity(name)) {
+          if (errEl) { errEl.textContent = "That name isn't allowed. Choose another."; errEl.style.display = "block"; }
+          return;
+        }
+        state.trainerName = name || "Anonymous Trainer";
+        localStorage.setItem("oddegg-trainer-name", state.trainerName);
+        const display = document.getElementById("trainerNameDisplay");
+        if (display) display.textContent = state.trainerName;
+        closeTrainerModal();
+      }
+
+      // ─── Mobile tab switching ─────────────────────────────────────────────────
+      function setMobileTab(tab) {
+        const eggPanel = document.getElementById("eggPanel");
+        const dexPanel = document.getElementById("dexPanel");
+        const tabEgg   = document.getElementById("tabEgg");
+        const tabDex   = document.getElementById("tabDex");
+        if (tab === 'egg') {
+          eggPanel.classList.remove("mobile-hidden");
+          dexPanel.classList.add("mobile-hidden");
+          tabEgg.classList.add("tab-active");
+          tabDex.classList.remove("tab-active");
+        } else {
+          eggPanel.classList.add("mobile-hidden");
+          dexPanel.classList.remove("mobile-hidden");
+          tabDex.classList.add("tab-active");
+          tabEgg.classList.remove("tab-active");
+        }
+      }
+
+      // ─── Ho-Oh Easter Egg ─────────────────────────────────────────────────────
+      function startHoOhScheduler() {
+        if (!window.matchMedia('(pointer:fine)').matches) return; // desktop only
+        const ms = (120 + Math.random() * 180) * 1000; // 2–5 min
+        setTimeout(() => { spawnHoOh(); startHoOhScheduler(); }, ms);
+      }
+
+      function spawnHoOh() {
+        const hooh = document.createElement("img");
+        hooh.src = "./ho oh flying.gif";
+        hooh.className = "hooh-fly";
+        const topPct = 15 + Math.random() * 28; // 15–43% from top
+        const duration = 9 + Math.random() * 5; // 9–14s to cross screen
+        hooh.style.cssText = `
+          position: fixed;
+          top: ${topPct}vh;
+          left: ${window.innerWidth + 20}px;
+          width: 130px; height: auto;
+          z-index: 9998;
+          cursor: pointer;
+          pointer-events: auto;
+          image-rendering: auto;
+          user-select: none;
+          filter: drop-shadow(0 6px 16px rgba(0,0,0,0.45));
+          transform: scaleX(-1);
+          transition: left ${duration}s linear;
+        `;
+        document.body.appendChild(hooh);
+
+        // Force reflow then start flying
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          hooh.style.left = `-200px`;
+        }));
+
+        // Click bonus
+        let caught = false;
+        hooh.addEventListener("click", () => {
+          if (caught) return;
+          caught = true;
+          const bonus = Math.max(1, Math.round((state.eggState?.targetSteps ?? 100) * 0.1));
+          if (state.eggState?.status === 'hatching') {
+            _pendingEggSteps += bonus;
+            state.eggState.currentSteps += bonus;
+            const counterEl = document.getElementById("clickCounter");
+            if (counterEl) counterEl.textContent = fmt(state.eggState.currentSteps) + " steps";
+          }
+          showHoohToast(bonus);
+          hooh.style.transition = "none";
+          hooh.style.opacity = "0";
+          setTimeout(() => hooh.remove(), 400);
+        });
+
+        // Remove after animation completes (+ 1s buffer)
+        setTimeout(() => { if (hooh.parentNode) hooh.remove(); }, (duration + 1) * 1000);
+      }
+
+      function showHoohToast(bonus) {
+        const toast = document.createElement("div");
+        toast.style.cssText = `
+          position: fixed; top: 50%; left: 50%; z-index: 9999;
+          transform: translate(-50%, -50%);
+          background: linear-gradient(180deg, #fff8e8 0%, #ffe5a0 100%);
+          border: 5px solid #c8850a; border-radius: 24px;
+          padding: 20px 32px; text-align: center;
+          font-family: inherit; font-weight: 900; font-size: 20px;
+          color: #5f3a00; box-shadow: 0 20px 50px rgba(20,30,60,0.3);
+          animation: slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1);
+          pointer-events: none;
+        `;
+        toast.innerHTML = `🔥 Ho-Oh flew by!<br><span style="font-size:16px;">+${fmt(bonus)} bonus steps!</span>`;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.style.transition = "opacity 0.4s";
+          toast.style.opacity = "0";
+          setTimeout(() => toast.remove(), 500);
+        }, 2500);
       }
 
       // Maps an egg_state DB row to state.eggState
@@ -1366,7 +1593,6 @@
         } else if (row.status === 'hatching') {
           _clearAutoClaimTimer();
           _clearStuckClaimTimer();
-          _clearClaimerNameTimer();
         }
       }
 
@@ -1424,6 +1650,14 @@
       }
 
       async function loadState() {
+        // Load trainer name from localStorage
+        const savedTrainer = localStorage.getItem("oddegg-trainer-name");
+        if (savedTrainer) {
+          state.trainerName = savedTrainer;
+          const display = document.getElementById("trainerNameDisplay");
+          if (display) display.textContent = savedTrainer;
+        }
+
         // Clean up old combined localStorage key — stale local data should not override shared dex
         if (localStorage.getItem(STORAGE_KEY + "-egg") || localStorage.getItem(STORAGE_KEY + "-ui")) {
           localStorage.removeItem(STORAGE_KEY);
@@ -1540,19 +1774,11 @@
       }
 
       async function handleClaimHatch() {
-        _clearClaimerNameTimer();
         const pokemon = state.eggState.pokemon;
         if (!pokemon) return;
 
-        const rawName = (document.getElementById("claimerInput")?.value || "").trim();
-        if (rawName && containsProfanity(rawName)) {
-          const errEl = document.getElementById("claimError");
-          if (errEl) { errEl.textContent = "That name isn't allowed. Please choose another."; errEl.style.display = "block"; }
-          return;
-        }
-
         const isShiny      = pokemon.isShiny;
-        const discoveredBy = rawName || "Anonymous Trainer";
+        const discoveredBy = state.trainerName || "Anonymous Trainer";
         const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
 
         // ── Ditto morph path (2nd ditto onwards) ──────────────────────────────
@@ -1654,11 +1880,11 @@
       function setDexView(view) {
         state.activeDexView = view;
         saveState();
-        renderDex();
         renderFullDexOverlay();
       }
 
-      function openFullDex()  { state.fullDexOpen = true; fullDexPage = 0; renderFullDexOverlay(); }
+      function openBaseDex()  { state.activeDexView = 'normal'; state.fullDexOpen = true; fullDexPage = 0; renderFullDexOverlay(); }
+      function openShinyDex() { state.activeDexView = 'shiny';  state.fullDexOpen = true; fullDexPage = 0; renderFullDexOverlay(); }
       function closeFullDex() { state.fullDexOpen = false; renderFullDexOverlay(); }
 
       // Called when any player taps "Claim It!" — first one wins the race
@@ -1673,8 +1899,13 @@
           return;
         }
         _isClaimer = true;
-        _startClaimerNameTimer();
-        render();
+        const pokemon = state.eggState.pokemon;
+        const alreadyHaveDitto = Boolean(pokemon?.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
+        if (pokemon?.slug === "ditto" && alreadyHaveDitto) {
+          render(); // show morph picker
+        } else {
+          await handleClaimHatch(); // instant — no name form needed
+        }
       }
 
       // ─── Render: Main View ───────────────────────────────────────────────────
@@ -1796,13 +2027,8 @@
                   <div class="ditto-selection" id="dittoSelection" style="display:none;">
                     <img id="dittoSelImg" /><span id="dittoSelName"></span>
                   </div>
-                  <div class="claim-box" style="margin-top:10px;">
-                    <label>Who triggered the hatch?</label>
-                    <input id="claimerInput" placeholder="Enter your name" value="${state.claimer}" />
-                    <div id="claimError" class="error" style="display:none;margin-top:10px;"></div>
-                    <div class="controls">
-                      <button class="success-btn" id="dittoConfirmBtn" disabled>Transform!</button>
-                    </div>
+                  <div class="controls" style="margin-top:12px;">
+                    <button class="success-btn" id="dittoConfirmBtn" disabled>Transform!</button>
                   </div>
                 </div>
               </div>
@@ -1828,14 +2054,6 @@
             });
           });
           document.getElementById("dittoConfirmBtn").addEventListener("click", handleClaimHatch);
-          const claimerInput = document.getElementById("claimerInput");
-          if (claimerInput) {
-            claimerInput.addEventListener("input", e => {
-              state.claimer = e.target.value; saveState();
-              const errEl = document.getElementById("claimError");
-              if (errEl) errEl.style.display = "none";
-            });
-          }
           return;
         }
 
@@ -1857,24 +2075,10 @@
                   <div id="autoClaimCountdown" style="margin-top:10px;font-size:13px;color:var(--slate);">Auto-claiming in ${_autoClaimRemaining || 10}s…</div>
                 </div>`;
         } else if (egg.status === 'claiming' && _isClaimer) {
-          // This player won — show name form
-          const primaryText = lineComplete
-            ? (pokemon.isShiny ? `Count This Shiny ${pokemon.name}` : `Count This ${pokemon.name}`)
-            : (pokemon.isShiny ? "Add to Shiny Dex" : "Add to Dex");
-          const btnClass = pokemon.isShiny ? "shiny-btn" : "success-btn";
+          // This player won — processing instantly
           claimBoxHTML = `
-                <div class="claim-box">
-                  ${lineComplete
-                    ? `<label>Living Dex Complete</label>
-                       <div class="dialog-sub" style="margin-top:12px;">You already have the full ${pokemon.isShiny ? "shiny " : ""}${pokemon.name} line. This hatch increases the No. found count.</div>`
-                    : `<label>You claimed it! Enter your name:</label>
-                       <input id="claimerInput" placeholder="Enter your name" value="${state.claimer}" />
-                       <div id="claimError" class="error" style="display:none;margin-top:10px;"></div>`
-                  }
-                  <div class="controls">
-                    <button class="${btnClass}" id="addDexBtn">${pokemon.slug === "ditto" ? "Claim Ditto!" : primaryText}</button>
-                  </div>
-                  <div id="claimerCountdown" style="margin-top:8px;font-size:13px;color:var(--slate);">Auto-submitting in ${_claimerNameRemaining || 10}s…</div>
+                <div class="claim-box" style="text-align:center;">
+                  <div class="dialog-sub" style="padding:12px 0;">⏳ Claiming as ${state.trainerName || "Anonymous Trainer"}…</div>
                 </div>`;
         } else {
           // Someone else claimed it
@@ -1912,37 +2116,16 @@
 
         if (egg.status === 'hatched') {
           document.getElementById("claimBtn").addEventListener("click", handleAttemptClaim);
-        } else if (egg.status === 'claiming' && _isClaimer) {
-          document.getElementById("addDexBtn").addEventListener("click", handleClaimHatch);
-          const claimerInput = document.getElementById("claimerInput");
-          if (claimerInput) {
-            claimerInput.addEventListener("input", e => {
-              state.claimer = e.target.value;
-              saveState();
-              const errEl = document.getElementById("claimError");
-              if (errEl) errEl.style.display = "none";
-            });
-          }
         }
       }
 
       // ─── Render: Dex panel ───────────────────────────────────────────────────
       function renderDex() {
-        const isShiny     = state.activeDexView === "shiny";
-        const dexArray    = isShiny ? state.shinyRecentLog : state.recentLog;
-        const foundCounts = getFoundCounts(isShiny);
-
-        document.getElementById("dexPanelTitle").textContent = isShiny ? "Shiny Dex" : "Living Dex";
-        document.getElementById("recentTitle").textContent   = isShiny ? "Recent Shinies" : "Recently Found";
-        document.getElementById("fullDexBtn").textContent    = isShiny ? "Open Full Shiny" : "Open Full Dex";
-        document.getElementById("normalDexBtn").classList.toggle("active", !isShiny);
-        document.getElementById("shinyDexBtn").classList.toggle("active",  isShiny);
-
-        const dexList = document.getElementById("dexList");
+        // Always show combined recent log (shiny + normal together)
+        const dexArray = state.recentLog;
+        const dexList  = document.getElementById("dexList");
         if (!dexArray.length) {
-          dexList.innerHTML = `<div class="empty">${isShiny
-            ? "No shiny hatches yet. The odds are 1 in 512 — keep clicking!"
-            : "No hatches yet. Start stepping to fill the living dex!"}</div>`;
+          dexList.innerHTML = `<div class="empty">No hatches yet. Start stepping to fill the living dex!</div>`;
           return;
         }
 
@@ -2065,38 +2248,34 @@
         }).join("");
       }
 
-      // ─── Render: Charm bar ───────────────────────────────────────────────────
+      // ─── Render: Charm icons (in dex-top header) ────────────────────────────
       function renderCharmBar() {
         const count = getDexCount();
 
-        const ovalItem = document.getElementById("ovalCharmItem");
-        const ovalDesc = document.getElementById("ovalCharmDesc");
-        if (ovalItem && ovalDesc) {
-          ovalItem.classList.toggle("charm-unlocked", state.ovalCharmUnlocked);
-          ovalItem.classList.toggle("charm-locked",  !state.ovalCharmUnlocked);
-          ovalDesc.textContent = state.ovalCharmUnlocked
-            ? "Completed lines hatch less often"
-            : `${count} / 100 caught`;
-        }
+        const ovalIcon   = document.getElementById("dexOvalCharm");
+        const shinyIcon  = document.getElementById("dexShinyCharm");
+        const catchIcon  = document.getElementById("dexCatchingCharm");
+        const ovalTip    = document.getElementById("dexOvalTip");
+        const shinyTip   = document.getElementById("dexShinyTip");
+        const catchTip   = document.getElementById("dexCatchingTip");
 
-        const shinyItem = document.getElementById("shinyCharmItem");
-        const shinyDesc = document.getElementById("shinyCharmDesc");
-        if (shinyItem && shinyDesc) {
-          shinyItem.classList.toggle("charm-unlocked", state.shinyCharmUnlocked);
-          shinyItem.classList.toggle("charm-locked",  !state.shinyCharmUnlocked);
-          shinyDesc.textContent = state.shinyCharmUnlocked
-            ? "Shiny odds: 1 in 128"
-            : `${count} / 512 caught`;
+        if (ovalIcon) {
+          ovalIcon.classList.toggle("charm-icon-locked", !state.ovalCharmUnlocked);
+          if (ovalTip) ovalTip.textContent = state.ovalCharmUnlocked
+            ? "Oval Charm: Completed lines hatch less often"
+            : `Oval Charm: ${count}/100 caught`;
         }
-
-        const catchItem = document.getElementById("catchingCharmItem");
-        const catchDesc = document.getElementById("catchingCharmDesc");
-        if (catchItem && catchDesc) {
-          catchItem.classList.toggle("charm-unlocked", state.catchingCharmUnlocked);
-          catchItem.classList.toggle("charm-locked",  !state.catchingCharmUnlocked);
-          catchDesc.textContent = state.catchingCharmUnlocked
-            ? "Ditto odds: 1 in 256"
-            : "Find your first Ditto to unlock";
+        if (shinyIcon) {
+          shinyIcon.classList.toggle("charm-icon-locked", !state.shinyCharmUnlocked);
+          if (shinyTip) shinyTip.textContent = state.shinyCharmUnlocked
+            ? "Shiny Charm: Shiny odds 1 in 128"
+            : `Shiny Charm: ${count}/512 caught`;
+        }
+        if (catchIcon) {
+          catchIcon.classList.toggle("charm-icon-locked", !state.catchingCharmUnlocked);
+          if (catchTip) catchTip.textContent = state.catchingCharmUnlocked
+            ? "Catching Charm: Ditto odds 1 in 256"
+            : "Catching Charm: Find first Ditto";
         }
       }
 
@@ -2140,11 +2319,38 @@
           // Flush egg steps to Supabase every 500ms — fast enough for responsive hatch detection
           setInterval(_flushEggSteps, 500);
 
-          // Wire up persistent buttons
-          document.getElementById("normalDexBtn").addEventListener("click", () => setDexView("normal"));
-          document.getElementById("shinyDexBtn").addEventListener("click",  () => setDexView("shiny"));
-          document.getElementById("fullDexBtn").addEventListener("click",   openFullDex);
-          document.getElementById("clearDexBtn").addEventListener("click",  handleResetDex);
+          // Wire up persistent dex buttons
+          document.getElementById("baseDexBtn").addEventListener("click",      openBaseDex);
+          document.getElementById("shinyDexFullBtn").addEventListener("click", openShinyDex);
+          document.getElementById("clearDexBtn").addEventListener("click",     handleResetDex);
+
+          // Mobile tab buttons
+          document.getElementById("tabEgg").addEventListener("click", () => setMobileTab("egg"));
+          document.getElementById("tabDex").addEventListener("click", () => setMobileTab("dex"));
+
+          // Trainer chip → re-open modal
+          document.getElementById("trainerChip").addEventListener("click", showTrainerModal);
+
+          // Trainer modal buttons
+          document.getElementById("trainerNameConfirm").addEventListener("click", confirmTrainerName);
+          document.getElementById("trainerNameSkip").addEventListener("click", () => {
+            state.trainerName = "Anonymous Trainer";
+            localStorage.setItem("oddegg-trainer-name", state.trainerName);
+            const display = document.getElementById("trainerNameDisplay");
+            if (display) display.textContent = state.trainerName;
+            closeTrainerModal();
+          });
+          document.getElementById("trainerNameInput").addEventListener("keydown", e => {
+            if (e.key === "Enter") confirmTrainerName();
+          });
+
+          // Show trainer modal on first visit (no saved name)
+          if (!localStorage.getItem("oddegg-trainer-name")) {
+            setTimeout(showTrainerModal, 600);
+          }
+
+          // Ho-Oh Easter egg scheduler (desktop only)
+          startHoOhScheduler();
 
         } catch (err) {
           document.getElementById("mainView").innerHTML = `
