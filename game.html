@@ -1881,6 +1881,7 @@
 
         state.globalClicks++;
         _pendingClicks++;
+        if (egg.currentSteps >= egg.targetSteps) return; // already at max locally — wait for server
         _pendingEggSteps++;
         egg.currentSteps++;
 
