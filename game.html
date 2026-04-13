@@ -2240,7 +2240,7 @@
               tile.style.display = (!q || POKEMON_DATA[tile.dataset.slug].name.toLowerCase().includes(q)) ? "" : "none";
             });
           });
-          document.getElementById("dittoConfirmBtn").addEventListener("click", handleClaimHatch);
+          document.getElementById("dittoConfirmBtn").addEventListener("click", () => handleClaimHatch());
           return;
         }
 
