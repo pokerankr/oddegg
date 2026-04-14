@@ -1084,7 +1084,6 @@
       let devEggSlug       = null;  // null = all gens; set to a slug for dev testing
       let devDittoMode     = false; // force every egg to be a ditto
       let dittoChosenSlug  = null;  // set when trainer picks a pokemon for ditto to morph into
-      let _pendingClicks      = 0;     // clicks accumulated since last sync
       let _stateDirty        = false; // true when shared state needs syncing
       const _clickTimestamps = [];    // rolling window for autoclicker detection
       let _autoclickerCooldown = false;
@@ -1343,19 +1342,18 @@
       // with our potentially-stale local copy during the brief realtime delivery window.
       let _serverSharedSnapshot = null;
 
-      // Single round-trip: atomically increments clicks AND updates all shared state
+      // Single round-trip: syncs dex/charm state to Supabase.
+      // Global click tracking is handled server-side by increment_egg_steps.
       function _syncToSupabase() {
-        if (!_stateDirty && _pendingClicks === 0) return;
+        if (!_stateDirty) return;
         const wasDirty = _stateDirty;
-        const toFlush  = _pendingClicks;
-        _pendingClicks = 0;
         _stateDirty    = false;
-        // When click-only (no local dex changes), send the server's last-known snapshot
+        // When we have no local dex changes, send the server's last-known snapshot
         // instead of our potentially-stale local copy — prevents overwriting a freshly
         // claimed pokemon during the brief realtime delivery window.
         const snap = _serverSharedSnapshot;
         db.rpc("sync_game_state", {
-          click_amount:           toFlush,
+          click_amount:           0,
           new_dex:                wasDirty ? state.dex               : (snap?.dex               ?? state.dex),
           new_shiny_dex:          wasDirty ? state.shinyDex          : (snap?.shiny_dex         ?? state.shinyDex),
           new_recent_log:         wasDirty ? state.recentLog         : (snap?.recent_log        ?? state.recentLog),
@@ -1370,12 +1368,8 @@
         }).then(({ data, error }) => {
           if (error) {
             console.error("[OddEgg] Sync failed:", error);
-            _pendingClicks += toFlush; // restore so next interval retries
             _stateDirty = true;
-          } else if (typeof data === "number") {
-            state.globalClicks = Math.max(state.globalClicks, data);
-            const el = document.getElementById("globalClickCount");
-            if (el) el.textContent = fmt(state.globalClicks);
+          } else {
             // After a dirty sync succeeds, our local state IS the server state — snapshot it
             if (wasDirty) {
               _serverSharedSnapshot = {
@@ -1979,10 +1973,8 @@
         const displaySteps = egg.currentSteps + _pendingEggSteps + _inFlightSteps;
         if (displaySteps >= egg.targetSteps) return; // at server cap — wait for hatch
         _pendingEggSteps++;
-        state.globalClicks++;
-        _pendingClicks++;
+        // globalClicks is now tracked server-side in increment_egg_steps — display updates via realtime
 
-        document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
         const counterEl = document.getElementById("clickCounter");
         if (counterEl) counterEl.textContent = fmt(displaySteps + 1) + " steps";
         _updateEggDialogue();
