@@ -1745,17 +1745,12 @@
         }
       }
 
-      // Generates egg params locally, saves to Supabase, and updates local state
+      // Generates egg params locally, saves to Supabase, and updates local state.
+      // Does NOT touch reveal/claimer state — callers manage that themselves.
       async function generateAndSaveEgg() {
-        // Clear any pending reveal or Ditto picker state
-        if (_revealTimer)    { clearTimeout(_revealTimer);    _revealTimer   = null; }
-        if (_revealTickTimer){ clearInterval(_revealTickTimer);_revealTickTimer = null; }
         if (_autoDittoTimer) { clearTimeout(_autoDittoTimer); _autoDittoTimer = null; }
-        _revealActive      = false;
-        _revealPokemon     = null;
-        _revealTrainerName = null;
-        _isCurrentClaimer  = false;
         dittoChosenSlug    = null;
+        _isCurrentClaimer  = false;
         _pendingEggSteps   = 0;
         _inFlightSteps     = 0;
 
@@ -2070,13 +2065,17 @@
       }
 
       // Shows the hatched-pokemon reveal screen for `seconds`, then generates a new egg.
-      function _startReveal(newCharms, seconds = 5) {
+      async function _startReveal(newCharms, seconds = 5) {
         _clearAutoClaimTimer();
         _clearStuckClaimTimer();
         _revealPokemon   = state.eggState.pokemon;
         _revealActive    = true;
         _revealCountdown = seconds;
         render();
+
+        // Save the next egg to DB immediately — DB is no longer stuck in 'claiming'
+        // so a refresh during the reveal lands on a clean hatching egg, not a stuck state.
+        await generateAndSaveEgg();
 
         if (_revealTickTimer) clearInterval(_revealTickTimer);
         _revealTickTimer = setInterval(() => {
@@ -2087,13 +2086,11 @@
         }, 1000);
 
         if (_revealTimer) clearTimeout(_revealTimer);
-        _revealTimer = setTimeout(async () => {
+        _revealTimer = setTimeout(() => {
           _revealTimer        = null;
           _revealActive       = false;
-          _isCurrentClaimer   = false;
           _revealPokemon      = null;
           _revealTrainerName  = null;
-          await generateAndSaveEgg();
           render();
           newCharms.forEach(showCharmToast);
         }, seconds * 1000);
