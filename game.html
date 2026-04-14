@@ -2083,7 +2083,7 @@
         addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
         dittoChosenSlug = null;
         state.claimer   = "";
-        const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
+        const newCharms = checkCharmUnlocks(chosenEntry); // check morph, not ditto — so fire-type morphs unlock Flame Body
         saveState(true);
         return newCharms;
       }
