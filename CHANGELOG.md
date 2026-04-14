@@ -4,6 +4,34 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.4] — 2026-04-13
+### Step Counter Accuracy + Auto-Claim
+
+#### Server-Authoritative Global Step Counter
+- Global step total is now tracked server-side inside `increment_egg_steps` — increments by the actual steps consumed (capped at the egg's target), not the raw amount sent
+- Concurrent taps from multiple devices no longer overcount: the RPC serializes flushes with a row lock, so only steps that actually mattered are credited
+- Removed client-side click accumulation (`_pendingClicks`) — the counter is now always accurate regardless of how many devices are tapping simultaneously
+
+#### Claim Race Removed
+- The "Claim It!" button is gone — whoever's step caused the hatch is auto-credited immediately
+- `increment_egg_steps` now returns the egg row, so the flushing client detects the hatch and calls `try_claim_egg` in the same round-trip (no more 3s fallback delay for the claimer)
+- 3s fallback auto-claim still fires as a safety net if the claiming client crashes mid-flush
+
+#### Reveal Screen
+- After a hatch, the caught Pokémon is shown for 5 seconds with a "New egg in X…" countdown before the next egg generates
+
+#### Ditto Picker (Claimer Only)
+- Second+ Ditto: the claimer gets a 30s window to pick which Pokémon Ditto transforms into
+- If no selection is made within 30s, a random available Pokémon is auto-picked
+
+#### Bug Fixes
+- Fixed "Anonymous Trainer" appearing in the log — trainer names that weren't set now get a fun NPC name
+- Fixed Ditto double-pick: stuck-claim timer no longer fires while the claimer is in the picker
+- Fixed spam-click dex loss: click-only syncs now echo the server's last-known dex state instead of the potentially-stale local copy
+- Fixed taps past the egg threshold counting toward the global total
+
+---
+
 ## [0.6.0] — 2026-04-12
 ### Mobile UI + Trainer ID + Ho-Oh + Dex Overhaul
 
