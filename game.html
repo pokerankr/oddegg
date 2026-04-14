@@ -1976,11 +1976,11 @@
           }
         }
 
-        state.globalClicks++;
-        _pendingClicks++;
         const displaySteps = egg.currentSteps + _pendingEggSteps + _inFlightSteps;
         if (displaySteps >= egg.targetSteps) return; // at server cap — wait for hatch
         _pendingEggSteps++;
+        state.globalClicks++;
+        _pendingClicks++;
 
         document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
         const counterEl = document.getElementById("clickCounter");
