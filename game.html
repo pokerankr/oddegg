@@ -237,18 +237,19 @@
 
       /* ── Click counter ── */
       .click-counter {
-        position: absolute; bottom: 148px; left: 50%;
-        transform: translateX(-50%);
+        position: absolute; top: 10px; right: 12px;
         z-index: 5;
         background: rgba(255,255,255,0.92);
         border: 3px solid var(--screen-border);
         border-radius: 999px;
-        padding: 6px 16px;
-        font-size: 13px; font-weight: 900;
+        padding: 4px 12px;
+        font-size: 12px; font-weight: 900;
         color: var(--ink-2);
         letter-spacing: 0.06em;
         box-shadow: 0 4px 12px rgba(30,44,70,0.14);
         white-space: nowrap;
+        opacity: 0.7;
+        pointer-events: none;
       }
       .click-counter.special-counter {
         background: linear-gradient(180deg, rgba(255,248,180,0.97) 0%, rgba(255,230,80,0.95) 100%);
@@ -970,6 +971,10 @@
                 <div class="dex-subtitle">Living Dex</div>
               </div>
               <div class="dex-charm-row" id="dexCharmRow">
+                <div class="dex-charm-icon" id="dexFlameBodyCharm" style="display:none">
+                  <img src="volcanobadge.png" alt="Flame Body" />
+                  <div class="charm-tooltip" id="dexFlameBodyTip">Flame Body: Eggs hatch 10% faster</div>
+                </div>
                 <div class="dex-charm-icon charm-icon-locked" id="dexOvalCharm">
                   <img src="ovalcharm.png" alt="Oval Charm" />
                   <div class="charm-tooltip" id="dexOvalTip">Oval Charm: locked</div>
@@ -1027,6 +1032,15 @@
       const SHINY_ODDS  = 2;
       const STORAGE_KEY = "oddegg-v1";
       const EGG_IMAGE   = "https://www.pngkey.com/png/full/30-307419_image-egg-standard-k-pokemon-egg-clipart.png";
+
+      // Pokémon with the Flame Body ability — unlocks the Flame Body charm
+      const FLAME_BODY_POKEMON = new Set([
+        "magmar","slugma","magcargo","magby","magmortar",
+        "litwick","lampent","chandelure","larvesta","volcarona",
+        "fletchinder","talonflame","carkol","coalossal",
+        "ponyta","rapidash","moltres","heatran",
+        "sizzlipede","centiskorch","charcadet"
+      ]);
 
       // ─── Data (populated after fetch) ────────────────────────────────────────
       let POKEMON_DATA   = {};
@@ -1105,6 +1119,7 @@
       let _spectatorPokemon   = null;              // non-claimer: pokemon to show briefly after hatch
       let _spectatorTimer     = null;              // clears spectator reveal after 3s
       let _isCurrentClaimer   = false;             // this tab won the current claim
+      let _pendingLogEntries  = [];               // log entries held during reveal, flushed after countdown
       let _dittoTrainerName   = null;              // saved trainer name for deferred ditto claim
       let _autoDittoTimer     = null;              // auto-pick timer for ditto picker
       let _dittoCountdown     = 0;                 // seconds left on ditto picker
@@ -1145,9 +1160,13 @@
       }
 
       // Checks thresholds and returns array of newly unlocked charm names
-      function checkCharmUnlocks() {
+      function checkCharmUnlocks(pokemon = null) {
         const count = getDexCount();
         const newlyUnlocked = [];
+        if (!state.flameBodyCharmUnlocked && pokemon?.slug && FLAME_BODY_POKEMON.has(pokemon.slug)) {
+          state.flameBodyCharmUnlocked = true;
+          newlyUnlocked.push("flamebody");
+        }
         if (!state.catchingCharmUnlocked && (state.unlockedDex["ditto"] || state.unlockedShinyDex["ditto"])) {
           state.catchingCharmUnlocked = true;
           newlyUnlocked.push("catching");
@@ -1165,9 +1184,10 @@
 
       function showCharmToast(charmKey) {
         const cfg = {
-          catching: { name: "Catching Charm", img: "catchingcharm.png", desc: "Ditto now appears 4× more often!", cls: "" },
-          oval:     { name: "Oval Charm",     img: "ovalcharm.png",     desc: "Completed lines are now less common in eggs!", cls: "" },
-          shiny:    { name: "Shiny Charm",    img: "shinycharm.png",    desc: "Shiny odds improved to 1 in 128!", cls: " shiny-charm-toast" },
+          flamebody: { name: "Flame Body",     img: "volcanobadge.png",  desc: "Eggs now hatch 10% faster!", cls: "" },
+          catching:  { name: "Catching Charm", img: "catchingcharm.png", desc: "Ditto now appears 4× more often!", cls: "" },
+          oval:      { name: "Oval Charm",     img: "ovalcharm.png",     desc: "Completed lines are now less common in eggs!", cls: "" },
+          shiny:     { name: "Shiny Charm",    img: "shinycharm.png",    desc: "Shiny odds improved to 1 in 128!", cls: " shiny-charm-toast" },
         }[charmKey];
         if (!cfg) return;
 
@@ -1202,8 +1222,10 @@
         // Random thresholds for hatching dialogue stages (as fractions of targetSteps)
         const hint1At = Math.random() * (0.44 - 0.15) + 0.15; // 15–44%
         const hint2At = Math.random() * (0.74 - 0.45) + 0.45; // 45–74%
+        let targetSteps = randomInt(1, MAX_STEPS);
+        if (state.flameBodyCharmUnlocked) targetSteps = Math.max(1, Math.floor(targetSteps * 0.9));
         return {
-          targetSteps:  randomInt(1, MAX_STEPS),
+          targetSteps,
           currentSteps: 0,
           targetSlug:   slug,
           isSpecial:    data.isSpecial,
@@ -1234,9 +1256,10 @@
         activeDexView:      "normal",
         fullDexOpen:        false,
         globalClicks:       0,
-        ovalCharmUnlocked:    false,
-        shinyCharmUnlocked:   false,
-        catchingCharmUnlocked: false,
+        ovalCharmUnlocked:      false,
+        shinyCharmUnlocked:     false,
+        catchingCharmUnlocked:  false,
+        flameBodyCharmUnlocked: false,
       };
 
       // ─── Derived helpers ─────────────────────────────────────────────────────
@@ -1364,9 +1387,10 @@
           new_shiny_found_counts: wasDirty ? state.shinyFoundCounts  : (snap?.shiny_found_counts ?? state.shinyFoundCounts),
           new_unlocked_dex:       wasDirty ? state.unlockedDex       : (snap?.unlocked_dex      ?? state.unlockedDex),
           new_unlocked_shiny_dex: wasDirty ? state.unlockedShinyDex  : (snap?.unlocked_shiny_dex ?? state.unlockedShinyDex),
-          new_oval_charm:         wasDirty ? state.ovalCharmUnlocked     : (snap?.oval_charm_unlocked     ?? state.ovalCharmUnlocked),
-          new_shiny_charm:        wasDirty ? state.shinyCharmUnlocked    : (snap?.shiny_charm_unlocked    ?? state.shinyCharmUnlocked),
-          new_catching_charm:     wasDirty ? state.catchingCharmUnlocked : (snap?.catching_charm_unlocked ?? state.catchingCharmUnlocked),
+          new_oval_charm:         wasDirty ? state.ovalCharmUnlocked       : (snap?.oval_charm_unlocked       ?? state.ovalCharmUnlocked),
+          new_shiny_charm:        wasDirty ? state.shinyCharmUnlocked      : (snap?.shiny_charm_unlocked      ?? state.shinyCharmUnlocked),
+          new_catching_charm:     wasDirty ? state.catchingCharmUnlocked   : (snap?.catching_charm_unlocked   ?? state.catchingCharmUnlocked),
+          new_flame_body_charm:   wasDirty ? state.flameBodyCharmUnlocked  : (snap?.flame_body_charm_unlocked ?? state.flameBodyCharmUnlocked),
         }).then(({ data, error }) => {
           if (error) {
             console.error("[OddEgg] Sync failed:", error);
@@ -1383,9 +1407,10 @@
                 shiny_found_counts:     state.shinyFoundCounts,
                 unlocked_dex:           { ...state.unlockedDex },
                 unlocked_shiny_dex:     { ...state.unlockedShinyDex },
-                oval_charm_unlocked:    state.ovalCharmUnlocked,
-                shiny_charm_unlocked:   state.shinyCharmUnlocked,
-                catching_charm_unlocked: state.catchingCharmUnlocked,
+                oval_charm_unlocked:      state.ovalCharmUnlocked,
+                shiny_charm_unlocked:     state.shinyCharmUnlocked,
+                catching_charm_unlocked:  state.catchingCharmUnlocked,
+                flame_body_charm_unlocked: state.flameBodyCharmUnlocked,
               };
             }
           }
@@ -1755,6 +1780,7 @@
         _isCurrentClaimer  = false;
         _pendingEggSteps   = 0;
         _inFlightSteps     = 0;
+        _pendingLogEntries = [];
 
         const fresh = buildFreshEgg();
         state.eggState = { ...fresh, status: 'hatching' };
@@ -1920,10 +1946,11 @@
             if (data.shiny_found_counts && typeof data.shiny_found_counts === "object") state.shinyFoundCounts = data.shiny_found_counts;
             if (data.unlocked_dex && typeof data.unlocked_dex === "object")             state.unlockedDex      = data.unlocked_dex;
             if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object") state.unlockedShinyDex = data.unlocked_shiny_dex;
-            if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
-            if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
-            if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
-            if (typeof data.global_clicks           === "number")  state.globalClicks          = Math.max(state.globalClicks, data.global_clicks);
+            if (typeof data.oval_charm_unlocked       === "boolean") state.ovalCharmUnlocked       = data.oval_charm_unlocked;
+            if (typeof data.shiny_charm_unlocked      === "boolean") state.shinyCharmUnlocked      = data.shiny_charm_unlocked;
+            if (typeof data.catching_charm_unlocked   === "boolean") state.catchingCharmUnlocked   = data.catching_charm_unlocked;
+            if (typeof data.flame_body_charm_unlocked === "boolean") state.flameBodyCharmUnlocked  = data.flame_body_charm_unlocked;
+            if (typeof data.global_clicks             === "number")  state.globalClicks            = Math.max(state.globalClicks, data.global_clicks);
           } else {
             _migrateFromLocalStorage();
           }
@@ -2025,12 +2052,10 @@
         getFoundCounts(isShiny)[pokemon.line] = (getFoundCounts(isShiny)[pokemon.line] || 0) + 1;
         unlockPokemon(pokemon.slug, isShiny);
         const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString() };
-        state.recentLog.unshift(entry);
-        state.recentLog = state.recentLog.slice(0, 12);
-        if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        _pendingLogEntries.push({ entry, isShiny });
         addPokemonToDex(pokemon.slug, isShiny, entry);
         state.claimer = "";
-        const newCharms = checkCharmUnlocks(); // check first so charm state is correct when saved
+        const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
         saveState(true);
         return newCharms;
       }
@@ -2048,22 +2073,18 @@
         if (isShiny) state.shinyFoundCounts[dittoLineKey] = (state.shinyFoundCounts[dittoLineKey] || 0) + 1;
         unlockPokemon("ditto", isShiny);
         const dittoEntry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), morphedInto: dittoChosenSlug };
-        state.recentLog.unshift(dittoEntry);
-        state.recentLog = state.recentLog.slice(0, 12);
-        if (isShiny) { state.shinyRecentLog.unshift(dittoEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        _pendingLogEntries.push({ entry: dittoEntry, isShiny });
         // Record chosen morph
         const chosenData = POKEMON_DATA[dittoChosenSlug];
         state.foundCounts[chosenData.line]      = (state.foundCounts[chosenData.line] || 0) + 1;
         if (isShiny) state.shinyFoundCounts[chosenData.line] = (state.shinyFoundCounts[chosenData.line] || 0) + 1;
         unlockPokemon(dittoChosenSlug, isShiny);
         const chosenEntry = { ...buildPokemonRecord(dittoChosenSlug, isShiny), discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), transformedFromDitto: true };
-        state.recentLog.unshift(chosenEntry);
-        state.recentLog = state.recentLog.slice(0, 12);
-        if (isShiny) { state.shinyRecentLog.unshift(chosenEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        _pendingLogEntries.push({ entry: chosenEntry, isShiny });
         addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
         dittoChosenSlug = null;
         state.claimer   = "";
-        const newCharms = checkCharmUnlocks(); // check first so charm state is correct when saved
+        const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
         saveState(true);
         return newCharms;
       }
@@ -2095,6 +2116,16 @@
           _revealActive       = false;
           _revealPokemon      = null;
           _revealTrainerName  = null;
+          // Flush log entries now that reveal is done
+          for (const { entry, isShiny } of _pendingLogEntries) {
+            state.recentLog.unshift(entry);
+            state.recentLog = state.recentLog.slice(0, 12);
+            if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+          }
+          if (_pendingLogEntries.length) {
+            _pendingLogEntries = [];
+            saveState(true); // broadcast log to all clients
+          }
           render();
           newCharms.forEach(showCharmToast);
         }, seconds * 1000);
@@ -2613,13 +2644,18 @@
       function renderCharmBar() {
         const count = getDexCount();
 
+        const flameIcon  = document.getElementById("dexFlameBodyCharm");
         const ovalIcon   = document.getElementById("dexOvalCharm");
         const shinyIcon  = document.getElementById("dexShinyCharm");
         const catchIcon  = document.getElementById("dexCatchingCharm");
+        const flameTip   = document.getElementById("dexFlameBodyTip");
         const ovalTip    = document.getElementById("dexOvalTip");
         const shinyTip   = document.getElementById("dexShinyTip");
         const catchTip   = document.getElementById("dexCatchingTip");
 
+        if (flameIcon) {
+          flameIcon.style.display = state.flameBodyCharmUnlocked ? "" : "none";
+        }
         if (ovalIcon) {
           ovalIcon.classList.toggle("charm-icon-locked", !state.ovalCharmUnlocked);
           if (ovalTip) ovalTip.textContent = state.ovalCharmUnlocked
@@ -2762,9 +2798,10 @@
                 state.unlockedDex      = data.unlocked_dex;
               if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object")
                 state.unlockedShinyDex = data.unlocked_shiny_dex;
-              if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
-              if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
-              if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
+              if (typeof data.oval_charm_unlocked       === "boolean") state.ovalCharmUnlocked       = data.oval_charm_unlocked;
+              if (typeof data.shiny_charm_unlocked      === "boolean") state.shinyCharmUnlocked      = data.shiny_charm_unlocked;
+              if (typeof data.catching_charm_unlocked   === "boolean") state.catchingCharmUnlocked   = data.catching_charm_unlocked;
+              if (typeof data.flame_body_charm_unlocked === "boolean") state.flameBodyCharmUnlocked  = data.flame_body_charm_unlocked;
               if (typeof data.global_clicks === "number") {
                 state.globalClicks = Math.max(state.globalClicks, data.global_clicks);
                 const el = document.getElementById("globalClickCount");
@@ -2781,9 +2818,10 @@
                 shiny_found_counts:     data.shiny_found_counts ?? _serverSharedSnapshot?.shiny_found_counts,
                 unlocked_dex:           data.unlocked_dex       ?? _serverSharedSnapshot?.unlocked_dex,
                 unlocked_shiny_dex:     data.unlocked_shiny_dex ?? _serverSharedSnapshot?.unlocked_shiny_dex,
-                oval_charm_unlocked:    data.oval_charm_unlocked    ?? _serverSharedSnapshot?.oval_charm_unlocked,
-                shiny_charm_unlocked:   data.shiny_charm_unlocked   ?? _serverSharedSnapshot?.shiny_charm_unlocked,
-                catching_charm_unlocked: data.catching_charm_unlocked ?? _serverSharedSnapshot?.catching_charm_unlocked,
+                oval_charm_unlocked:      data.oval_charm_unlocked       ?? _serverSharedSnapshot?.oval_charm_unlocked,
+                shiny_charm_unlocked:     data.shiny_charm_unlocked      ?? _serverSharedSnapshot?.shiny_charm_unlocked,
+                catching_charm_unlocked:  data.catching_charm_unlocked   ?? _serverSharedSnapshot?.catching_charm_unlocked,
+                flame_body_charm_unlocked: data.flame_body_charm_unlocked ?? _serverSharedSnapshot?.flame_body_charm_unlocked,
               };
 
               renderDex();
@@ -2804,23 +2842,25 @@
             if (data.shiny_found_counts && typeof data.shiny_found_counts === "object") state.shinyFoundCounts = data.shiny_found_counts;
             if (data.unlocked_dex       && typeof data.unlocked_dex       === "object") state.unlockedDex      = data.unlocked_dex;
             if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object") state.unlockedShinyDex = data.unlocked_shiny_dex;
-            if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
-            if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
-            if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
-            if (typeof data.global_clicks           === "number")  state.globalClicks          = Math.max(state.globalClicks, data.global_clicks);
+            if (typeof data.oval_charm_unlocked       === "boolean") state.ovalCharmUnlocked       = data.oval_charm_unlocked;
+            if (typeof data.shiny_charm_unlocked      === "boolean") state.shinyCharmUnlocked      = data.shiny_charm_unlocked;
+            if (typeof data.catching_charm_unlocked   === "boolean") state.catchingCharmUnlocked   = data.catching_charm_unlocked;
+            if (typeof data.flame_body_charm_unlocked === "boolean") state.flameBodyCharmUnlocked  = data.flame_body_charm_unlocked;
+            if (typeof data.global_clicks             === "number")  state.globalClicks            = Math.max(state.globalClicks, data.global_clicks);
             // Snapshot what the server currently holds — used as safe baseline for click-only syncs
             _serverSharedSnapshot = {
-              dex:                    data.dex,
-              shiny_dex:              data.shiny_dex,
-              recent_log:             data.recent_log,
-              shiny_recent_log:       data.shiny_recent_log,
-              found_counts:           data.found_counts,
-              shiny_found_counts:     data.shiny_found_counts,
-              unlocked_dex:           data.unlocked_dex,
-              unlocked_shiny_dex:     data.unlocked_shiny_dex,
-              oval_charm_unlocked:    data.oval_charm_unlocked,
-              shiny_charm_unlocked:   data.shiny_charm_unlocked,
-              catching_charm_unlocked: data.catching_charm_unlocked,
+              dex:                      data.dex,
+              shiny_dex:                data.shiny_dex,
+              recent_log:               data.recent_log,
+              shiny_recent_log:         data.shiny_recent_log,
+              found_counts:             data.found_counts,
+              shiny_found_counts:       data.shiny_found_counts,
+              unlocked_dex:             data.unlocked_dex,
+              unlocked_shiny_dex:       data.unlocked_shiny_dex,
+              oval_charm_unlocked:      data.oval_charm_unlocked,
+              shiny_charm_unlocked:     data.shiny_charm_unlocked,
+              catching_charm_unlocked:  data.catching_charm_unlocked,
+              flame_body_charm_unlocked: data.flame_body_charm_unlocked,
             };
             renderDex();
             renderCharmBar();
