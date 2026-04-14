@@ -2845,7 +2845,7 @@
                 } else if (data.status === 'hatching' && !_isCurrentClaimer && !_revealActive
                            && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
                   // New egg arrived — show non-claimer a brief reveal of what was just hatched
-                  _showSpectatorReveal(prevPokemon, 3);
+                  _showSpectatorReveal(prevPokemon, 5);
                 } else if (!_revealActive && !_isCurrentClaimer) {
                   // Don't interrupt the claimer's reveal or Ditto picker on their own tab
                   render();
