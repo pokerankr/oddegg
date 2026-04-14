@@ -1918,8 +1918,8 @@
             if (Array.isArray(data.shiny_recent_log)) state.shinyRecentLog = data.shiny_recent_log;
             if (data.found_counts && typeof data.found_counts === "object")             state.foundCounts      = data.found_counts;
             if (data.shiny_found_counts && typeof data.shiny_found_counts === "object") state.shinyFoundCounts = data.shiny_found_counts;
-            if (data.unlocked_dex && typeof data.unlocked_dex === "object")             Object.assign(state.unlockedDex, data.unlocked_dex);
-            if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object") Object.assign(state.unlockedShinyDex, data.unlocked_shiny_dex);
+            if (data.unlocked_dex && typeof data.unlocked_dex === "object")             state.unlockedDex      = data.unlocked_dex;
+            if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object") state.unlockedShinyDex = data.unlocked_shiny_dex;
             if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
             if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
@@ -2757,9 +2757,9 @@
               if (data.shiny_found_counts && typeof data.shiny_found_counts === "object")
                 state.shinyFoundCounts = data.shiny_found_counts;
               if (data.unlocked_dex && typeof data.unlocked_dex === "object")
-                Object.assign(state.unlockedDex, data.unlocked_dex);
+                state.unlockedDex      = data.unlocked_dex;
               if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object")
-                Object.assign(state.unlockedShinyDex, data.unlocked_shiny_dex);
+                state.unlockedShinyDex = data.unlocked_shiny_dex;
               if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
               if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
               if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
@@ -2800,8 +2800,8 @@
             if (Array.isArray(data.shiny_recent_log)) state.shinyRecentLog = data.shiny_recent_log;
             if (data.found_counts       && typeof data.found_counts       === "object") state.foundCounts      = data.found_counts;
             if (data.shiny_found_counts && typeof data.shiny_found_counts === "object") state.shinyFoundCounts = data.shiny_found_counts;
-            if (data.unlocked_dex       && typeof data.unlocked_dex       === "object") Object.assign(state.unlockedDex, data.unlocked_dex);
-            if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object") Object.assign(state.unlockedShinyDex, data.unlocked_shiny_dex);
+            if (data.unlocked_dex       && typeof data.unlocked_dex       === "object") state.unlockedDex      = data.unlocked_dex;
+            if (data.unlocked_shiny_dex && typeof data.unlocked_shiny_dex === "object") state.unlockedShinyDex = data.unlocked_shiny_dex;
             if (typeof data.oval_charm_unlocked     === "boolean") state.ovalCharmUnlocked     = data.oval_charm_unlocked;
             if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
