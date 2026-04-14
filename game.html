@@ -1458,6 +1458,7 @@
 
       async function _autoClaimExpired() {
         _clearAutoClaimTimer();
+        if (_isCurrentClaimer || _revealActive) return; // already handling this hatch
         if (!state.eggState || state.eggState.status !== 'hatched') return;
         const { data: won } = await db.rpc("try_claim_egg");
         if (!won) {
@@ -1490,7 +1491,14 @@
       // pokemon to the dex (generateAndSaveEgg would skip that step)
       function _startStuckClaimTimer() {
         if (_stuckClaimTimer) return;
-        _stuckClaimTimer = setTimeout(async () => { // 8s recovery window
+        // Ditto 2nd+ picker gives the claimer 30s to choose + 5s reveal — use 40s.
+        // Normal claims complete in <2s, so 8s is plenty.
+        const pokemon = state.eggState?.pokemon;
+        const alreadyHaveDitto = pokemon?.slug === "ditto" && Boolean(
+          pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]
+        );
+        const recoveryMs = alreadyHaveDitto ? 40000 : 8000;
+        _stuckClaimTimer = setTimeout(async () => { // recovery window
           _stuckClaimTimer = null;
           if (state.eggState?.status !== 'claiming' || _isCurrentClaimer) return;
           // Reset to 'hatched' — only if still claiming (WHERE clause prevents double-update)
@@ -1502,7 +1510,7 @@
           // and restarts the auto-claim timer
           const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
           if (eggRow) { _applyEggRow(eggRow); render(); }
-        }, 8000);
+        }, recoveryMs);
       }
 
       function _clearStuckClaimTimer() {
@@ -1724,7 +1732,7 @@
         // Manage timers based on status transitions
         if (row.status === 'hatched') {
           _clearStuckClaimTimer();
-          if (!_autoClaimTimer) {
+          if (!_autoClaimTimer && !_isCurrentClaimer && !_revealActive) {
             // Fallback timer — fires only if the claiming client crashes before completing
             _startAutoClaimTimer(3);
           }
