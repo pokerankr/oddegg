@@ -1338,35 +1338,35 @@
         if (immediate) _syncToSupabase();
       }
 
-      let _lastForcedSync = 0;
+      // Last dex/log state received FROM the server (via realtime or initial load).
+      // Used for click-only syncs so we never overwrite a freshly claimed pokemon
+      // with our potentially-stale local copy during the brief realtime delivery window.
+      let _serverSharedSnapshot = null;
 
       // Single round-trip: atomically increments clicks AND updates all shared state
       function _syncToSupabase() {
         if (!_stateDirty && _pendingClicks === 0) return;
-        // Guard: don't overwrite dex from the periodic interval unless WE made a dex
-        // change (_stateDirty). During the brief window between another client claiming
-        // a pokemon and us receiving the realtime event, our local dex is stale — sending
-        // it would erase the new pokemon. Batch clicks and force-sync every 30s instead.
-        if (!_stateDirty) {
-          if (Date.now() - _lastForcedSync < 30000) return;
-        }
-        _lastForcedSync = Date.now();
+        const wasDirty = _stateDirty;
         const toFlush  = _pendingClicks;
         _pendingClicks = 0;
         _stateDirty    = false;
+        // When click-only (no local dex changes), send the server's last-known snapshot
+        // instead of our potentially-stale local copy — prevents overwriting a freshly
+        // claimed pokemon during the brief realtime delivery window.
+        const snap = _serverSharedSnapshot;
         db.rpc("sync_game_state", {
-          click_amount:          toFlush,
-          new_dex:               state.dex,
-          new_shiny_dex:         state.shinyDex,
-          new_recent_log:        state.recentLog,
-          new_shiny_recent_log:  state.shinyRecentLog,
-          new_found_counts:      state.foundCounts,
-          new_shiny_found_counts: state.shinyFoundCounts,
-          new_unlocked_dex:      state.unlockedDex,
-          new_unlocked_shiny_dex: state.unlockedShinyDex,
-          new_oval_charm:        state.ovalCharmUnlocked,
-          new_shiny_charm:       state.shinyCharmUnlocked,
-          new_catching_charm:    state.catchingCharmUnlocked,
+          click_amount:           toFlush,
+          new_dex:                wasDirty ? state.dex               : (snap?.dex               ?? state.dex),
+          new_shiny_dex:          wasDirty ? state.shinyDex          : (snap?.shiny_dex         ?? state.shinyDex),
+          new_recent_log:         wasDirty ? state.recentLog         : (snap?.recent_log        ?? state.recentLog),
+          new_shiny_recent_log:   wasDirty ? state.shinyRecentLog    : (snap?.shiny_recent_log  ?? state.shinyRecentLog),
+          new_found_counts:       wasDirty ? state.foundCounts       : (snap?.found_counts      ?? state.foundCounts),
+          new_shiny_found_counts: wasDirty ? state.shinyFoundCounts  : (snap?.shiny_found_counts ?? state.shinyFoundCounts),
+          new_unlocked_dex:       wasDirty ? state.unlockedDex       : (snap?.unlocked_dex      ?? state.unlockedDex),
+          new_unlocked_shiny_dex: wasDirty ? state.unlockedShinyDex  : (snap?.unlocked_shiny_dex ?? state.unlockedShinyDex),
+          new_oval_charm:         wasDirty ? state.ovalCharmUnlocked     : (snap?.oval_charm_unlocked     ?? state.ovalCharmUnlocked),
+          new_shiny_charm:        wasDirty ? state.shinyCharmUnlocked    : (snap?.shiny_charm_unlocked    ?? state.shinyCharmUnlocked),
+          new_catching_charm:     wasDirty ? state.catchingCharmUnlocked : (snap?.catching_charm_unlocked ?? state.catchingCharmUnlocked),
         }).then(({ data, error }) => {
           if (error) {
             console.error("[OddEgg] Sync failed:", error);
@@ -1376,6 +1376,22 @@
             state.globalClicks = Math.max(state.globalClicks, data);
             const el = document.getElementById("globalClickCount");
             if (el) el.textContent = fmt(state.globalClicks);
+            // After a dirty sync succeeds, our local state IS the server state — snapshot it
+            if (wasDirty) {
+              _serverSharedSnapshot = {
+                dex:                    state.dex,
+                shiny_dex:              state.shinyDex,
+                recent_log:             state.recentLog,
+                shiny_recent_log:       state.shinyRecentLog,
+                found_counts:           state.foundCounts,
+                shiny_found_counts:     state.shinyFoundCounts,
+                unlocked_dex:           { ...state.unlockedDex },
+                unlocked_shiny_dex:     { ...state.unlockedShinyDex },
+                oval_charm_unlocked:    state.ovalCharmUnlocked,
+                shiny_charm_unlocked:   state.shinyCharmUnlocked,
+                catching_charm_unlocked: state.catchingCharmUnlocked,
+              };
+            }
           }
         });
       }
@@ -2707,6 +2723,21 @@
                 if (el) el.textContent = fmt(state.globalClicks);
               }
 
+              // Keep snapshot in sync with server — used by click-only syncs
+              _serverSharedSnapshot = {
+                dex:                    Array.isArray(data.dex)             ? data.dex             : _serverSharedSnapshot?.dex,
+                shiny_dex:              Array.isArray(data.shiny_dex)       ? data.shiny_dex       : _serverSharedSnapshot?.shiny_dex,
+                recent_log:             Array.isArray(data.recent_log)      ? data.recent_log      : _serverSharedSnapshot?.recent_log,
+                shiny_recent_log:       Array.isArray(data.shiny_recent_log)? data.shiny_recent_log: _serverSharedSnapshot?.shiny_recent_log,
+                found_counts:           data.found_counts       ?? _serverSharedSnapshot?.found_counts,
+                shiny_found_counts:     data.shiny_found_counts ?? _serverSharedSnapshot?.shiny_found_counts,
+                unlocked_dex:           data.unlocked_dex       ?? _serverSharedSnapshot?.unlocked_dex,
+                unlocked_shiny_dex:     data.unlocked_shiny_dex ?? _serverSharedSnapshot?.unlocked_shiny_dex,
+                oval_charm_unlocked:    data.oval_charm_unlocked    ?? _serverSharedSnapshot?.oval_charm_unlocked,
+                shiny_charm_unlocked:   data.shiny_charm_unlocked   ?? _serverSharedSnapshot?.shiny_charm_unlocked,
+                catching_charm_unlocked: data.catching_charm_unlocked ?? _serverSharedSnapshot?.catching_charm_unlocked,
+              };
+
               renderDex();
               renderCharmBar();
               if (state.fullDexOpen) renderFullDexOverlay();
@@ -2729,6 +2760,20 @@
             if (typeof data.shiny_charm_unlocked    === "boolean") state.shinyCharmUnlocked    = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked === "boolean") state.catchingCharmUnlocked = data.catching_charm_unlocked;
             if (typeof data.global_clicks           === "number")  state.globalClicks          = Math.max(state.globalClicks, data.global_clicks);
+            // Snapshot what the server currently holds — used as safe baseline for click-only syncs
+            _serverSharedSnapshot = {
+              dex:                    data.dex,
+              shiny_dex:              data.shiny_dex,
+              recent_log:             data.recent_log,
+              shiny_recent_log:       data.shiny_recent_log,
+              found_counts:           data.found_counts,
+              shiny_found_counts:     data.shiny_found_counts,
+              unlocked_dex:           data.unlocked_dex,
+              unlocked_shiny_dex:     data.unlocked_shiny_dex,
+              oval_charm_unlocked:    data.oval_charm_unlocked,
+              shiny_charm_unlocked:   data.shiny_charm_unlocked,
+              catching_charm_unlocked: data.catching_charm_unlocked,
+            };
             renderDex();
             renderCharmBar();
             if (state.fullDexOpen) renderFullDexOverlay();
