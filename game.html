@@ -945,7 +945,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.2</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.3</span>
             </div>
           </div>
           <div id="mainView">
@@ -1089,7 +1089,8 @@
       const _clickTimestamps = [];    // rolling window for autoclicker detection
       let _autoclickerCooldown = false;
       const SESSION_ID      = crypto.randomUUID(); // per-tab claim identity
-      let _pendingEggSteps  = 0;                   // egg steps queued for Supabase flush
+      let _pendingEggSteps  = 0;                   // egg steps tapped, not yet sent to server
+      let _inFlightSteps   = 0;                   // egg steps sent to server, awaiting RPC response
       let _autoClaimTimer     = null;              // fires if egg goes unclaimed for 10s
       let _autoClaimTick      = null;              // 1s interval driving the countdown display
       let _autoClaimRemaining = 0;                 // seconds left on the countdown
@@ -1652,9 +1653,8 @@
           const bonus = Math.max(1, Math.round((state.eggState?.targetSteps ?? 100) * 0.1));
           if (state.eggState?.status === 'hatching') {
             _pendingEggSteps += bonus;
-            state.eggState.currentSteps += bonus;
             const counterEl = document.getElementById("clickCounter");
-            if (counterEl) counterEl.textContent = fmt(state.eggState.currentSteps) + " steps";
+            if (counterEl) counterEl.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
             _updateEggDialogue();
           }
           showHoohToast(bonus);
@@ -1694,14 +1694,9 @@
         if (!row) return;
         const prevStatus = state.eggState?.status;
         const isActive = row.status === 'hatched' || row.status === 'claiming';
-        // Preserve optimistic local steps when still hatching — prevents backwards jitter
-        // (same Math.max pattern used for globalClicks)
-        const prevSteps = state.eggState?.currentSteps ?? 0;
         state.eggState = {
           targetSteps:  row.target_steps,
-          currentSteps: (!isActive && row.status === state.eggState?.status)
-            ? Math.max(prevSteps, row.current_steps)
-            : row.current_steps,
+          currentSteps: row.current_steps,  // always trust server — display adds local pending/inflight
           targetSlug:   row.target_slug,
           isSpecial:    row.is_special,
           isShiny:      row.is_shiny,
@@ -1712,7 +1707,7 @@
           hatched:      isActive,
           loading:      false,
           pokemon:      isActive && row.target_slug
-            ? { ...buildPokemonRecord(row.target_slug, row.is_shiny), stepsToHatch: row.current_steps }
+            ? { ...buildPokemonRecord(row.target_slug, row.is_shiny), stepsToHatch: row.target_steps }
             : null,
           error: "",
         };
@@ -1743,6 +1738,8 @@
         _revealTrainerName = null;
         _isCurrentClaimer  = false;
         dittoChosenSlug    = null;
+        _pendingEggSteps   = 0;
+        _inFlightSteps     = 0;
 
         const fresh = buildFreshEgg();
         state.eggState = { ...fresh, status: 'hatching' };
@@ -1771,11 +1768,12 @@
         const txtEl = document.getElementById("eggDialogText");
         const subEl = document.getElementById("eggDialogSub");
         if (!txtEl || !subEl) return;
-        const progress = egg.currentSteps / (egg.targetSteps || 1);
+        const displaySteps = egg.currentSteps + _pendingEggSteps + _inFlightSteps;
+        const progress = displaySteps / (egg.targetSteps || 1);
         const hint1At  = egg.hint1At ?? 0.15;
         const hint2At  = egg.hint2At ?? 0.45;
         let txt, sub;
-        if (egg.currentSteps === 0) {
+        if (displaySteps === 0) {
           txt = egg.isSpecial ? "A mysterious golden egg is waiting…" : "An Odd Egg is waiting.";
           sub = egg.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
         } else if (progress < hint1At) {
@@ -1804,12 +1802,15 @@
         }
         const steps = _pendingEggSteps;
         _pendingEggSteps = 0;
+        _inFlightSteps += steps;
         db.rpc("increment_egg_steps", { amount: steps }).then(async ({ data, error }) => {
           if (error) {
             console.error("[OddEgg] Egg step flush failed:", error);
             _pendingEggSteps += steps;
+            _inFlightSteps  -= steps; // restore — will retry next interval
             return;
           }
+          _inFlightSteps -= steps; // server confirmed
           if (data) {
             const row = Array.isArray(data) ? data[0] : data;
             if (row && typeof row === 'object' && 'status' in row) {
@@ -1859,7 +1860,7 @@
                 // If !won: another client won the tie — their realtime push moves us forward
               } else {
                 const el = document.getElementById("clickCounter");
-                if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
+                if (el) el.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
                 _updateEggDialogue();
               }
             }
@@ -1961,13 +1962,13 @@
 
         state.globalClicks++;
         _pendingClicks++;
-        if (egg.currentSteps >= egg.targetSteps) return; // already at max locally — wait for server
+        const displaySteps = egg.currentSteps + _pendingEggSteps + _inFlightSteps;
+        if (displaySteps >= egg.targetSteps) return; // at server cap — wait for hatch
         _pendingEggSteps++;
-        egg.currentSteps++;
 
         document.getElementById("globalClickCount").textContent = fmt(state.globalClicks);
         const counterEl = document.getElementById("clickCounter");
-        if (counterEl) counterEl.textContent = fmt(egg.currentSteps) + " steps";
+        if (counterEl) counterEl.textContent = fmt(displaySteps + 1) + " steps";
         _updateEggDialogue();
         // Hatch is detected server-side via increment_egg_steps and broadcast via realtime
       }
@@ -2288,14 +2289,15 @@
         }
 
         if (!egg || egg.status === 'hatching') {
-          const progress = (egg?.currentSteps ?? 0) / (egg?.targetSteps ?? 1);
+          const displaySteps = (egg?.currentSteps ?? 0) + _pendingEggSteps + _inFlightSteps;
+          const progress = displaySteps / (egg?.targetSteps ?? 1);
           const specialClass = egg?.isShiny ? " shiny" : egg?.isSpecial ? " special" : "";
           const stepBtnClass = egg?.isSpecial ? "step-btn special-step" : "step-btn";
           const counterClass = egg?.isSpecial ? "click-counter special-counter" : "click-counter";
           const hint1At = egg?.hint1At ?? 0.15;
           const hint2At = egg?.hint2At ?? 0.45;
           let eggTypeHint, subText;
-          if (!egg || egg.currentSteps === 0) {
+          if (!egg || displaySteps === 0) {
             eggTypeHint = egg?.isSpecial ? "A mysterious golden egg is waiting…" : "An Odd Egg is waiting.";
             subText     = egg?.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
           } else if (progress < hint1At) {
@@ -2330,7 +2332,7 @@
                   <div class="egg-glow"></div>
                   <img class="egg-image" src="${egg?.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
                 </button>
-                <div class="${counterClass}" id="clickCounter">${fmt(egg?.currentSteps ?? 0)} steps</div>
+                <div class="${counterClass}" id="clickCounter">${fmt(displaySteps)} steps</div>
               </div>
               <div class="dialog-wrap">
                 <div class="dialog">
@@ -2754,7 +2756,7 @@
                 }
               } else if (data.status === 'hatching' && !_revealActive) {
                 const el = document.getElementById("clickCounter");
-                if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
+                if (el) el.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
                 _updateEggDialogue();
               }
             }
@@ -2773,7 +2775,7 @@
               render();
             } else if (eggRow.status === 'hatching' && !_revealActive) {
               const el = document.getElementById("clickCounter");
-              if (el) el.textContent = fmt(state.eggState.currentSteps) + " steps";
+              if (el) el.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
             }
           });
       }
