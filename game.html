@@ -1822,10 +1822,10 @@
           if (error) {
             console.error("[OddEgg] Egg step flush failed:", error);
             _pendingEggSteps += steps;
-            _inFlightSteps  -= steps; // restore — will retry next interval
+            _inFlightSteps = Math.max(0, _inFlightSteps - steps); // restore — will retry next interval
             return;
           }
-          _inFlightSteps -= steps; // server confirmed
+          _inFlightSteps = Math.max(0, _inFlightSteps - steps); // server confirmed
           if (data) {
             const row = Array.isArray(data) ? data[0] : data;
             if (row && typeof row === 'object' && 'status' in row) {
@@ -2841,16 +2841,18 @@
               // text so we don't rebuild the DOM and disrupt rapid taps.
               if (data.status !== prevStatus) {
                 if (data.status === 'hatched' && prevStatus === 'hatching') {
-                  _playHatchSequence();
+                  // Skip hatch animation if already mid-reveal (rapid successive hatches)
+                  if (!_spectatorPokemon) _playHatchSequence();
                 } else if (data.status === 'hatching' && !_isCurrentClaimer && !_revealActive
                            && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
-                  // New egg arrived — show non-claimer a brief reveal of what was just hatched
-                  _showSpectatorReveal(prevPokemon, 5);
-                } else if (!_revealActive && !_isCurrentClaimer) {
-                  // Don't interrupt the claimer's reveal or Ditto picker on their own tab
+                  // New egg arrived — show reveal of what just hatched, but only if not
+                  // already in one (rapid hatches: let current finish, render new egg after)
+                  if (!_spectatorPokemon) _showSpectatorReveal(prevPokemon, 5);
+                } else if (!_revealActive && !_isCurrentClaimer && !_spectatorPokemon) {
+                  // Don't interrupt any reveal screen
                   render();
                 }
-              } else if (data.status === 'hatching' && !_revealActive) {
+              } else if (data.status === 'hatching' && !_revealActive && !_spectatorPokemon) {
                 const el = document.getElementById("clickCounter");
                 if (el) el.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
                 _updateEggDialogue();
