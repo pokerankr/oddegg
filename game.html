@@ -945,7 +945,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.1</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.2</span>
             </div>
           </div>
           <div id="mainView">
@@ -1113,6 +1113,12 @@
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
       function randomFrom(arr)     { return arr[randomInt(0, arr.length - 1)]; }
+      // Returns trainer name, substituting a random NPC name for Anonymous Trainer
+      function getEffectiveTrainerName() {
+        return (state.trainerName && state.trainerName !== "Anonymous Trainer")
+          ? state.trainerName
+          : generateNPCTrainerName();
+      }
       function fmt(n)              { return Number(n).toLocaleString(); }
       function formatDate(iso) {
         try { return new Date(iso).toLocaleString(); } catch { return iso; }
@@ -1331,9 +1337,19 @@
         if (immediate) _syncToSupabase();
       }
 
+      let _lastForcedSync = 0;
+
       // Single round-trip: atomically increments clicks AND updates all shared state
       function _syncToSupabase() {
         if (!_stateDirty && _pendingClicks === 0) return;
+        // Guard: don't overwrite dex from the periodic interval unless WE made a dex
+        // change (_stateDirty). During the brief window between another client claiming
+        // a pokemon and us receiving the realtime event, our local dex is stale — sending
+        // it would erase the new pokemon. Batch clicks and force-sync every 30s instead.
+        if (!_stateDirty) {
+          if (Date.now() - _lastForcedSync < 30000) return;
+        }
+        _lastForcedSync = Date.now();
         const toFlush  = _pendingClicks;
         _pendingClicks = 0;
         _stateDirty    = false;
@@ -1465,7 +1481,7 @@
         if (_stuckClaimTimer) return;
         _stuckClaimTimer = setTimeout(async () => { // 8s recovery window
           _stuckClaimTimer = null;
-          if (state.eggState?.status !== 'claiming') return;
+          if (state.eggState?.status !== 'claiming' || _isCurrentClaimer) return;
           // Reset to 'hatched' — only if still claiming (WHERE clause prevents double-update)
           await db.from("egg_state")
             .update({ status: 'hatched' })
@@ -1807,7 +1823,7 @@
                   _clearAutoClaimTimer();
                   _isCurrentClaimer = true;
                   const pokemon     = state.eggState.pokemon;
-                  const trainerName = state.trainerName || generateNPCTrainerName();
+                  const trainerName = getEffectiveTrainerName();
                   const alreadyHaveDitto = Boolean(pokemon?.isShiny
                     ? state.unlockedShinyDex["ditto"]
                     : state.unlockedDex["ditto"]);
@@ -2038,6 +2054,8 @@
 
       // Shows the hatched-pokemon reveal screen for `seconds`, then generates a new egg.
       function _startReveal(newCharms, seconds = 5) {
+        _clearAutoClaimTimer();
+        _clearStuckClaimTimer();
         _revealPokemon   = state.eggState.pokemon;
         _revealActive    = true;
         _revealCountdown = seconds;
@@ -2067,7 +2085,7 @@
       async function handleClaimHatch(discoveredBy = null) {
         const pokemon = state.eggState.pokemon;
         if (!pokemon) return;
-        discoveredBy = discoveredBy || state.trainerName || generateNPCTrainerName();
+        discoveredBy = discoveredBy || getEffectiveTrainerName();
 
         // ── Ditto morph path (2nd ditto onwards) ──────────────────────────────
         const alreadyHaveDitto = Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
