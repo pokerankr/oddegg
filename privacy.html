@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — An Odd Egg</title>
+  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+      color: #1f2940;
+      background: url('./background.png.png') center / cover no-repeat fixed;
+    }
+
+    .page {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 20px;
+      padding: 40px 48px;
+      box-shadow: 0 8px 32px rgba(20, 30, 50, 0.18);
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 28px;
+      font-size: 14px;
+      color: #2a75bb;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 900;
+      margin: 0 0 4px;
+      color: #1f2940;
+    }
+
+    .version {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 32px;
+    }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 800;
+      margin: 32px 0 8px;
+      color: #31415f;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    p, li {
+      font-size: 15px;
+      line-height: 1.65;
+      color: #374151;
+      margin: 0 0 12px;
+    }
+
+    ul {
+      padding-left: 20px;
+      margin: 0 0 12px;
+    }
+
+    .disclaimer-box {
+      background: #fff8e8;
+      border: 2px solid #ffcb05;
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin: 28px 0;
+    }
+
+    .disclaimer-box p {
+      margin: 0;
+      font-size: 14px;
+      color: #4b4000;
+    }
+
+    .ai-box {
+      background: #f0f4ff;
+      border: 2px solid #2a75bb;
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin: 28px 0;
+    }
+
+    .ai-box p {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: #1f2940;
+    }
+
+    .ai-box p:last-child { margin: 0; }
+
+    hr {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 32px 0;
+    }
+
+    @media (max-width: 600px) {
+      .card { padding: 28px 22px; }
+      h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <a class="back-link" href="./index.html">← Back to An Odd Egg</a>
+
+    <div class="card">
+      <h1>Privacy Policy</h1>
+      <div class="version">Last updated: April 2026</div>
+
+      <div class="disclaimer-box">
+        <p>
+          <strong>An Odd Egg is an independent fan project.</strong> It is not affiliated with, endorsed by, or
+          connected to Nintendo, Game Freak, The Pokémon Company, or any of their subsidiaries or partners.
+          Pokémon and all related names, characters, and imagery are trademarks of their respective owners.
+          This game is created purely for entertainment and is not monetised in any way.
+        </p>
+      </div>
+
+      <h2>What Information We Collect</h2>
+      <p>An Odd Egg collects a minimal amount of information to make the shared multiplayer experience work:</p>
+      <ul>
+        <li><strong>Trainer name</strong> — a nickname you choose yourself, stored locally in your browser and synced to our shared game database so other players can see who caught what. You can change or remove it at any time.</li>
+        <li><strong>Game state</strong> — your living dex progress, recently found Pokémon, charms, and step counts are stored in Supabase (our cloud database) so the game persists across sessions and devices.</li>
+        <li><strong>Anonymous session data</strong> — a randomly generated session ID is created each time you visit, used only to coordinate real-time multiplayer actions (like who claimed an egg). It is not linked to any personal account.</li>
+      </ul>
+
+      <h2>What We Do Not Collect</h2>
+      <ul>
+        <li>We do not collect your real name, email address, or any personally identifiable information.</li>
+        <li>We do not use advertising, tracking pixels, or third-party analytics.</li>
+        <li>We do not sell, trade, or share your data with anyone, ever.</li>
+        <li>We do not use cookies beyond what your browser stores locally for the game state.</li>
+      </ul>
+
+      <h2>Third-Party Services</h2>
+      <p>
+        An Odd Egg uses <strong>Supabase</strong> to store and sync shared game state in real time.
+        Supabase may log standard server-side metadata (IP addresses, timestamps) as part of normal
+        database operations. Refer to <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase's Privacy Policy</a>
+        for details on how they handle that data.
+      </p>
+      <p>
+        Pokémon sprites and data are sourced from community-maintained APIs and repositories
+        (primarily PokéAPI). No personal data is transmitted to these services.
+      </p>
+
+      <h2>Data Retention</h2>
+      <p>
+        Game state is retained in Supabase indefinitely to keep the shared living dex persistent.
+        If you'd like your trainer name removed from the records, reach out and we'll handle it manually.
+        Honestly it's just a nickname — but still, the option is there.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        An Odd Egg does not knowingly collect information from children under 13. Given that the game
+        collects no personal information beyond a self-chosen nickname, it poses no meaningful privacy
+        risk to younger players — but if you're a parent with concerns, feel free to get in touch.
+      </p>
+
+      <h2>Changes to This Policy</h2>
+      <p>
+        If anything significant changes, this page will be updated. Since this is a free fan game
+        run by one person, "significant changes" mostly means "something broke and we fixed it."
+      </p>
+
+      <hr />
+
+      <div class="ai-box">
+        <p>
+          <strong>A note on how this game was made:</strong> An Odd Egg was built through a collaboration
+          between a person with absolutely zero programming experience and
+          <a href="https://claude.ai" target="_blank" rel="noopener">Claude</a>, Anthropic's AI assistant.
+          Every mechanic, every pixel, every bug — conceived by one idiot with ideas and executed by an AI
+          that somehow made it work.
+        </p>
+        <p>
+          If you have a problem with the fact that this game was made with the help of AI, that's completely
+          valid and we respect your feelings. You are welcome to stop playing and, with the utmost sincerity,
+          shove it directly up your butt.
+        </p>
+      </div>
+
+      <hr />
+
+      <p style="font-size:13px;color:#9ca3af;text-align:center;">
+        An Odd Egg &nbsp;·&nbsp; A fan project &nbsp;·&nbsp; Not affiliated with Nintendo or The Pokémon Company
+      </p>
+    </div>
+  </div>
+</body>
+</html>
