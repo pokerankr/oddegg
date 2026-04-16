@@ -4,6 +4,28 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.5] — 2026-04-15
+### UI Polish + Flame Body Charm
+
+#### Step Counter Repositioned
+- Step counter moved to the top-right corner of the egg box — no longer floats in the middle of the tapping area
+
+#### Recently Found Delayed Until After Reveal
+- Hatched Pokémon (and any evolution entries) no longer appear in Recently Found during the 5s reveal countdown — they are held and flushed all at once when the countdown ends
+- Fixed: evolution entries (e.g. Wartortle when Squirtle triggers a merge) were bypassing the delay and appearing as spoilers during the reveal — all log entries are now deferred together in the correct order
+
+#### Flame Body Charm (Secret)
+- New hidden charm using the Volcano Badge — unlocks by hatching any Fire-type Pokémon with the Flame Body ability (Ponyta, Magmar, Litwick line, Volcarona line, and more)
+- Effect: all future eggs hatch 10% faster
+- Charm is invisible until earned — no locked placeholder shown
+- Ditto morphing into a Fire-type also counts
+
+#### Bug Fixes
+- Fixed Ditto morphing into a fire-type not triggering the Flame Body charm unlock
+- Fixed recently found not populating at all after the reveal delay was introduced
+
+---
+
 ## [0.7.4] — 2026-04-13
 ### Step Counter Accuracy + Auto-Claim
 

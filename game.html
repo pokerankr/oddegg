@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.4</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.5</span>
             </div>
           </div>
           <div id="mainView">
@@ -2013,12 +2013,14 @@
       }
 
       // Shared helper: add a pokemon slug to the dex + log evolution events
+      // Returns an array of {entry, isShiny} evolution log entries — caller decides where to push them.
       function addPokemonToDex(slug, isShiny, baseEntry) {
         const lineSlug = POKEMON_DATA[slug].line;
-        if (hasLivingDexComplete(lineSlug, isShiny)) return;
+        if (hasLivingDexComplete(lineSlug, isShiny)) return [];
         getDexArray(isShiny).unshift(baseEntry);
         const evoEvents = autoMerge(lineSlug, isShiny);
         getDexArray(isShiny).forEach(e => unlockPokemon(e.slug, isShiny));
+        const evoLogEntries = [];
         for (const ev of evoEvents) {
           const fromName = POKEMON_DATA[ev.fromSlug]?.name || ev.fromSlug;
           for (const toSlug of ev.toSlugs) {
@@ -2029,14 +2031,10 @@
               claimedAt:    new Date().toISOString(),
               evolvedFrom:  fromName,
             };
-            state.recentLog.unshift(evolvedEntry);
-            state.recentLog = state.recentLog.slice(0, 12);
-            if (isShiny) {
-              state.shinyRecentLog.unshift(evolvedEntry);
-              state.shinyRecentLog = state.shinyRecentLog.slice(0, 8);
-            }
+            evoLogEntries.push({ entry: evolvedEntry, isShiny });
           }
         }
+        return evoLogEntries;
       }
 
       // ─── Claim helpers ────────────────────────────────────────────────────────
@@ -2052,7 +2050,8 @@
         unlockPokemon(pokemon.slug, isShiny);
         const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString() };
         _pendingLogEntries.push({ entry, isShiny });
-        addPokemonToDex(pokemon.slug, isShiny, entry);
+        const evoEntries = addPokemonToDex(pokemon.slug, isShiny, entry);
+        _pendingLogEntries.push(...evoEntries);
         state.claimer = "";
         const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
         saveState(true);
@@ -2080,7 +2079,8 @@
         unlockPokemon(dittoChosenSlug, isShiny);
         const chosenEntry = { ...buildPokemonRecord(dittoChosenSlug, isShiny), discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), transformedFromDitto: true };
         _pendingLogEntries.push({ entry: chosenEntry, isShiny });
-        addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
+        const evoEntries = addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
+        _pendingLogEntries.push(...evoEntries);
         dittoChosenSlug = null;
         state.claimer   = "";
         const newCharms = checkCharmUnlocks(chosenEntry); // check morph, not ditto — so fire-type morphs unlock Flame Body
