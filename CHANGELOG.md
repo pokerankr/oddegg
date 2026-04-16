@@ -4,12 +4,12 @@ All notable changes to the game will be documented here.
 
 ---
 
-## [0.7.7] — 2026-04-15
+## [0.7.8] — 2026-04-15
 ### Bug Fix
 
-#### Double-Hatch on Concurrent Spam Tapping
-- Fixed: two devices hammering steps simultaneously could hatch two different Pokémon back-to-back at the same timestamp
-- When a new egg arrives via realtime after a claim, accumulated pending steps are now immediately drained — they no longer overflow into the fresh egg
+#### Step Bleed into Next Egg
+- Fixed: non-claimer devices were carrying accumulated pending steps into the freshly generated egg, causing immediate back-to-back hatches
+- Pending steps are now drained as soon as any device detects the egg is hatched or claiming — not just when the new egg realtime update arrives (which could be too late)
 
 ---
 
