@@ -4,6 +4,14 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.6] — 2026-04-15
+### Cleanup
+
+#### Removed Ditto Mode
+- Dev-only "🔮 Ditto" button removed from the UI
+
+---
+
 ## [0.7.5] — 2026-04-15
 ### UI Polish + Flame Body Charm
 

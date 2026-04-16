@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.5</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.6</span>
             </div>
           </div>
           <div id="mainView">
@@ -1096,7 +1096,6 @@
       let fullDexPage      = 0;
       const DEX_PAGE_SIZE  = 40;
       let devEggSlug       = null;  // null = all gens; set to a slug for dev testing
-      let devDittoMode     = false; // force every egg to be a ditto
       let dittoChosenSlug  = null;  // set when trainer picks a pokemon for ditto to morph into
       let _stateDirty        = false; // true when shared state needs syncing
       const _clickTimestamps = [];    // rolling window for autoclicker detection
@@ -1214,7 +1213,7 @@
 
         // Ditto roll — separate from normal pool, scales with catching charm
         const dittoOdds = state.catchingCharmUnlocked ? 256 : 1025;
-        const isDitto   = devDittoMode || (!devEggSlug && Boolean(POKEMON_DATA["ditto"]) && randomInt(1, dittoOdds) === 1);
+        const isDitto   = !devEggSlug && Boolean(POKEMON_DATA["ditto"]) && randomInt(1, dittoOdds) === 1;
         const slug      = isDitto ? "ditto" : (devEggSlug || randomFrom(pool));
         const data      = POKEMON_DATA[slug];
         const effectiveShinyOdds = state.shinyCharmUnlocked ? 128 : SHINY_ODDS;
@@ -2184,11 +2183,6 @@
         render();
       }
 
-      async function toggleDittoMode() {
-        devDittoMode = !devDittoMode;
-        await generateAndSaveEgg();
-        render();
-      }
 
       async function handleDevSkip() {
         const egg = state.eggState;
@@ -2438,7 +2432,6 @@
                   </div>
                   <div class="controls">
                     <button class="${stepBtnClass}" id="stepBtn">Take a Step</button>
-                    <button class="dev-btn" id="devDittoBtn" title="Dev: force every egg to be Ditto" style="${devDittoMode ? 'background:linear-gradient(180deg,#ede0ff 0%,#c8a0f0 100%);color:#3d1a6e;box-shadow:0 8px 0 #7c3aed;' : ''}">🔮 Ditto${devDittoMode ? " ON" : ""}</button>
                   </div>
                   ${egg?.error ? `<div class="error">${egg.error}</div>` : ""}
                 </div>
@@ -2448,7 +2441,6 @@
 
           document.getElementById("stepBtn").addEventListener("click", handleTakeStep);
           document.getElementById("eggTapBtn").addEventListener("click", handleTakeStep);
-          document.getElementById("devDittoBtn").addEventListener("click", toggleDittoMode);
           return;
         }
 
