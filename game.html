@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.9</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.10</span>
             </div>
           </div>
           <div id="mainView">
@@ -1848,10 +1848,11 @@
           _pendingEggSteps = 0;
           return;
         }
-        const steps = _pendingEggSteps;
+        const steps       = _pendingEggSteps;
+        const expectedSlug = state.eggState.targetSlug; // snapshot — server discards if egg has changed
         _pendingEggSteps = 0;
         _inFlightSteps += steps;
-        db.rpc("increment_egg_steps", { amount: steps }).then(async ({ data, error }) => {
+        db.rpc("increment_egg_steps", { amount: steps, expected_slug: expectedSlug }).then(async ({ data, error }) => {
           if (error) {
             console.error("[OddEgg] Egg step flush failed:", error);
             _pendingEggSteps += steps;

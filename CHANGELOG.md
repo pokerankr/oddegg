@@ -4,6 +4,16 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.10] — 2026-04-15
+### Bug Fix
+
+#### Step Bleed — Definitive Fix
+- `increment_egg_steps` now accepts the expected `target_slug` from the client
+- Server discards any flush where the slug doesn't match the current egg — stale in-flight calls from the old egg can no longer bleed into the new one
+- Previous client-side fixes (draining `_pendingEggSteps` on hatch) remain as a first line of defence
+
+---
+
 ## [0.7.9] — 2026-04-15
 ### Full Game Reset Support
 
