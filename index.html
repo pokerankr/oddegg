@@ -1055,8 +1055,8 @@
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // ─── Config ──────────────────────────────────────────────────────────────
-      const MAX_STEPS   = 10;
-      const SHINY_ODDS  = 2;
+      const MAX_STEPS   = 1_000_000;
+      const SHINY_ODDS  = 512;
       const STORAGE_KEY = "oddegg-v1";
       const EGG_IMAGE   = "./standardegg.png";
 
@@ -1247,7 +1247,7 @@
         // Random thresholds for hatching dialogue stages (as fractions of targetSteps)
         const hint1At = Math.random() * (0.44 - 0.15) + 0.15; // 15–44%
         const hint2At = Math.random() * (0.74 - 0.45) + 0.45; // 45–74%
-        let targetSteps = randomInt(1, MAX_STEPS);
+        let targetSteps = randomInt(Math.ceil(MAX_STEPS * 0.75), MAX_STEPS);
         if (state.flameBodyCharmUnlocked) targetSteps = Math.max(1, Math.floor(targetSteps * 0.9));
         return {
           targetSteps,
