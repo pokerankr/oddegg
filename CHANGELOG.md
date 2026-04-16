@@ -4,6 +4,16 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.12] — 2026-04-15
+### Bug Fix
+
+#### Recently Found Missing After Refresh
+- Root cause: if the claimer refreshed during the reveal, `_pendingLogEntries` (held in memory) was lost — nobody ever broadcast the log entries to Supabase
+- Fix: pending log entries are now written to localStorage immediately after a claim; on any page load they are recovered, deduplicated against what's already in the DB, and broadcast
+- The reveal timer still clears localStorage when it flushes normally (no double-post)
+
+---
+
 ## [0.7.11] — 2026-04-15
 ### Bug Fix
 

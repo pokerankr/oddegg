@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.11</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.12</span>
             </div>
           </div>
           <div id="mainView">
@@ -1983,6 +1983,25 @@
           _migrateFromLocalStorage();
         }
 
+        // Recover any log entries the claimer had pending when they refreshed mid-reveal
+        try {
+          const raw = localStorage.getItem("oddegg-pending-log");
+          if (raw) {
+            const pending = JSON.parse(raw);
+            if (Array.isArray(pending) && pending.length) {
+              for (const { entry, isShiny } of pending) {
+                if (!state.recentLog.some(e => e.claimedAt === entry.claimedAt && e.slug === entry.slug)) {
+                  state.recentLog.unshift(entry);
+                  state.recentLog = state.recentLog.slice(0, 12);
+                  if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+                }
+              }
+              localStorage.removeItem("oddegg-pending-log");
+              _stateDirty = true; // will broadcast after init completes
+            }
+          }
+        } catch {}
+
         // Load shared egg from Supabase egg_state table
         try {
           const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
@@ -2078,6 +2097,7 @@
         _pendingLogEntries.push({ entry, isShiny });
         const evoEntries = addPokemonToDex(pokemon.slug, isShiny, entry);
         _pendingLogEntries.push(...evoEntries);
+        localStorage.setItem("oddegg-pending-log", JSON.stringify(_pendingLogEntries));
         state.claimer = "";
         const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
         saveState(true);
@@ -2107,6 +2127,7 @@
         _pendingLogEntries.push({ entry: chosenEntry, isShiny });
         const evoEntries = addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
         _pendingLogEntries.push(...evoEntries);
+        localStorage.setItem("oddegg-pending-log", JSON.stringify(_pendingLogEntries));
         dittoChosenSlug = null;
         state.claimer   = "";
         const newCharms = checkCharmUnlocks(chosenEntry); // check morph, not ditto — so fire-type morphs unlock Flame Body
@@ -2149,6 +2170,7 @@
           }
           if (_pendingLogEntries.length) {
             _pendingLogEntries = [];
+            localStorage.removeItem("oddegg-pending-log");
             saveState(true); // broadcast log to all clients
           }
           render();
