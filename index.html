@@ -1571,6 +1571,16 @@
       }
 
       // ─── Sound ───────────────────────────────────────────────────────────────
+      let _audioCtx = null;
+      // Call on first user gesture — unlocks audio for the whole session
+      function _unlockAudio() {
+        if (_audioCtx) return;
+        try {
+          _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          _audioCtx.resume();
+        } catch {}
+      }
+
       function playPokemonCry(pokemonId) {
         if (_soundMuted) return;
         try {
@@ -1578,7 +1588,7 @@
             `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemonId}.ogg`
           );
           audio.volume = 0.55;
-          audio.play().catch(() => {}); // silently ignore autoplay blocks
+          audio.play().catch(() => {});
         } catch {}
       }
 
@@ -2032,6 +2042,7 @@
       const _isTouchDevice = window.matchMedia('(pointer:coarse)').matches;
 
       function handleTakeStep() {
+        _unlockAudio();
         const egg = state.eggState;
         if (!egg || egg.status !== 'hatching') return;
 
