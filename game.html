@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.13</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.14</span>
             </div>
           </div>
           <div id="mainView">
@@ -1118,7 +1118,6 @@
       let _spectatorPokemon   = null;              // non-claimer: pokemon to show briefly after hatch
       let _spectatorTimer     = null;              // clears spectator reveal after 3s
       let _isCurrentClaimer   = false;             // this tab won the current claim
-      let _pendingLogEntries  = [];               // log entries held during reveal, flushed after countdown
       let _dittoTrainerName   = null;              // saved trainer name for deferred ditto claim
       let _autoDittoTimer     = null;              // auto-pick timer for ditto picker
       let _dittoCountdown     = 0;                 // seconds left on ditto picker
@@ -1411,8 +1410,6 @@
                 catching_charm_unlocked:  state.catchingCharmUnlocked,
                 flame_body_charm_unlocked: state.flameBodyCharmUnlocked,
               };
-              // Entries are now in Supabase — safe to clear the recovery backup
-              localStorage.removeItem("oddegg-pending-log");
             }
           }
         });
@@ -1985,27 +1982,6 @@
           _migrateFromLocalStorage();
         }
 
-        // Recover any log entries the claimer had pending when they refreshed mid-reveal
-        try {
-          const raw = localStorage.getItem("oddegg-pending-log");
-          if (raw) {
-            const pending = JSON.parse(raw);
-            if (Array.isArray(pending) && pending.length) {
-              for (const { entry, isShiny } of pending) {
-                if (!state.recentLog.some(e => e.claimedAt === entry.claimedAt && e.slug === entry.slug)) {
-                  state.recentLog.unshift(entry);
-                  state.recentLog = state.recentLog.slice(0, 12);
-                  if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
-                }
-              }
-              // Don't remove from localStorage yet — SUBSCRIBED re-fetch will overwrite
-              // state.recentLog from the server; we re-apply from localStorage there.
-              // localStorage is cleared in _syncToSupabase when the dirty sync succeeds.
-              _stateDirty = true;
-            }
-          }
-        } catch {}
-
         // Load shared egg from Supabase egg_state table
         try {
           const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
@@ -2090,52 +2066,68 @@
 
       // Processes dex/log/charm updates for a normal (non-Ditto) hatch.
       // Does NOT call generateAndSaveEgg — caller is responsible for that.
-      function _processClaim(trainerName) {
+      function _processClaim(trainerName, revealSeconds = 5) {
         const pokemon = state.eggState.pokemon || _revealPokemon;
         if (!pokemon) return [];
-        const isShiny    = pokemon.isShiny;
+        const isShiny      = pokemon.isShiny;
         const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
+        const visibleAfter = Date.now() + revealSeconds * 1000;
         getFoundCounts(isShiny)[pokemon.line] = (getFoundCounts(isShiny)[pokemon.line] || 0) + 1;
         unlockPokemon(pokemon.slug, isShiny);
-        const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString() };
-        _pendingLogEntries.push({ entry, isShiny });
+        const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), visibleAfter };
+        state.recentLog.unshift(entry);
+        state.recentLog = state.recentLog.slice(0, 12);
+        if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
         const evoEntries = addPokemonToDex(pokemon.slug, isShiny, entry);
-        _pendingLogEntries.push(...evoEntries);
-        localStorage.setItem("oddegg-pending-log", JSON.stringify(_pendingLogEntries));
+        for (const { entry: evoEntry, isShiny: evoIsShiny } of evoEntries) {
+          const e = { ...evoEntry, visibleAfter };
+          state.recentLog.unshift(e);
+          state.recentLog = state.recentLog.slice(0, 12);
+          if (evoIsShiny) { state.shinyRecentLog.unshift(e); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        }
         state.claimer = "";
         const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
-        saveState(true);
+        saveState(true); // dex + log committed atomically in one sync
         return newCharms;
       }
 
       // Processes dex/log/charm updates for a Ditto morph claim.
       // Requires dittoChosenSlug to be set. Does NOT call generateAndSaveEgg.
-      function _processDittoClaim(trainerName) {
+      function _processDittoClaim(trainerName, revealSeconds = 5) {
         const pokemon = state.eggState.pokemon || _revealPokemon;
         if (!pokemon || !dittoChosenSlug) return [];
         const isShiny      = pokemon.isShiny;
         const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
+        const visibleAfter = Date.now() + revealSeconds * 1000;
         // Record ditto itself
         const dittoLineKey = POKEMON_DATA["ditto"].line || "ditto";
         state.foundCounts[dittoLineKey]      = (state.foundCounts[dittoLineKey] || 0) + 1;
         if (isShiny) state.shinyFoundCounts[dittoLineKey] = (state.shinyFoundCounts[dittoLineKey] || 0) + 1;
         unlockPokemon("ditto", isShiny);
-        const dittoEntry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), morphedInto: dittoChosenSlug };
-        _pendingLogEntries.push({ entry: dittoEntry, isShiny });
+        const dittoEntry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), morphedInto: dittoChosenSlug, visibleAfter };
+        state.recentLog.unshift(dittoEntry);
+        state.recentLog = state.recentLog.slice(0, 12);
+        if (isShiny) { state.shinyRecentLog.unshift(dittoEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
         // Record chosen morph
         const chosenData = POKEMON_DATA[dittoChosenSlug];
         state.foundCounts[chosenData.line]      = (state.foundCounts[chosenData.line] || 0) + 1;
         if (isShiny) state.shinyFoundCounts[chosenData.line] = (state.shinyFoundCounts[chosenData.line] || 0) + 1;
         unlockPokemon(dittoChosenSlug, isShiny);
-        const chosenEntry = { ...buildPokemonRecord(dittoChosenSlug, isShiny), discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), transformedFromDitto: true };
-        _pendingLogEntries.push({ entry: chosenEntry, isShiny });
+        const chosenEntry = { ...buildPokemonRecord(dittoChosenSlug, isShiny), discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), transformedFromDitto: true, visibleAfter };
+        state.recentLog.unshift(chosenEntry);
+        state.recentLog = state.recentLog.slice(0, 12);
+        if (isShiny) { state.shinyRecentLog.unshift(chosenEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
         const evoEntries = addPokemonToDex(dittoChosenSlug, isShiny, chosenEntry);
-        _pendingLogEntries.push(...evoEntries);
-        localStorage.setItem("oddegg-pending-log", JSON.stringify(_pendingLogEntries));
+        for (const { entry: evoEntry, isShiny: evoIsShiny } of evoEntries) {
+          const e = { ...evoEntry, visibleAfter };
+          state.recentLog.unshift(e);
+          state.recentLog = state.recentLog.slice(0, 12);
+          if (evoIsShiny) { state.shinyRecentLog.unshift(e); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        }
         dittoChosenSlug = null;
         state.claimer   = "";
         const newCharms = checkCharmUnlocks(chosenEntry); // check morph, not ditto — so fire-type morphs unlock Flame Body
-        saveState(true);
+        saveState(true); // dex + log committed atomically in one sync
         return newCharms;
       }
 
@@ -2166,17 +2158,7 @@
           _revealActive       = false;
           _revealPokemon      = null;
           _revealTrainerName  = null;
-          // Flush log entries now that reveal is done
-          for (const { entry, isShiny } of _pendingLogEntries) {
-            state.recentLog.unshift(entry);
-            state.recentLog = state.recentLog.slice(0, 12);
-            if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
-          }
-          if (_pendingLogEntries.length) {
-            _pendingLogEntries = [];
-            localStorage.removeItem("oddegg-pending-log");
-            saveState(true); // broadcast log to all clients
-          }
+          // visibleAfter timestamps have now expired — render() picks them up automatically
           render();
           newCharms.forEach(showCharmToast);
         }, seconds * 1000);
@@ -2544,9 +2526,26 @@
       }
 
       // ─── Render: Dex panel ───────────────────────────────────────────────────
+      // Schedule a renderDex() call for the moment the earliest suppressed log entry becomes visible.
+      // Called whenever we receive remote recentLog updates that might contain visibleAfter entries.
+      let _visibleAfterTimer = null;
+      function _scheduleVisibleAfterRender() {
+        const now = Date.now();
+        const pending = state.recentLog
+          .filter(e => e.visibleAfter && e.visibleAfter > now)
+          .map(e => e.visibleAfter);
+        if (!pending.length) return;
+        const earliest = Math.min(...pending);
+        const delay = Math.max(0, earliest - now) + 50; // +50ms slack
+        if (_visibleAfterTimer) clearTimeout(_visibleAfterTimer);
+        _visibleAfterTimer = setTimeout(() => { _visibleAfterTimer = null; renderDex(); }, delay);
+      }
+
       function renderDex() {
-        // Always show combined recent log (shiny + normal together)
-        const dexArray = state.recentLog;
+        // Always show combined recent log (shiny + normal together).
+        // Entries with visibleAfter in the future are suppressed until the reveal ends.
+        const now      = Date.now();
+        const dexArray = state.recentLog.filter(e => !e.visibleAfter || now >= e.visibleAfter);
         const dexList  = document.getElementById("dexList");
         if (!dexArray.length) {
           dexList.innerHTML = `<div class="empty">No hatches yet. Start stepping to fill the living dex!</div>`;
@@ -2869,6 +2868,7 @@
               };
 
               renderDex();
+              _scheduleVisibleAfterRender();
               renderCharmBar();
               if (state.fullDexOpen) renderFullDexOverlay();
             }
@@ -2906,25 +2906,8 @@
               catching_charm_unlocked:  data.catching_charm_unlocked,
               flame_body_charm_unlocked: data.flame_body_charm_unlocked,
             };
-            // Re-apply any locally recovered log entries that haven't synced to the server yet
-            // (server re-fetch above may have overwritten state.recentLog with stale empty data)
-            try {
-              const raw = localStorage.getItem("oddegg-pending-log");
-              if (raw) {
-                const pending = JSON.parse(raw);
-                if (Array.isArray(pending)) {
-                  for (const { entry, isShiny } of pending) {
-                    if (!state.recentLog.some(e => e.claimedAt === entry.claimedAt && e.slug === entry.slug)) {
-                      state.recentLog.unshift(entry);
-                      state.recentLog = state.recentLog.slice(0, 12);
-                      if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
-                    }
-                  }
-                  _stateDirty = true; // ensure these get synced to server
-                }
-              }
-            } catch {}
             renderDex();
+            _scheduleVisibleAfterRender();
             renderCharmBar();
             if (state.fullDexOpen) renderFullDexOverlay();
           });

@@ -4,6 +4,19 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.14] — 2026-04-16
+### Bug Fix
+
+#### Recently Found Atomic Claim — Definitive Fix
+- Root cause: the hatch claim path was non-atomic — dex state was committed immediately while log entries were deferred in a `_pendingLogEntries` buffer, then flushed after the reveal countdown. A refresh at any point during that window lost the log entries even though the dex update survived.
+- Fix: removed `_pendingLogEntries` entirely. Log entries are now pushed directly into `state.recentLog` (alongside the dex update) in the same `saveState(true)` call — both hit Supabase atomically.
+- Entries carry a `visibleAfter` timestamp (current time + reveal seconds). `renderDex()` filters out any entry whose `visibleAfter` is still in the future, so the spoiler-free reveal behavior is preserved.
+- After the reveal timer fires, `render()` is called and `renderDex()` naturally shows the entries — no separate flush step needed.
+- Non-claimer clients that receive the log via realtime call `_scheduleVisibleAfterRender()`, which sets a `setTimeout` to re-render the moment the earliest suppressed entry's `visibleAfter` expires.
+- Removed all `oddegg-pending-log` localStorage machinery (write, recovery on load, re-apply in SUBSCRIBED callback, clear on sync) — no longer needed.
+
+---
+
 ## [0.7.13] — 2026-04-15
 ### Bug Fix
 
