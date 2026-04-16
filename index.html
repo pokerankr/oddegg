@@ -1966,7 +1966,7 @@
             if (typeof data.shiny_charm_unlocked      === "boolean") state.shinyCharmUnlocked      = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked   === "boolean") state.catchingCharmUnlocked   = data.catching_charm_unlocked;
             if (typeof data.flame_body_charm_unlocked === "boolean") state.flameBodyCharmUnlocked  = data.flame_body_charm_unlocked;
-            if (typeof data.global_clicks             === "number")  state.globalClicks            = Math.max(state.globalClicks, data.global_clicks);
+            if (typeof data.global_clicks             === "number")  state.globalClicks            = data.global_clicks;
           } else {
             _migrateFromLocalStorage();
           }
@@ -2788,7 +2788,7 @@
               if (typeof data.catching_charm_unlocked   === "boolean") state.catchingCharmUnlocked   = data.catching_charm_unlocked;
               if (typeof data.flame_body_charm_unlocked === "boolean") state.flameBodyCharmUnlocked  = data.flame_body_charm_unlocked;
               if (typeof data.global_clicks === "number") {
-                state.globalClicks = Math.max(state.globalClicks, data.global_clicks);
+                state.globalClicks = data.global_clicks;
                 const el = document.getElementById("globalClickCount");
                 if (el) el.textContent = fmt(state.globalClicks);
               }
@@ -2832,7 +2832,7 @@
             if (typeof data.shiny_charm_unlocked      === "boolean") state.shinyCharmUnlocked      = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked   === "boolean") state.catchingCharmUnlocked   = data.catching_charm_unlocked;
             if (typeof data.flame_body_charm_unlocked === "boolean") state.flameBodyCharmUnlocked  = data.flame_body_charm_unlocked;
-            if (typeof data.global_clicks             === "number")  state.globalClicks            = Math.max(state.globalClicks, data.global_clicks);
+            if (typeof data.global_clicks             === "number")  state.globalClicks            = data.global_clicks;
             // Snapshot what the server currently holds — used as safe baseline for click-only syncs
             _serverSharedSnapshot = {
               dex:                      data.dex,
