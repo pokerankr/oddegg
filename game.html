@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.6</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.7</span>
             </div>
           </div>
           <div id="mainView">
@@ -1768,6 +1768,11 @@
         } else if (row.status === 'hatching') {
           _clearAutoClaimTimer();
           _clearStuckClaimTimer();
+          // New egg arrived — drain any accumulated steps so they don't overflow into it
+          if (prevStatus === 'claiming' || prevStatus === 'hatched') {
+            _pendingEggSteps = 0;
+            _inFlightSteps   = 0;
+          }
         }
       }
 
