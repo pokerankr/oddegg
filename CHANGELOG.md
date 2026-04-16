@@ -4,6 +4,40 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.15] — 2026-04-16
+### Visual Overhaul
+
+#### Layout & Composition
+- Page background now uses `background.png.png` (soft sky + meadow landscape) replacing the CSS gradient
+- Egg hatching area now uses `hatchingbg.png.png` (floral meadow with circular platform) as a full-cover background
+- CSS cloud divs and grass-platform div hidden — both are baked into the background images
+- Field min-height increased from 560px to 500px (field bg is taller visually); battle stage min-height from 340px to 400px for a bigger, more immersive egg scene
+- Bottom vignette gradient added to the field so the dialog card lifts cleanly off the meadow
+
+#### Egg
+- Egg image increased from 235px to 265px max-width
+- Glow radius scaled up to match; drop shadow deepened
+- Switched egg image source to local `standardegg.png` (faster, no external dependency)
+
+#### Action Panel
+- Step button is now full-width with larger padding (19px font, 17px vertical padding) and a stronger shadow
+- Dialog rounded from 24px to 28px radius; background set to `rgba(255,255,255,0.97)` so it reads cleanly over the meadow
+
+#### Dex Panel
+- "Open Pokédex" button enlarged (16px, 14px padding, stronger shadow) — clearly the primary action
+- "Clear Dex" demoted to secondary style: smaller (13px), muted pink palette, reduced shadow and opacity
+- "Recently Found" section title separated with a subtle top rule and improved letter-spacing
+- Dex screen internal padding increased from 14px to 16px
+
+#### Panel Height Alignment
+- Both the egg panel and Living Dex panel now share the same top and bottom edges
+- CSS Grid `align-items: stretch` makes both columns the same height (set by the egg panel's natural content)
+- Dex panel fills that height via its flex chain: dex-shell → dex-body → dex-screen → dex-list (flex:1, scrolls overflow)
+- `min-height: 0` on dex flex items so the dex list scrolls correctly without overflowing
+- On single-column breakpoints (≤ 1040px), alignment reverts to `start` so panels stack naturally
+
+---
+
 ## [0.7.14] — 2026-04-16
 ### Bug Fix
 

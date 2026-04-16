@@ -33,11 +33,7 @@
         min-height: 100vh;
         font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
         color: var(--ink);
-        background:
-          radial-gradient(circle at 20% 20%, rgba(255,255,255,0.45) 0 8%, transparent 8.5%),
-          radial-gradient(circle at 82% 18%, rgba(255,255,255,0.35) 0 7%, transparent 7.5%),
-          radial-gradient(circle at 55% 14%, rgba(255,255,255,0.25) 0 6%, transparent 6.5%),
-          linear-gradient(180deg, #a7dcff 0%, #d8f0ff 40%, #eaf8ff 58%, #dff8cf 58%, #bde89b 100%);
+        background: url('./background.png.png') center / cover no-repeat fixed;
       }
 
       .page {
@@ -60,6 +56,13 @@
         border-radius: 34px;
         box-shadow: 0 22px 50px rgba(25, 35, 60, 0.22);
         overflow: hidden;
+        height: 720px;
+        display: flex; flex-direction: column;
+      }
+
+      #mainView {
+        flex: 1; min-height: 0;
+        display: flex; flex-direction: column;
       }
 
       .topbar {
@@ -71,6 +74,7 @@
         background: linear-gradient(180deg, #fefefe 0%, #edf5ff 100%);
         border-bottom: 4px solid var(--screen-border);
         flex-wrap: wrap;
+        flex-shrink: 0;
       }
 
       .topbar-right { display: contents; }
@@ -93,10 +97,17 @@
       }
 
       /* ── Field ── */
+      .cloud, .grass-platform { display: none; }
       .field {
         position: relative; overflow: hidden;
-        min-height: 560px; padding: 24px 24px 0;
-        background: linear-gradient(180deg, #bfe7ff 0%, #eefbff 58%, #d9f5c7 58%, #b7e692 100%);
+        flex: 1; min-height: 0; padding: 0;
+        background: url('./hatchingbg.png.png') center bottom / cover no-repeat;
+        display: flex; flex-direction: column;
+      }
+      .field::after {
+        content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+        height: 120px; pointer-events: none; z-index: 3;
+        background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.12) 100%);
       }
 
       .cloud, .cloud::before, .cloud::after {
@@ -112,7 +123,7 @@
       .battle-stage {
         position: relative; display: flex;
         align-items: center; justify-content: center;
-        min-height: 340px; z-index: 2;
+        flex: 1; min-height: 0; z-index: 2;
       }
 
       .grass-platform {
@@ -142,7 +153,7 @@
 
       .egg-glow {
         position: absolute;
-        width: 250px; height: 250px;
+        width: 300px; height: 300px;
         border-radius: 50%;
         background: radial-gradient(circle, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.32) 42%, rgba(255,255,255,0) 72%);
         filter: blur(4px);
@@ -186,11 +197,11 @@
 
       .egg-image {
         position: relative; z-index: 2;
-        width: min(235px, 42vw); max-width: 235px;
+        width: min(265px, 46vw); max-width: 265px;
         height: auto; display: block;
         user-select: none; -webkit-user-drag: none;
         image-rendering: auto;
-        filter: drop-shadow(0 20px 16px rgba(26,38,62,0.18));
+        filter: drop-shadow(0 26px 20px rgba(26,38,62,0.24));
         animation: idleEgg 2.5s ease-in-out infinite;
       }
       .egg-image.hatching { animation: hatchShake 0.14s ease-in-out infinite alternate; }
@@ -260,14 +271,14 @@
       /* ── Dialog ── */
       .dialog-wrap {
         position: relative; z-index: 4;
-        margin-top: -8px; padding: 0 18px 18px;
+        padding: 0 18px 20px; flex-shrink: 0;
       }
       .dialog {
-        background: var(--screen);
+        background: rgba(255,255,255,0.97);
         border: 5px solid var(--screen-border);
-        border-radius: 24px;
-        box-shadow: 0 14px 26px rgba(30,44,70,0.18);
-        padding: 18px;
+        border-radius: 28px;
+        box-shadow: 0 16px 32px rgba(30,44,70,0.20);
+        padding: 18px 20px;
       }
       .dialog-top {
         display: flex; justify-content: space-between;
@@ -302,8 +313,9 @@
 
       .step-btn {
         background: linear-gradient(180deg, #ffdc57 0%, #f6b913 100%);
-        color: #3c2b00; min-width: 190px;
-        box-shadow: 0 8px 0 #c28e00;
+        color: #3c2b00; width: 100%;
+        box-shadow: 0 9px 0 #c28e00;
+        font-size: 19px; padding: 17px 28px;
       }
       .step-btn.special-step {
         background: linear-gradient(180deg, var(--gold-1) 0%, var(--gold-2) 100%);
@@ -354,7 +366,7 @@
       .reveal-stage {
         position: relative; z-index: 3;
         display: flex; justify-content: center;
-        align-items: center; min-height: 400px;
+        align-items: center; flex: 1; min-height: 0;
       }
       .reveal-orb {
         position: absolute; width: 420px; height: 420px;
@@ -459,11 +471,14 @@
         border: 6px solid var(--screen-border);
         border-radius: 34px; overflow: hidden;
         box-shadow: 0 22px 50px rgba(25,35,60,0.22);
+        display: flex; flex-direction: column;
+        height: 720px;
       }
       .dex-top {
         padding: 18px 18px 14px;
         border-bottom: 5px solid var(--screen-border);
         background: linear-gradient(180deg, #ff8c88 0%, #f15b55 100%);
+        flex-shrink: 0;
       }
       .dex-lights { display: flex; gap: 8px; margin-bottom: 14px; }
       .light-big, .light-small { border-radius: 50%; border: 3px solid var(--screen-border); }
@@ -477,15 +492,16 @@
       .light-small.green  { background: #73db72; }
       .dex-title { color: white; font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; }
       .dex-subtitle { margin-top: 6px; color: rgba(255,255,255,0.92); font-size: 26px; font-weight: 900; line-height: 1; }
-      .dex-body { padding: 14px; }
+      .dex-body { padding: 14px; flex: 1; min-height: 0; display: flex; flex-direction: column; }
       .dex-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
       .dex-count-group { flex: 0 0 auto; }
       .dex-screen {
         background: linear-gradient(180deg, #eaf8d8 0%, #d5efb9 100%);
         border: 5px solid var(--screen-border);
-        border-radius: 28px; padding: 14px; min-height: 520px;
+        border-radius: 28px; padding: 16px;
+        flex: 1; min-height: 0; display: flex; flex-direction: column;
       }
-      .dex-meta { display: flex; flex-direction: column; gap: 14px; margin-bottom: 14px; }
+      .dex-meta { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }
       .dex-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
       .counter {
         display: inline-flex; align-items: center; justify-content: center;
@@ -495,16 +511,19 @@
         font-size: 22px; font-weight: 900;
       }
       .clear-btn {
-        background: linear-gradient(180deg, #fff 0%, #d9e4f3 100%);
-        color: var(--ink); box-shadow: 0 6px 0 #8da4bf;
+        background: linear-gradient(180deg, #fff8f8 0%, #ffe4e4 100%);
+        color: #8b3535; box-shadow: 0 4px 0 #d0a0a0;
+        border-color: rgba(180,80,80,0.35);
         grid-column: 1 / -1;
+        font-size: 13px; padding: 9px 16px; opacity: 0.82;
       }
       .full-dex-btn {
         background: linear-gradient(180deg, #d8f7ff 0%, #7fd1ff 100%);
-        color: #143e66; box-shadow: 0 6px 0 #4686b0;
+        color: #143e66; box-shadow: 0 8px 0 #4686b0;
         grid-column: 1 / -1;
+        font-size: 16px; padding: 14px 20px;
       }
-      .dex-list { display: grid; gap: 10px; max-height: 560px; overflow: auto; padding-right: 4px; }
+      .dex-list { display: grid; gap: 10px; flex: 1; overflow: auto; padding-right: 4px; align-content: start; }
       .dex-list::-webkit-scrollbar { width: 10px; }
       .dex-list::-webkit-scrollbar-thumb { background: rgba(49,63,89,0.28); border-radius: 999px; }
       .empty {
@@ -513,7 +532,10 @@
         background: rgba(255,255,255,0.6); text-align: center;
         font-size: 14px; font-weight: 800; color: var(--ink-2);
       }
-      .recent-title { font-size: 13px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); }
+      .recent-title {
+        font-size: 11px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; color: var(--slate);
+        padding: 10px 2px 6px; border-top: 2px solid rgba(49,63,89,0.15); flex-shrink: 0;
+      }
 
       /* ── Dex entries ── */
       .entry {
@@ -882,7 +904,11 @@
       /* ── Responsive ── */
       @media (max-width: 1040px) {
         .layout { grid-template-columns: 1fr; }
-        .field { min-height: 500px; }
+        .screen-shell { height: auto; }
+        .dex-shell { height: auto; }
+        .field { flex: none; min-height: 460px; display: block; }
+        .battle-stage { flex: none; min-height: 340px; }
+        .dex-list { max-height: 520px; }
         .full-dex-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       }
       @media (max-width: 768px) {
@@ -901,7 +927,8 @@
         .status-chip { padding: 8px 12px; }
         .status-chip .value { font-size: 16px; }
         .brand-copy h1 { font-size: 26px; }
-        .field { padding: 18px 14px 0; min-height: 420px; }
+        .field { min-height: 380px; display: block; }
+        .battle-stage { min-height: 320px; flex: none; }
         .dialog-wrap { padding: 0 10px 12px; }
         .dialog { padding: 14px; }
         .dialog-top { flex-direction: column; }
@@ -946,7 +973,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.14</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.15</span>
             </div>
           </div>
           <div id="mainView">
@@ -1031,7 +1058,7 @@
       const MAX_STEPS   = 10;
       const SHINY_ODDS  = 2;
       const STORAGE_KEY = "oddegg-v1";
-      const EGG_IMAGE   = "https://www.pngkey.com/png/full/30-307419_image-egg-standard-k-pokemon-egg-clipart.png";
+      const EGG_IMAGE   = "./standardegg.png";
 
       // Pokémon with the Flame Body ability — unlocks the Flame Body charm
       const FLAME_BODY_POKEMON = new Set([
