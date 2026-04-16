@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.12</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.13</span>
             </div>
           </div>
           <div id="mainView">
@@ -1411,6 +1411,8 @@
                 catching_charm_unlocked:  state.catchingCharmUnlocked,
                 flame_body_charm_unlocked: state.flameBodyCharmUnlocked,
               };
+              // Entries are now in Supabase — safe to clear the recovery backup
+              localStorage.removeItem("oddegg-pending-log");
             }
           }
         });
@@ -1996,8 +1998,10 @@
                   if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
                 }
               }
-              localStorage.removeItem("oddegg-pending-log");
-              _stateDirty = true; // will broadcast after init completes
+              // Don't remove from localStorage yet — SUBSCRIBED re-fetch will overwrite
+              // state.recentLog from the server; we re-apply from localStorage there.
+              // localStorage is cleared in _syncToSupabase when the dirty sync succeeds.
+              _stateDirty = true;
             }
           }
         } catch {}
@@ -2902,6 +2906,24 @@
               catching_charm_unlocked:  data.catching_charm_unlocked,
               flame_body_charm_unlocked: data.flame_body_charm_unlocked,
             };
+            // Re-apply any locally recovered log entries that haven't synced to the server yet
+            // (server re-fetch above may have overwritten state.recentLog with stale empty data)
+            try {
+              const raw = localStorage.getItem("oddegg-pending-log");
+              if (raw) {
+                const pending = JSON.parse(raw);
+                if (Array.isArray(pending)) {
+                  for (const { entry, isShiny } of pending) {
+                    if (!state.recentLog.some(e => e.claimedAt === entry.claimedAt && e.slug === entry.slug)) {
+                      state.recentLog.unshift(entry);
+                      state.recentLog = state.recentLog.slice(0, 12);
+                      if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+                    }
+                  }
+                  _stateDirty = true; // ensure these get synced to server
+                }
+              }
+            } catch {}
             renderDex();
             renderCharmBar();
             if (state.fullDexOpen) renderFullDexOverlay();

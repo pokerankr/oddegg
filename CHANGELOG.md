@@ -4,6 +4,15 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.13] — 2026-04-15
+### Bug Fix
+
+#### Recently Found Disappearing After Refresh
+- Root cause: the SUBSCRIBED realtime callback re-fetches `shared_game_state` and was overwriting `state.recentLog` with the server's empty value before the pending entries had been synced
+- Fix: localStorage recovery no longer removes its backup immediately; the SUBSCRIBED callback re-applies any localStorage entries after the server re-fetch; `_syncToSupabase` removes the backup only after a successful dirty sync confirms the entries are in the DB
+
+---
+
 ## [0.7.12] — 2026-04-15
 ### Bug Fix
 
