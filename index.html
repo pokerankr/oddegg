@@ -793,14 +793,6 @@
         100% { opacity: 0; }
       }
 
-      /* ── Mute button ── */
-      .mute-btn {
-        background: linear-gradient(180deg, #fff 0%, #dce8f7 100%);
-        color: var(--ink); box-shadow: 0 6px 0 #8da4bf;
-        border-width: 3px; border-radius: 14px;
-        padding: 8px 12px; font-size: 18px; line-height: 1;
-        min-width: unset; width: auto !important;
-      }
 
       /* ── Online trainers chip ── */
       .online-chip { cursor: default; position: relative; }
@@ -973,7 +965,6 @@
                 <span class="label">Total Steps</span>
                 <span class="value" id="globalClickCount">0</span>
               </div>
-              <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
               <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.15</span>
             </div>
           </div>
@@ -1056,8 +1047,8 @@
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // ─── Config ──────────────────────────────────────────────────────────────
-      const MAX_STEPS   = 10;
-      const SHINY_ODDS  = 2;
+      const MAX_STEPS   = 100_000;
+      const SHINY_ODDS  = 512;
       const STORAGE_KEY = "oddegg-v1";
       const EGG_IMAGE   = "./standardegg.png";
 
@@ -1149,7 +1140,6 @@
       let _dittoTrainerName   = null;              // saved trainer name for deferred ditto claim
       let _autoDittoTimer     = null;              // auto-pick timer for ditto picker
       let _dittoCountdown     = 0;                 // seconds left on ditto picker
-      let _soundMuted         = localStorage.getItem("oddegg-muted") === "true";
       let _presenceChannel    = null;
       let _onlineTrainers     = [];
 
@@ -1570,34 +1560,6 @@
         if (_stuckClaimTimer) { clearTimeout(_stuckClaimTimer); _stuckClaimTimer = null; }
       }
 
-      // ─── Sound ───────────────────────────────────────────────────────────────
-      let _audioCtx = null;
-      // Call on first user gesture — unlocks audio for the whole session
-      function _unlockAudio() {
-        if (_audioCtx) return;
-        try {
-          _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          _audioCtx.resume();
-        } catch {}
-      }
-
-      function playPokemonCry(pokemonId) {
-        if (_soundMuted) return;
-        try {
-          const audio = new Audio(
-            `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${pokemonId}.ogg`
-          );
-          audio.volume = 0.55;
-          audio.play().catch(() => {});
-        } catch {}
-      }
-
-      function toggleMute() {
-        _soundMuted = !_soundMuted;
-        localStorage.setItem("oddegg-muted", _soundMuted);
-        const btn = document.getElementById("muteBtn");
-        if (btn) btn.textContent = _soundMuted ? "🔇" : "🔊";
-      }
 
       // ─── Hatch burst animation ────────────────────────────────────────────────
       function _playHatchSequence() {
@@ -1608,7 +1570,6 @@
           _hatchAnimTimer    = null;
           _hatchAnimPlaying  = false;
           render(); // shows full reveal
-          if (state.eggState?.pokemon) playPokemonCry(state.eggState.pokemon.id);
         }, 1350);
       }
 
@@ -2042,7 +2003,6 @@
       const _isTouchDevice = window.matchMedia('(pointer:coarse)').matches;
 
       function handleTakeStep() {
-        _unlockAudio();
         const egg = state.eggState;
         if (!egg || egg.status !== 'hatching') return;
 
@@ -2781,12 +2741,6 @@
             setTimeout(showTrainerModal, 600);
           }
 
-          // Mute button
-          const muteBtn = document.getElementById("muteBtn");
-          if (muteBtn) {
-            muteBtn.textContent = _soundMuted ? "🔇" : "🔊";
-            muteBtn.addEventListener("click", toggleMute);
-          }
 
           // Online trainers presence
           initPresence();
