@@ -2551,6 +2551,9 @@
         if (!overlay) return;
         if (!state.fullDexOpen) { overlay.className = "full-dex-overlay"; overlay.innerHTML = ""; return; }
 
+        // Preserve search state across re-renders (e.g. triggered by realtime updates)
+        const prevSearch = document.getElementById("dexSearch")?.value ?? "";
+
         const isShiny    = state.activeDexView === "shiny";
         const unlockMap  = getUnlockMap(isShiny);
         const foundCounts= getFoundCounts(isShiny);
@@ -2606,8 +2609,18 @@
         document.getElementById("dexPrevBtn").addEventListener("click", () => { fullDexPage--; renderFullDexOverlay(); });
         document.getElementById("dexNextBtn").addEventListener("click", () => { fullDexPage++; renderFullDexOverlay(); });
 
+        // Restore search value and re-apply filter if there was one
+        const searchEl = document.getElementById("dexSearch");
+        if (prevSearch) {
+          searchEl.value = prevSearch;
+          const q = prevSearch.toLowerCase().trim();
+          const filtered = ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q));
+          document.getElementById("fullDexGrid").innerHTML = renderDexGrid(filtered, unlockMap, isShiny, getDexArray(isShiny));
+          document.getElementById("dexPagination").style.display = "none";
+        }
+
         // Search filter — searches full list, hides pagination while active
-        document.getElementById("dexSearch").addEventListener("input", e => {
+        searchEl.addEventListener("input", e => {
           const q = e.target.value.toLowerCase().trim();
           const filtered = q
             ? ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q))
