@@ -1029,7 +1029,6 @@
               <div class="dex-meta">
                 <div class="dex-controls">
                   <button class="full-dex-btn" id="baseDexBtn">Open Pokédex</button>
-                  <button class="clear-btn" id="clearDexBtn">Clear Dex</button>
                 </div>
                 <div class="recent-title">Recently Found</div>
               </div>
@@ -2735,7 +2734,6 @@
 
           // Wire up persistent dex buttons
           document.getElementById("baseDexBtn").addEventListener("click", openBaseDex);
-          document.getElementById("clearDexBtn").addEventListener("click",     handleResetDex);
 
           // Mobile tab buttons
           document.getElementById("tabEgg").addEventListener("click", () => setMobileTab("egg"));
