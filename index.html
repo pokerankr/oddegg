@@ -1247,7 +1247,7 @@
         // Random thresholds for hatching dialogue stages (as fractions of targetSteps)
         const hint1At = Math.random() * (0.44 - 0.15) + 0.15; // 15–44%
         const hint2At = Math.random() * (0.74 - 0.45) + 0.45; // 45–74%
-        let targetSteps = randomInt(Math.ceil(MAX_STEPS * 0.75), MAX_STEPS);
+        let targetSteps = randomInt(1, MAX_STEPS);
         if (state.flameBodyCharmUnlocked) targetSteps = Math.max(1, Math.floor(targetSteps * 0.9));
         return {
           targetSteps,
@@ -1857,31 +1857,24 @@
         const egg = state.eggState;
         if (!egg || egg.status !== 'hatching') return;
         const txtEl = document.getElementById("eggDialogText");
-        const subEl = document.getElementById("eggDialogSub");
-        if (!txtEl || !subEl) return;
+        if (!txtEl) return;
         const displaySteps = egg.currentSteps + _pendingEggSteps + _inFlightSteps;
         const progress = displaySteps / (egg.targetSteps || 1);
         const hint1At  = egg.hint1At ?? 0.15;
         const hint2At  = egg.hint2At ?? 0.45;
-        let txt, sub;
+        let txt;
         if (displaySteps === 0) {
           txt = egg.isSpecial ? "A mysterious golden egg is waiting…" : "An Odd Egg is waiting.";
-          sub = egg.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
         } else if (progress < hint1At) {
           txt = "It looks as though this Egg will take a long time yet to hatch.";
-          sub = egg.isSpecial ? "Whatever is inside, it pulses with strange energy." : "Keep stepping — every step counts.";
         } else if (progress < hint2At) {
           txt = "What Pokémon will hatch from this Egg? It doesn't seem close to hatching.";
-          sub = "It's warming up… but it still has a ways to go.";
         } else if (progress < 0.75) {
           txt = "It appears to move occasionally. It may be close to hatching.";
-          sub = "Keep going — something is stirring inside.";
         } else {
           txt = "Sounds can be heard coming from inside! This Egg will hatch soon!";
-          sub = "Just a few more steps…";
         }
         if (txtEl.textContent !== txt) txtEl.textContent = txt;
-        if (subEl.textContent !== sub) subEl.textContent = sub;
       }
 
       // Flushes pending egg steps to Supabase — called on a fast timer
