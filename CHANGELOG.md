@@ -4,6 +4,17 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.11] — 2026-04-15
+### Bug Fix
+
+#### Refresh During Reveal Now Syncs Properly
+- Refreshing during the 5s reveal no longer drops you straight to a tappable new egg
+- `reveal_ends_at`, `revealed_slug`, and `revealed_is_shiny` are now stored on the egg row when a new egg is generated during a reveal
+- A refreshing client detects the active reveal window and shows the spectator reveal for the remaining seconds before allowing tapping
+- Requires SQL: `ALTER TABLE egg_state ADD COLUMN IF NOT EXISTS reveal_ends_at timestamptz, ADD COLUMN IF NOT EXISTS revealed_slug text, ADD COLUMN IF NOT EXISTS revealed_is_shiny boolean DEFAULT false`
+
+---
+
 ## [0.7.10] — 2026-04-15
 ### Bug Fix
 

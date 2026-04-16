@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.10</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.11</span>
             </div>
           </div>
           <div id="mainView">
@@ -1777,12 +1777,24 @@
             _pendingEggSteps = 0;
             _inFlightSteps   = 0;
           }
+          // If a reveal is still in progress (e.g. this client just refreshed), show spectator reveal
+          // for the remaining window instead of jumping straight to the new egg
+          if (!_revealActive && !_spectatorPokemon && row.reveal_ends_at) {
+            const remainingMs = new Date(row.reveal_ends_at) - Date.now();
+            if (remainingMs > 500) {
+              const remainingSecs = Math.ceil(remainingMs / 1000);
+              const revealPokemon = row.revealed_slug
+                ? { ...buildPokemonRecord(row.revealed_slug, row.revealed_is_shiny) }
+                : null;
+              _showSpectatorReveal(revealPokemon, remainingSecs);
+            }
+          }
         }
       }
 
       // Generates egg params locally, saves to Supabase, and updates local state.
-      // Does NOT touch reveal/claimer state — callers manage that themselves.
-      async function generateAndSaveEgg() {
+      // Pass revealPokemon + revealSeconds so refreshing clients can sync to the reveal countdown.
+      async function generateAndSaveEgg(revealPokemon = null, revealSeconds = 0) {
         if (_autoDittoTimer) { clearTimeout(_autoDittoTimer); _autoDittoTimer = null; }
         dittoChosenSlug    = null;
         _isCurrentClaimer  = false;
@@ -1802,8 +1814,13 @@
             p_hint1_at:     fresh.hint1At,
             p_hint2_at:     fresh.hint2At,
           });
-          // Clear hatched_at so it doesn't bleed into the next egg's countdown
-          await db.from("egg_state").update({ hatched_at: null }).eq("id", 1);
+          // Store reveal window so refreshing clients show spectator reveal instead of tapping immediately
+          await db.from("egg_state").update({
+            hatched_at:       null,
+            reveal_ends_at:   revealPokemon ? new Date(Date.now() + revealSeconds * 1000).toISOString() : null,
+            revealed_slug:    revealPokemon?.slug    ?? null,
+            revealed_is_shiny: revealPokemon?.isShiny ?? false,
+          }).eq("id", 1);
         } catch (e) {
           console.error("[OddEgg] generateAndSaveEgg failed:", e);
         }
@@ -2106,9 +2123,9 @@
         _revealCountdown = seconds;
         render();
 
-        // Save the next egg to DB immediately — DB is no longer stuck in 'claiming'
-        // so a refresh during the reveal lands on a clean hatching egg, not a stuck state.
-        await generateAndSaveEgg();
+        // Save the next egg to DB immediately with reveal window — refreshing clients will
+        // show a spectator reveal for the remaining seconds instead of jumping to the new egg.
+        await generateAndSaveEgg(_revealPokemon, seconds);
 
         if (_revealTickTimer) clearInterval(_revealTickTimer);
         _revealTickTimer = setInterval(() => {
