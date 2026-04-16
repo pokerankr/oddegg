@@ -384,7 +384,7 @@
       }
       .pokemon-art {
         position: relative; z-index: 2;
-        width: min(300px, 62vw); height: auto;
+        width: min(360px, 62vw); height: auto;
         object-fit: contain;
         filter: drop-shadow(0 22px 18px rgba(22,31,48,0.18));
         animation: revealBob 2.2s ease-in-out infinite;
@@ -2175,7 +2175,7 @@
         _revealTickTimer = setInterval(() => {
           _revealCountdown = Math.max(0, _revealCountdown - 1);
           const el = document.getElementById("revealCountdown");
-          if (el) el.textContent = `New egg in ${_revealCountdown}s…`;
+          if (el) el.innerHTML = `Dex #${String(_revealPokemon?.id ?? 0).padStart(4,"0")} &nbsp;·&nbsp; New egg in ${_revealCountdown}s…`;
           if (_revealCountdown <= 0) { clearInterval(_revealTickTimer); _revealTickTimer = null; }
         }, 1000);
 
@@ -2314,24 +2314,14 @@
             : (p.slug === "ditto" ? "Transform!" : "Discovery!");
           view.innerHTML = `
             <div class="field">
-              <div class="cloud"></div><div class="cloud c2"></div><div class="cloud c3"></div>
               <div class="reveal-stage">
                 <div class="${orbClass}"></div>
                 <img class="pokemon-art" src="${p.image}" alt="${p.name}" />
               </div>
               <div class="dialog-wrap">
                 <div class="dialog">
-                  <div class="dialog-text">The Odd Egg hatched into ${p.isShiny ? "✨ Shiny " : ""}${p.name}!</div>
-                  <div class="info-card">
-                    <div class="kicker ${p.isSpecial ? 'legendary-kicker' : ''}">${kicker}</div>
-                    <div class="name">${p.isShiny ? "✨ " : ""}${p.name}</div>
-                    <div class="dexno">Dex #${String(p.id).padStart(4, "0")}</div>
-                    ${p.isShiny   ? `<div class="shiny-badge">✨ Shiny Hatch</div>` : ""}
-                    ${p.isSpecial ? `<div class="legendary-badge">⭐ ${pd?.isLegendary ? "Legendary" : "Mythical"}</div>` : ""}
-                  </div>
-                  <div class="claim-box" style="text-align:center;">
-                    <div class="dialog-sub" style="padding:12px 0;">New egg hatching soon…</div>
-                  </div>
+                  <div class="dialog-text">${p.isShiny ? "✨ Shiny " : ""}${p.name}${p.isSpecial ? (pd?.isLegendary ? " ⭐" : " ✦") : ""} hatched!</div>
+                  <div class="dialog-sub">Dex #${String(p.id).padStart(4, "0")} &nbsp;·&nbsp; New egg hatching soon…</div>
                 </div>
               </div>
             </div>`;
@@ -2343,29 +2333,16 @@
           const p         = _revealPokemon;
           const pd        = POKEMON_DATA[p.slug];
           const orbClass  = p.isShiny ? "reveal-orb shiny-orb" : p.isSpecial ? "reveal-orb special-orb" : "reveal-orb";
-          const kicker    = p.isSpecial
-            ? (pd?.isLegendary ? "Legendary Discovery!" : "Mythical Discovery!")
-            : (p.slug === "ditto" ? "Transform!" : "Discovery!");
           view.innerHTML = `
             <div class="field">
-              <div class="cloud"></div><div class="cloud c2"></div><div class="cloud c3"></div>
               <div class="reveal-stage">
                 <div class="${orbClass}"></div>
                 <img class="pokemon-art" src="${p.image}" alt="${p.name}" />
               </div>
               <div class="dialog-wrap">
                 <div class="dialog">
-                  <div class="dialog-text">The Odd Egg hatched into ${p.isShiny ? "✨ Shiny " : ""}${p.name}!</div>
-                  <div class="info-card">
-                    <div class="kicker ${p.isSpecial ? 'legendary-kicker' : ''}">${kicker}</div>
-                    <div class="name">${p.isShiny ? "✨ " : ""}${p.name}</div>
-                    <div class="dexno">Dex #${String(p.id).padStart(4, "0")}</div>
-                    ${p.isShiny   ? `<div class="shiny-badge">✨ Shiny Hatch</div>` : ""}
-                    ${p.isSpecial ? `<div class="legendary-badge">⭐ ${pd?.isLegendary ? "Legendary" : "Mythical"}</div>` : ""}
-                  </div>
-                  <div class="claim-box" style="text-align:center;">
-                    <div class="dialog-sub" style="padding:12px 0;" id="revealCountdown">New egg in ${_revealCountdown}s…</div>
-                  </div>
+                  <div class="dialog-text">${p.isShiny ? "✨ Shiny " : ""}${p.name}${p.isSpecial ? (pd?.isLegendary ? " ⭐" : " ✦") : ""} hatched!</div>
+                  <div class="dialog-sub" id="revealCountdown">Dex #${String(p.id).padStart(4, "0")} &nbsp;·&nbsp; New egg in ${_revealCountdown}s…</div>
                 </div>
               </div>
             </div>`;
@@ -2515,37 +2492,17 @@
         const alreadyHaveDitto = Boolean(pokemon.isShiny ? state.unlockedShinyDex["ditto"] : state.unlockedDex["ditto"]);
 
         // ── Build reveal — claiming is handled automatically, show brief status ──
-        const lineComplete = hasLivingDexComplete(pokemon.line, pokemon.isShiny);
-        const kicker       = pokemon.isSpecial
-          ? (pData?.isLegendary ? "Legendary Discovery!" : "Mythical Discovery!")
-          : (pokemon.slug === "ditto" ? "Transform!" : "Discovery!");
-
-        const claimBoxHTML = `
-              <div class="claim-box" style="text-align:center;">
-                <div class="dialog-sub" style="padding:12px 0;">⏳ Another trainer is claiming this egg…</div>
-              </div>`;
-
+        const dittoLabel = pokemon.slug === "ditto" ? (alreadyHaveDitto ? " 🔮" : " 🔮 First Ditto!") : "";
         view.innerHTML = `
           <div class="field">
-            <div class="cloud"></div>
-            <div class="cloud c2"></div>
-            <div class="cloud c3"></div>
             <div class="reveal-stage">
               <div class="${orbClass}"></div>
               <img class="pokemon-art" src="${pokemon.image}" alt="${pokemon.name}" />
             </div>
             <div class="dialog-wrap">
               <div class="dialog">
-                <div class="dialog-text">The Odd Egg hatched into ${pokemon.isShiny ? "✨ Shiny " : ""}${pokemon.name}!</div>
-                <div class="info-card">
-                  <div class="kicker ${pokemon.isSpecial ? 'legendary-kicker' : ''}">${kicker}</div>
-                  <div class="name">${pokemon.isShiny ? "✨ " : ""}${pokemon.name}</div>
-                  <div class="dexno">Dex #${String(pokemon.id).padStart(4, "0")}</div>
-                  ${pokemon.isShiny   ? `<div class="shiny-badge">✨ Shiny Hatch</div>` : ""}
-                  ${pokemon.isSpecial ? `<div class="legendary-badge">⭐ ${pData?.isLegendary ? "Legendary" : "Mythical"}</div>` : ""}
-                  ${pokemon.slug === "ditto" ? `<div class="legendary-badge" style="border-color:#9b7fe8;background:linear-gradient(180deg,#ede0ff 0%,#c8a0f0 100%);color:#3d1a6e;">🔮 ${alreadyHaveDitto ? "Ditto Again!" : "First Ditto!"}</div>` : ""}
-                </div>
-                ${claimBoxHTML}
+                <div class="dialog-text">${pokemon.isShiny ? "✨ Shiny " : ""}${pokemon.name}${pokemon.isSpecial ? (pData?.isLegendary ? " ⭐" : " ✦") : ""}${dittoLabel} hatched!</div>
+                <div class="dialog-sub">Dex #${String(pokemon.id).padStart(4, "0")} &nbsp;·&nbsp; ⏳ A trainer is claiming…</div>
               </div>
             </div>
           </div>
