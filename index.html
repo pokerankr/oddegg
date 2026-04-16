@@ -980,7 +980,7 @@
                 <span class="label">Total Steps</span>
                 <span class="value" id="globalClickCount">0</span>
               </div>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.15</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v1.0.0</span>
             </div>
           </div>
           <div id="mainView">
@@ -1676,7 +1676,7 @@
       // ─── Ho-Oh Easter Egg ─────────────────────────────────────────────────────
       function startHoOhScheduler() {
         if (!window.matchMedia('(pointer:fine)').matches) return; // desktop only
-        const ms = (120 + Math.random() * 180) * 1000; // 2–5 min
+        const ms = (600 + Math.random() * 600) * 1000; // 10–20 min
         setTimeout(() => { spawnHoOh(); startHoOhScheduler(); }, ms);
       }
 
@@ -1712,7 +1712,8 @@
         hooh.addEventListener("click", () => {
           if (caught) return;
           caught = true;
-          const bonus = Math.max(1, Math.round((state.eggState?.targetSteps ?? 100) * 0.1));
+          const bonusPct = 0.10 + Math.random() * 0.05; // 10%–15%
+          const bonus = Math.max(1, Math.round((state.eggState?.targetSteps ?? 100) * bonusPct));
           if (state.eggState?.status === 'hatching') {
             _pendingEggSteps += bonus;
             const counterEl = document.getElementById("clickCounter");
