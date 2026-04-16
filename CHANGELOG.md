@@ -4,6 +4,15 @@ All notable changes to the game will be documented here.
 
 ---
 
+## [0.7.9] — 2026-04-15
+### Full Game Reset Support
+
+- Reset SQL now nulls `target_slug` on the egg row to signal a clean slate
+- Client detects a null `target_slug` on load and generates a brand new random egg instead of continuing with the old one
+- `hatched_at`, `is_shiny`, `is_ditto`, `is_special` are all cleared by the reset SQL
+
+---
+
 ## [0.7.8] — 2026-04-15
 ### Bug Fix
 

@@ -946,7 +946,7 @@
                 <span class="value" id="globalClickCount">0</span>
               </div>
               <button class="mute-btn" id="muteBtn" title="Toggle sound">🔊</button>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.8</span>
+              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v0.7.9</span>
             </div>
           </div>
           <div id="mainView">
@@ -1968,10 +1968,10 @@
         // Load shared egg from Supabase egg_state table
         try {
           const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
-          if (eggRow) {
+          if (eggRow && eggRow.target_slug) {
             _applyEggRow(eggRow);
           } else {
-            await generateAndSaveEgg(); // first load — create the shared egg
+            await generateAndSaveEgg(); // first load or post-reset — generate a fresh random egg
           }
         } catch {
           if (!state.eggState) state.eggState = { ...buildFreshEgg(), status: 'hatching' };
