@@ -952,15 +952,7 @@
   <body>
     <!-- Trainer ID modal -->
     <div id="trainerModal" class="trainer-modal-overlay" style="display:none;">
-      <div class="trainer-modal">
-        <div class="t-icon">🎮</div>
-        <h2>Welcome, Trainer!</h2>
-        <p>Enter your trainer name. It will be used whenever you claim a hatched Pokémon — no need to type it every time.</p>
-        <input id="trainerNameInput" placeholder="Your trainer name" maxlength="20" autocomplete="off" />
-        <div class="trainer-modal-error" id="trainerModalError"></div>
-        <button class="success-btn" id="trainerNameConfirm" style="width:100%;">Start Adventure!</button>
-        <button class="util-btn" id="trainerNameSkip" style="width:100%;margin-top:10px;font-size:13px;">Play as Anonymous</button>
-      </div>
+      <div class="trainer-modal" id="trainerModalInner"></div>
     </div>
 
     <div class="page">
@@ -1622,30 +1614,150 @@
       }
 
       // ─── Trainer ID modal ────────────────────────────────────────────────────
+      function _escHtml(s) {
+        return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      }
+
+      async function hashPin(pin) {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pin.trim().toLowerCase()));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+      }
+
+      let _trainerPendingName = "";
+
       function showTrainerModal() {
-        const modal = document.getElementById("trainerModal");
-        if (modal) {
-          modal.style.display = "flex";
-          const input = document.getElementById("trainerNameInput");
-          if (input) { input.value = state.trainerName || ""; input.focus(); }
-        }
+        _trainerPendingName = state.trainerName && state.trainerName !== "Anonymous Trainer" ? state.trainerName : "";
+        document.getElementById("trainerModal").style.display = "flex";
+        _renderTrainerPhase1();
       }
 
       function closeTrainerModal() {
-        const modal = document.getElementById("trainerModal");
-        if (modal) modal.style.display = "none";
+        document.getElementById("trainerModal").style.display = "none";
       }
 
-      function confirmTrainerName() {
+      function _renderTrainerPhase1(errorMsg = "") {
+        const inner = document.getElementById("trainerModalInner");
+        inner.innerHTML = `
+          <div class="t-icon">🎮</div>
+          <h2>Welcome, Trainer!</h2>
+          <p>Enter your trainer name. It will be used whenever you claim a hatched Pokémon.</p>
+          <input id="trainerNameInput" placeholder="Your trainer name" maxlength="20" autocomplete="off" value="${_escHtml(_trainerPendingName)}" />
+          <div class="trainer-modal-error" style="${errorMsg ? 'display:block' : 'display:none'}">${_escHtml(errorMsg)}</div>
+          <button class="success-btn" id="trainerPhase1Btn" style="width:100%;">Continue</button>
+          <button class="util-btn" id="trainerAnonBtn" style="width:100%;margin-top:10px;font-size:13px;">Play as Anonymous</button>
+        `;
+        const input = inner.querySelector("#trainerNameInput");
+        input.focus();
+        inner.querySelector("#trainerPhase1Btn").addEventListener("click", _trainerPhase1);
+        inner.querySelector("#trainerAnonBtn").addEventListener("click", () => _finalizeTrainer("Anonymous Trainer", ""));
+        input.addEventListener("keydown", e => { if (e.key === "Enter") _trainerPhase1(); });
+      }
+
+      async function _trainerPhase1() {
         const input = document.getElementById("trainerNameInput");
-        const name  = (input?.value || "").trim();
-        const errEl = document.getElementById("trainerModalError");
-        if (name && containsProfanity(name)) {
-          if (errEl) { errEl.textContent = "That name isn't allowed. Choose another."; errEl.style.display = "block"; }
+        const raw = (input?.value || "").trim();
+        _trainerPendingName = raw;
+        if (!raw) { _renderTrainerPhase1("Please enter a name."); return; }
+        if (containsProfanity(raw)) { _renderTrainerPhase1("That name isn't allowed. Choose another."); return; }
+        const normalized = raw.toLowerCase();
+        const btn = document.getElementById("trainerPhase1Btn");
+        if (btn) { btn.disabled = true; btn.textContent = "Checking…"; }
+        const { data, error } = await db.from("trainer_pins").select("pin_hash").eq("name", normalized).maybeSingle();
+        if (error) { _renderTrainerPhase1("Connection error. Try again."); return; }
+        if (data) { _renderTrainerPhase2b(normalized, data.pin_hash); }
+        else       { _renderTrainerPhase2a(normalized); }
+      }
+
+      function _renderTrainerPhase2a(name) {
+        const inner = document.getElementById("trainerModalInner");
+        inner.innerHTML = `
+          <div class="t-icon">🎮</div>
+          <h2>${_escHtml(name)}</h2>
+          <p>This name is available! Play freely, or claim it with a PIN so no one else can use it.</p>
+          <button class="success-btn" id="trainerFreeBtn" style="width:100%;">Play freely</button>
+          <button class="util-btn" id="trainerClaimBtn" style="width:100%;margin-top:10px;">🔒 Claim with PIN</button>
+          <button class="util-btn" id="trainerBackBtn" style="width:100%;margin-top:8px;font-size:12px;opacity:0.6;">← Back</button>
+        `;
+        inner.querySelector("#trainerFreeBtn").addEventListener("click", () => _finalizeTrainer(name, ""));
+        inner.querySelector("#trainerClaimBtn").addEventListener("click", () => _renderTrainerPhase2aPin(name));
+        inner.querySelector("#trainerBackBtn").addEventListener("click", () => _renderTrainerPhase1());
+      }
+
+      function _renderTrainerPhase2aPin(name, errorMsg = "") {
+        const inner = document.getElementById("trainerModalInner");
+        inner.innerHTML = `
+          <div class="t-icon">🔒</div>
+          <h2>Set a PIN</h2>
+          <p>Choose a PIN for <strong>${_escHtml(name)}</strong>. Anyone using this name will need it. No recovery if forgotten.</p>
+          <input id="trainerPinInput" type="password" inputmode="numeric" placeholder="Digits only, max 8" maxlength="8" autocomplete="off" />
+          <div class="trainer-modal-error" style="${errorMsg ? 'display:block' : 'display:none'}">${_escHtml(errorMsg)}</div>
+          <button class="success-btn" id="trainerSetPinBtn" style="width:100%;">Set PIN &amp; Start</button>
+          <button class="util-btn" id="trainerBackBtn" style="width:100%;margin-top:8px;font-size:12px;opacity:0.6;">← Back</button>
+        `;
+        const pinInput = inner.querySelector("#trainerPinInput");
+        pinInput.focus();
+        inner.querySelector("#trainerSetPinBtn").addEventListener("click", () => _trainerSetPin(name));
+        inner.querySelector("#trainerBackBtn").addEventListener("click", () => _renderTrainerPhase2a(name));
+        pinInput.addEventListener("keydown", e => { if (e.key === "Enter") _trainerSetPin(name); });
+      }
+
+      async function _trainerSetPin(name) {
+        const pinInput = document.getElementById("trainerPinInput");
+        const pin = (pinInput?.value || "").trim();
+        if (!pin) { _renderTrainerPhase2aPin(name, "Enter a PIN."); return; }
+        if (!/^\d+$/.test(pin)) { _renderTrainerPhase2aPin(name, "PIN must be digits only."); return; }
+        const btn = document.getElementById("trainerSetPinBtn");
+        if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+        const pinHash = await hashPin(pin);
+        const { error } = await db.from("trainer_pins").insert({ name, pin_hash: pinHash });
+        if (error) {
+          if (error.code === "23505") {
+            const { data } = await db.from("trainer_pins").select("pin_hash").eq("name", name).maybeSingle();
+            _renderTrainerPhase2b(name, data?.pin_hash ?? null, "Someone just claimed that name. Enter the PIN or go back.");
+          } else {
+            _renderTrainerPhase2aPin(name, "Could not save. Try again.");
+          }
           return;
         }
+        _finalizeTrainer(name, pinHash);
+      }
+
+      function _renderTrainerPhase2b(name, serverPinHash, errorMsg = "") {
+        const inner = document.getElementById("trainerModalInner");
+        inner.innerHTML = `
+          <div class="t-icon">🔒</div>
+          <h2>${_escHtml(name)}</h2>
+          <p>This name is claimed. Enter the PIN to sign in.</p>
+          <input id="trainerPinInput" type="password" inputmode="numeric" placeholder="PIN" maxlength="8" autocomplete="off" />
+          <div class="trainer-modal-error" style="${errorMsg ? 'display:block' : 'display:none'}">${_escHtml(errorMsg)}</div>
+          <button class="success-btn" id="trainerSignInBtn" style="width:100%;">Sign In</button>
+          <button class="util-btn" id="trainerBackBtn" style="width:100%;margin-top:8px;font-size:12px;opacity:0.6;">← Choose a different name</button>
+        `;
+        const pinInput = inner.querySelector("#trainerPinInput");
+        pinInput.focus();
+        inner.querySelector("#trainerSignInBtn").addEventListener("click", () => _trainerVerifyPin(name, serverPinHash));
+        inner.querySelector("#trainerBackBtn").addEventListener("click", () => _renderTrainerPhase1(""));
+        pinInput.addEventListener("keydown", e => { if (e.key === "Enter") _trainerVerifyPin(name, serverPinHash); });
+      }
+
+      async function _trainerVerifyPin(name, serverPinHash) {
+        const pinInput = document.getElementById("trainerPinInput");
+        const pin = (pinInput?.value || "").trim();
+        if (!pin) { _renderTrainerPhase2b(name, serverPinHash, "Enter your PIN."); return; }
+        const btn = document.getElementById("trainerSignInBtn");
+        if (btn) { btn.disabled = true; btn.textContent = "Checking…"; }
+        const enteredHash = await hashPin(pin);
+        if (enteredHash !== serverPinHash) {
+          _renderTrainerPhase2b(name, serverPinHash, "Wrong PIN. Try again or choose a different name.");
+          return;
+        }
+        _finalizeTrainer(name, enteredHash);
+      }
+
+      function _finalizeTrainer(name, pinHash) {
         state.trainerName = name || "Anonymous Trainer";
         localStorage.setItem("oddegg-trainer-name", state.trainerName);
+        localStorage.setItem("oddegg-trainer-pin", pinHash || "");
         const display = document.getElementById("trainerNameDisplay");
         if (display) display.textContent = state.trainerName;
         if (_presenceChannel) _presenceChannel.track({ name: state.trainerName });
@@ -2755,22 +2867,23 @@
           // Trainer chip → re-open modal
           document.getElementById("trainerChip").addEventListener("click", showTrainerModal);
 
-          // Trainer modal buttons
-          document.getElementById("trainerNameConfirm").addEventListener("click", confirmTrainerName);
-          document.getElementById("trainerNameSkip").addEventListener("click", () => {
-            state.trainerName = "Anonymous Trainer";
-            localStorage.setItem("oddegg-trainer-name", state.trainerName);
-            const display = document.getElementById("trainerNameDisplay");
-            if (display) display.textContent = state.trainerName;
-            closeTrainerModal();
-          });
-          document.getElementById("trainerNameInput").addEventListener("keydown", e => {
-            if (e.key === "Enter") confirmTrainerName();
-          });
-
-          // Show trainer modal on first visit (no saved name)
-          if (!localStorage.getItem("oddegg-trainer-name")) {
+          // Show trainer modal on first visit; silently verify PIN on return visits
+          const _savedTrainerName = localStorage.getItem("oddegg-trainer-name");
+          const _savedTrainerPin  = localStorage.getItem("oddegg-trainer-pin");
+          if (!_savedTrainerName) {
             setTimeout(showTrainerModal, 600);
+          } else if (_savedTrainerPin) {
+            (async () => {
+              const normalized = _savedTrainerName.toLowerCase();
+              const { data } = await db.from("trainer_pins").select("pin_hash").eq("name", normalized).maybeSingle();
+              if (data && data.pin_hash !== _savedTrainerPin) {
+                _trainerPendingName = _savedTrainerName;
+                setTimeout(() => {
+                  document.getElementById("trainerModal").style.display = "flex";
+                  _renderTrainerPhase2b(normalized, data.pin_hash, "Session expired. Enter your PIN to continue.");
+                }, 600);
+              }
+            })();
           }
 
 
