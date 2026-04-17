@@ -1596,8 +1596,8 @@
             renderOnlineTrainers();
           })
           .subscribe(async status => {
-            if (status === "SUBSCRIBED") {
-              await _presenceChannel.track({ name: state.trainerName || "Anonymous Trainer" });
+            if (status === "SUBSCRIBED" && state.trainerName) {
+              await _presenceChannel.track({ name: state.trainerName });
             }
           });
       }
