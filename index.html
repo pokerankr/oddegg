@@ -142,7 +142,7 @@
 
       /* ── Egg button ── */
       .egg-button {
-        position: relative; z-index: 3;
+        position: relative; z-index: 3; overflow: hidden;
         background: transparent; border: 0; padding: 0;
         cursor: pointer; transition: transform 0.15s ease;
         width: auto !important; display: flex;
@@ -1789,7 +1789,8 @@
         const trainerName = state.trainerName;
         if (!trainerName || trainerName === "Anonymous Trainer" || steps <= 0) return;
         const name = trainerName.toLowerCase();
-        db.rpc("increment_trainer_steps", { trainer_name: name, display_name: trainerName, steps });
+        db.rpc("increment_trainer_steps", { trainer_name: name, display_name: trainerName, steps })
+          .then(({ error }) => { if (error) console.error("[OddEgg] Step count update failed:", error); });
       }
 
       let _leaderboardTab = "hatchers";
@@ -2251,13 +2252,13 @@
         if (displaySteps >= egg.targetSteps) return; // at server cap — wait for hatch
         _pendingEggSteps++;
 
-        // Local ripple effect
-        const btn = document.getElementById("stepBtn");
-        if (btn && _lastClickEvent) {
+        // Local ripple effect — fires on whichever button was clicked
+        const btn = e?.currentTarget;
+        if (btn && e) {
           const rect   = btn.getBoundingClientRect();
           const size   = Math.max(rect.width, rect.height);
-          const x      = (_lastClickEvent.clientX - rect.left) - size / 2;
-          const y      = (_lastClickEvent.clientY - rect.top)  - size / 2;
+          const x      = (e.clientX - rect.left) - size / 2;
+          const y      = (e.clientY - rect.top)  - size / 2;
           const ripple = document.createElement("span");
           ripple.className = "step-ripple";
           ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
