@@ -1688,7 +1688,8 @@
         inner.innerHTML = `
           <div class="t-icon">🔒</div>
           <h2>Set a PIN</h2>
-          <p>Choose a PIN for <strong>${_escHtml(name)}</strong>. Anyone using this name will need it. No recovery if forgotten.</p>
+          <p>Choose a PIN for <strong>${_escHtml(name)}</strong>. Anyone using this name will need it.</p>
+          <p style="font-size:12px;font-weight:900;color:#b45309;background:#fef3c7;border-radius:8px;padding:8px 10px;margin:0 0 14px;">⚠️ NO RECOVERY METHOD. REMEMBER YOUR NAME AND PIN.</p>
           <input id="trainerPinInput" type="password" inputmode="numeric" placeholder="Digits only, max 8" maxlength="8" autocomplete="off" />
           <div class="trainer-modal-error" style="${errorMsg ? 'display:block' : 'display:none'}">${_escHtml(errorMsg)}</div>
           <button class="success-btn" id="trainerSetPinBtn" style="width:100%;">Set PIN &amp; Start</button>
