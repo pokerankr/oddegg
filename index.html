@@ -1502,7 +1502,7 @@
         const now = Date.now();
         while (_clickTimestamps.length && now - _clickTimestamps[0] > 1000) _clickTimestamps.shift();
         _clickTimestamps.push(now);
-        return _clickTimestamps.length > 10;
+        return _clickTimestamps.length > 12;
       }
 
       function showAutoclickerWarning() {
