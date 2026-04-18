@@ -941,11 +941,13 @@
       }
       @media (max-width: 640px) {
         .page { padding: 14px; padding-bottom: 80px; }
-        .topbar { padding: 10px 12px; gap: 8px; }
-        .topbar-right { gap: 8px; }
-        .status-chip { padding: 6px 10px; }
-        .status-chip { padding: 8px 12px; }
-        .status-chip .value { font-size: 16px; }
+        .topbar { padding: 8px 10px; gap: 6px; flex-wrap: nowrap; }
+        .topbar-right { gap: 6px; }
+        .status-chip { padding: 5px 9px; flex-shrink: 1; min-width: 0; }
+        .status-chip .label { font-size: 9px; }
+        .status-chip .value { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; display: block; }
+        .trainer-chip { max-width: 120px; }
+        .topbar .version-tag { display: none; }
         .brand-copy h1 { font-size: 26px; }
         .field { min-height: 380px; display: block; }
         .battle-stage { min-height: 320px; flex: none; }
@@ -984,7 +986,7 @@
                 <span class="label">Total Steps</span>
                 <span class="value" id="globalClickCount">0</span>
               </div>
-              <span style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;">v1.0.0</span>
+              <span class="version-tag" style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;flex-shrink:0;">v1.0.0</span>
             </div>
           </div>
           <div id="mainView">
@@ -1620,11 +1622,21 @@
         const countEl = document.getElementById("onlineCount");
         const chip    = document.getElementById("onlineChip");
         if (!countEl || !chip) return;
-        const count = _onlineTrainers.length || 1; // always at least self
+        const count = _onlineTrainers.length || 1;
         countEl.textContent = count;
-        chip.title = _onlineTrainers.length
-          ? _onlineTrainers.join(", ")
-          : state.trainerName || "Just you";
+        const names = _onlineTrainers.length ? _onlineTrainers : [state.trainerName || "Just you"];
+        chip.title = names.join(", ");
+        chip.onclick = () => {
+          const existing = document.getElementById("onlinePopup");
+          if (existing) { existing.remove(); return; }
+          const popup = document.createElement("div");
+          popup.id = "onlinePopup";
+          popup.style.cssText = `position:absolute;z-index:9000;background:white;border:3px solid var(--screen-border);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.22);top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;min-width:120px;`;
+          popup.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Online Now</div>` + names.map(n => `<div style="padding:2px 0;">${_escHtml(n)}</div>`).join("");
+          chip.style.position = "relative";
+          chip.appendChild(popup);
+          setTimeout(() => popup.remove(), 4000);
+        };
       }
 
       // ─── Trainer ID modal ────────────────────────────────────────────────────
@@ -1807,16 +1819,14 @@
         overlay.className = "full-dex-overlay open";
         overlay.innerHTML = `
           <div class="full-dex-shell" style="max-width:480px;">
-            <div class="full-dex-top">
-              <div style="flex-shrink:0;">
+            <div class="full-dex-top" style="flex-direction:column;align-items:stretch;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                 <div class="full-dex-title">🏆 Leaderboard</div>
+                <button id="closeLeaderboardBtn" class="close-dex-btn" style="font-size:12px;padding:5px 16px;flex-shrink:0;width:auto;">Close</button>
               </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <div style="display:flex;border-radius:10px;overflow:hidden;border:2px solid var(--screen-border);">
-                  <button id="lbTabHatchers" style="padding:7px 14px;font-size:13px;font-weight:800;font-family:inherit;border:none;cursor:pointer;background:${_leaderboardTab==='hatchers'?'var(--screen-border)':'transparent'};color:${_leaderboardTab==='hatchers'?'white':'var(--ink)'};">🥚 Top Hatchers</button>
-                  <button id="lbTabSteppers" style="padding:7px 14px;font-size:13px;font-weight:800;font-family:inherit;border:none;cursor:pointer;background:${_leaderboardTab==='steppers'?'var(--screen-border)':'transparent'};color:${_leaderboardTab==='steppers'?'white':'var(--ink)'};">👟 Top Steppers</button>
-                </div>
-                <button class="close-dex-btn" id="closeLeaderboardBtn">Close</button>
+              <div style="display:flex;border-radius:10px;overflow:hidden;border:2px solid var(--screen-border);">
+                <button id="lbTabHatchers" style="flex:1;padding:8px 6px;font-size:13px;font-weight:800;font-family:inherit;border:none;border-radius:0;cursor:pointer;background:${_leaderboardTab==='hatchers'?'var(--screen-border)':'transparent'};color:${_leaderboardTab==='hatchers'?'white':'var(--ink)'};">🥚 Top Hatchers</button>
+                <button id="lbTabSteppers" style="flex:1;padding:8px 6px;font-size:13px;font-weight:800;font-family:inherit;border:none;border-radius:0;cursor:pointer;background:${_leaderboardTab==='steppers'?'var(--screen-border)':'transparent'};color:${_leaderboardTab==='steppers'?'white':'var(--ink)'};">👟 Top Steppers</button>
               </div>
             </div>
             <div class="full-dex-body">
