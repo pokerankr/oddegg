@@ -3039,7 +3039,7 @@
           // Sync shared dex/charm state every 2 seconds
           setInterval(_syncToSupabase, 2000);
           // Flush egg steps to Supabase every 500ms — fast enough for responsive hatch detection
-          setInterval(_flushEggSteps, 500);
+          setInterval(_flushEggSteps, 2000);
 
           // Wire up persistent dex buttons
           document.getElementById("baseDexBtn").addEventListener("click", openBaseDex);
