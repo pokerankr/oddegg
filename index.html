@@ -1611,6 +1611,11 @@
             _onlineTrainers = Object.values(ps).flat().map(p => p.name).filter(Boolean);
             renderOnlineTrainers();
           })
+          .on("broadcast", { event: "emoji" }, ({ payload }) => {
+            if (!payload || !state.trainerName) return;
+            if (payload.to.toLowerCase() !== state.trainerName.toLowerCase()) return;
+            _showEmojiToast(payload.from, payload.src);
+          })
           .subscribe(async status => {
             if (status === "SUBSCRIBED" && state.trainerName) {
               await _presenceChannel.track({ name: state.trainerName });
@@ -1632,11 +1637,45 @@
           const popup = document.createElement("div");
           popup.id = "onlinePopup";
           popup.style.cssText = `position:absolute;z-index:9000;background:white;border:3px solid var(--screen-border);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.22);top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;min-width:120px;`;
-          popup.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Online Now</div>` + names.map(n => `<div style="padding:2px 0;">${_escHtml(n)}</div>`).join("");
+          const myName = (state.trainerName || "").toLowerCase();
+          popup.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Online Now</div>` + names.map(n => {
+            const isMe = n.toLowerCase() === myName;
+            const btn  = (!isMe && myName) ? `<button onclick="_sendEmoji('${_escHtml(n)}')" style="margin-left:8px;background:none;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1;" title="Send emoji">👋</button>` : "";
+            return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${btn}</div>`;
+          }).join("");
           chip.style.position = "relative";
           chip.appendChild(popup);
           setTimeout(() => popup.remove(), 4000);
         };
+      }
+
+      const EMOJI_OPTIONS = [
+        { label: "Eevee Clap", src: "eeveeclap.gif" },
+      ];
+
+      function _sendEmoji(toName) {
+        const existing = document.getElementById("emojiPicker");
+        if (existing) { existing.remove(); return; }
+        const picker = document.createElement("div");
+        picker.id = "emojiPicker";
+        picker.style.cssText = "position:fixed;z-index:9999;background:white;border:3px solid var(--screen-border);border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.25);top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;";
+        picker.innerHTML = `<div style="font-size:11px;font-weight:900;letter-spacing:0.12em;color:var(--slate);text-transform:uppercase;margin-bottom:10px;">Send to ${_escHtml(toName)}</div>` +
+          EMOJI_OPTIONS.map(e => `<img src="${e.src}" alt="${_escHtml(e.label)}" title="${_escHtml(e.label)}" style="width:72px;height:72px;object-fit:contain;cursor:pointer;border-radius:8px;border:2px solid transparent;" onmouseover="this.style.borderColor='var(--screen-border)'" onmouseout="this.style.borderColor='transparent'" onclick="_dispatchEmoji('${_escHtml(toName)}','${_escHtml(e.src)}');document.getElementById('emojiPicker')?.remove();document.getElementById('onlinePopup')?.remove();" />`).join("") +
+          `<div><button onclick="document.getElementById('emojiPicker')?.remove()" style="margin-top:10px;font-size:12px;padding:4px 14px;border-radius:20px;border:2px solid #ccc;background:white;cursor:pointer;">Cancel</button></div>`;
+        document.body.appendChild(picker);
+      }
+
+      function _dispatchEmoji(toName, src) {
+        if (!_presenceChannel) return;
+        _presenceChannel.send({ type: "broadcast", event: "emoji", payload: { to: toName, from: state.trainerName, src } });
+      }
+
+      function _showEmojiToast(fromName, src) {
+        const toast = document.createElement("div");
+        toast.style.cssText = "position:fixed;z-index:9999;bottom:90px;left:50%;transform:translateX(-50%);background:white;border:3px solid var(--screen-border);border-radius:16px;padding:14px 20px;box-shadow:0 8px 24px rgba(0,0,0,0.22);text-align:center;pointer-events:none;";
+        toast.innerHTML = `<img src="${_escHtml(src)}" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 8px;" /><div style="font-size:13px;font-weight:700;color:var(--slate);">${_escHtml(fromName)} waved at you!</div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
       }
 
       // ─── Trainer ID modal ────────────────────────────────────────────────────
