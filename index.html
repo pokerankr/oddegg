@@ -1614,7 +1614,7 @@
           .on("broadcast", { event: "emoji" }, ({ payload }) => {
             if (!payload || !state.trainerName) return;
             if (payload.to.toLowerCase() !== state.trainerName.toLowerCase()) return;
-            _showEmojiToast(payload.from, payload.src);
+            _showEmojiToast(payload.from, payload.src, payload.message);
           })
           .subscribe(async status => {
             if (status === "SUBSCRIBED" && state.trainerName) {
@@ -1650,31 +1650,52 @@
       }
 
       const EMOJI_OPTIONS = [
-        { label: "Eevee Clap", src: "eeveeclap.gif" },
+        { label: "Eevee Clap",    src: "eeveeclap.gif",    message: "{name} is excited you're here!" },
+        { label: "Pikachu Wave",  src: "pikachu_wave.gif", message: "{name} says hello!" },
       ];
+
+      let _emojiPickerIndex = 0;
 
       function _sendEmoji(toName) {
         const existing = document.getElementById("emojiPicker");
         if (existing) { existing.remove(); return; }
+        _emojiPickerIndex = 0;
+        _renderEmojiPicker(toName);
+      }
+
+      function _renderEmojiPicker(toName) {
+        document.getElementById("emojiPicker")?.remove();
+        const e = EMOJI_OPTIONS[_emojiPickerIndex];
+        const absrc = new URL(e.src, window.location.origin).href;
         const picker = document.createElement("div");
         picker.id = "emojiPicker";
-        picker.style.cssText = "position:fixed;z-index:9999;background:white;border:3px solid var(--screen-border);border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.25);top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;";
-        picker.innerHTML = `<div style="font-size:11px;font-weight:900;letter-spacing:0.12em;color:var(--slate);text-transform:uppercase;margin-bottom:10px;">Send to ${_escHtml(toName)}</div>` +
-          EMOJI_OPTIONS.map(e => { const absrc = new URL(e.src, window.location.origin).href; return `<img src="${absrc}" alt="${_escHtml(e.label)}" title="${_escHtml(e.label)}" style="width:72px;height:72px;object-fit:contain;cursor:pointer;border-radius:8px;border:2px solid transparent;" onmouseover="this.style.borderColor='var(--screen-border)'" onmouseout="this.style.borderColor='transparent'" onclick="_dispatchEmoji('${_escHtml(toName)}','${_escHtml(e.src)}');document.getElementById('emojiPicker')?.remove();document.getElementById('onlinePopup')?.remove();" />`; }).join("") +
-          `<div><button onclick="document.getElementById('emojiPicker')?.remove()" style="margin-top:10px;font-size:12px;padding:4px 14px;border-radius:20px;border:2px solid #ccc;background:white;cursor:pointer;">Cancel</button></div>`;
+        picker.style.cssText = "position:fixed;z-index:9999;background:white;border:3px solid var(--screen-border);border-radius:14px;padding:16px 20px;box-shadow:0 8px 24px rgba(0,0,0,0.25);top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;min-width:200px;";
+        picker.innerHTML = `
+          <div style="font-size:11px;font-weight:900;letter-spacing:0.12em;color:var(--slate);text-transform:uppercase;margin-bottom:12px;">Send to ${_escHtml(toName)}</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+            <button onclick="_emojiPickerIndex=((_emojiPickerIndex-1)+${EMOJI_OPTIONS.length})%${EMOJI_OPTIONS.length};_renderEmojiPicker('${_escHtml(toName)}')" style="font-size:20px;background:none;border:none;cursor:pointer;padding:4px;">◀</button>
+            <img src="${absrc}" style="width:80px;height:80px;object-fit:contain;border-radius:10px;" />
+            <button onclick="_emojiPickerIndex=(_emojiPickerIndex+1)%${EMOJI_OPTIONS.length};_renderEmojiPicker('${_escHtml(toName)}')" style="font-size:20px;background:none;border:none;cursor:pointer;padding:4px;">▶</button>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--slate);margin:8px 0 14px;">${_escHtml(e.label)}</div>
+          <div style="display:flex;gap:8px;justify-content:center;">
+            <button onclick="_dispatchEmoji('${_escHtml(toName)}',EMOJI_OPTIONS[_emojiPickerIndex]);document.getElementById('emojiPicker')?.remove();document.getElementById('onlinePopup')?.remove();" style="font-size:13px;padding:6px 18px;border-radius:20px;border:2px solid var(--screen-border);background:var(--screen-border);color:white;font-weight:700;cursor:pointer;">Send</button>
+            <button onclick="document.getElementById('emojiPicker')?.remove()" style="font-size:13px;padding:6px 18px;border-radius:20px;border:2px solid #ccc;background:white;cursor:pointer;">Cancel</button>
+          </div>`;
         document.body.appendChild(picker);
       }
 
-      function _dispatchEmoji(toName, src) {
+      function _dispatchEmoji(toName, emojiOption) {
         if (!_presenceChannel) return;
-        _presenceChannel.send({ type: "broadcast", event: "emoji", payload: { to: toName, from: state.trainerName, src } });
+        _presenceChannel.send({ type: "broadcast", event: "emoji", payload: { to: toName, from: state.trainerName, src: emojiOption.src, message: emojiOption.message } });
       }
 
-      function _showEmojiToast(fromName, src) {
+      function _showEmojiToast(fromName, src, message) {
+        const text = (message || "{name} waved at you!").replace("{name}", _escHtml(fromName));
         const toast = document.createElement("div");
         toast.style.cssText = "position:fixed;z-index:9999;bottom:90px;left:50%;transform:translateX(-50%);background:white;border:3px solid var(--screen-border);border-radius:16px;padding:14px 20px;box-shadow:0 8px 24px rgba(0,0,0,0.22);text-align:center;pointer-events:none;";
-        const imgSrc = new URL(_escHtml(src), window.location.origin).href;
-        toast.innerHTML = `<img src="${imgSrc}" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 8px;" /><div style="font-size:13px;font-weight:700;color:var(--slate);">${_escHtml(fromName)} waved at you!</div>`;
+        const imgSrc = new URL(src, window.location.origin).href;
+        toast.innerHTML = `<img src="${imgSrc}" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 8px;" /><div style="font-size:13px;font-weight:700;color:var(--slate);">${text}</div>`;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
       }
