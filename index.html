@@ -2155,6 +2155,7 @@
 
       // Flushes pending egg steps to Supabase — called on a fast timer
       function _flushEggSteps() {
+        if (document.hidden) return; // don't send steps when tab is backgrounded
         if (_pendingEggSteps === 0) return;
         if (!state.eggState || state.eggState.status !== 'hatching') {
           _pendingEggSteps = 0;
@@ -2309,6 +2310,7 @@
       let _lastClickEvent = null;
 
       function handleTakeStep(e) {
+        if (document.hidden) return; // tab backgrounded / screen locked — ignore phantom taps
         if (e) _lastClickEvent = e;
         const egg = state.eggState;
         if (!egg || egg.status !== 'hatching') return;
