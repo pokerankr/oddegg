@@ -1530,7 +1530,7 @@
         _clearAutoClaimTimer();
         if (_isCurrentClaimer || _revealActive) return; // already handling this hatch
         if (!state.eggState || state.eggState.status !== 'hatched') return;
-        const { data: won } = await db.rpc("try_claim_egg");
+        const { data: won } = await db.rpc("try_claim_egg", { p_trainer_name: state.trainerName ? state.trainerName.toLowerCase() : null, p_display_name: state.trainerName || null });
         if (!won) {
           // Someone else already claimed — re-fetch current state so we don't stay stuck
           const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
@@ -1736,14 +1736,11 @@
         const btn = document.getElementById("trainerSetPinBtn");
         if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
         const pinHash = await hashPin(pin);
-        const { error } = await db.from("trainer_pins").insert({ name, pin_hash: pinHash });
-        if (error) {
-          if (error.code === "23505") {
-            const { data } = await db.from("trainer_pins").select("pin_hash").eq("name", name).maybeSingle();
-            _renderTrainerPhase2b(name, data?.pin_hash ?? null, "Someone just claimed that name. Enter the PIN or go back.");
-          } else {
-            _renderTrainerPhase2aPin(name, "Could not save. Try again.");
-          }
+        const { data: claimed, error } = await db.rpc("claim_trainer_name", { p_name: name, p_pin_hash: pinHash });
+        if (error) { _renderTrainerPhase2aPin(name, "Could not save. Try again."); return; }
+        if (!claimed) {
+          const { data } = await db.from("trainer_pins").select("pin_hash").eq("name", name).maybeSingle();
+          _renderTrainerPhase2b(name, data?.pin_hash ?? null, "Someone just claimed that name. Enter the PIN or go back.");
           return;
         }
         _finalizeTrainer(name, pinHash);
@@ -2116,7 +2113,7 @@
               if (wasHatching && state.eggState.status !== 'hatching') {
                 _playHatchSequence(); // egg just hatched — play burst then reveal
                 // Auto-claim as the player whose step caused this hatch
-                const { data: won } = await db.rpc("try_claim_egg");
+                const { data: won } = await db.rpc("try_claim_egg", { p_trainer_name: state.trainerName ? state.trainerName.toLowerCase() : null, p_display_name: state.trainerName || null });
                 if (won) {
                   _clearAutoClaimTimer();
                   _isCurrentClaimer = true;
@@ -2331,7 +2328,6 @@
         state.claimer = "";
         const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
         saveState(true); // dex + log committed atomically in one sync
-        _incrementHatchCount(trainerName);
         return newCharms;
       }
 
@@ -2372,7 +2368,6 @@
         state.claimer   = "";
         const newCharms = checkCharmUnlocks(chosenEntry); // check morph, not ditto — so fire-type morphs unlock Flame Body
         saveState(true); // dex + log committed atomically in one sync
-        _incrementHatchCount(trainerName);
         return newCharms;
       }
 
