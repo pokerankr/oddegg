@@ -2016,7 +2016,7 @@
 
       // ─── Ho-Oh Easter Egg ─────────────────────────────────────────────────────
       function startHoOhScheduler() {
-        const ms = 30 * 1000; // 30s (temp)
+        const ms = (1200 + Math.random() * 600) * 1000; // 20–30 min
         setTimeout(() => { spawnHoOh(); startHoOhScheduler(); }, ms);
       }
 
