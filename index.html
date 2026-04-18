@@ -2017,7 +2017,7 @@
       // ─── Ho-Oh Easter Egg ─────────────────────────────────────────────────────
       function startHoOhScheduler() {
         if (!window.matchMedia('(pointer:fine)').matches) return; // desktop only
-        const ms = (600 + Math.random() * 600) * 1000; // 10–20 min
+        const ms = 30 * 1000; // 30s (temp)
         setTimeout(() => { spawnHoOh(); startHoOhScheduler(); }, ms);
       }
 
