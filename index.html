@@ -1640,7 +1640,9 @@
           const myName = (state.trainerName || "").toLowerCase();
           popup.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Online Now</div>` + names.map(n => {
             const isMe = n.toLowerCase() === myName;
-            const btn  = (!isMe && myName) ? `<button onclick="_sendEmoji('${_escHtml(n)}')" style="margin-left:8px;background:none;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1;" title="Send emoji">👋</button>` : "";
+            const cooldownLeft = Math.max(0, Math.ceil((EMOJI_COOLDOWN_MS - (Date.now() - _emojiLastSent)) / 1000));
+            const onCooldown = cooldownLeft > 0;
+            const btn  = (!isMe && myName) ? `<button onclick="_sendEmoji('${_escHtml(n)}')" ${onCooldown ? "disabled" : ""} style="margin-left:8px;background:none;border:none;cursor:${onCooldown ? 'default' : 'pointer'};font-size:${onCooldown ? '11px' : '16px'};padding:0;line-height:1;color:${onCooldown ? '#aaa' : 'inherit'};" title="${onCooldown ? `Wait ${cooldownLeft}s` : 'Send emoji'}">${onCooldown ? `${cooldownLeft}s` : '👋'}</button>` : "";
             return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${btn}</div>`;
           }).join("");
           chip.style.position = "relative";
@@ -1655,8 +1657,11 @@
       ];
 
       let _emojiPickerIndex = 0;
+      let _emojiLastSent = 0;
+      const EMOJI_COOLDOWN_MS = 30000;
 
       function _sendEmoji(toName) {
+        if (Date.now() - _emojiLastSent < EMOJI_COOLDOWN_MS) return;
         const existing = document.getElementById("emojiPicker");
         if (existing) { existing.remove(); return; }
         _emojiPickerIndex = 0;
@@ -1687,6 +1692,7 @@
 
       function _dispatchEmoji(toName, emojiOption) {
         if (!_presenceChannel) return;
+        _emojiLastSent = Date.now();
         _presenceChannel.send({ type: "broadcast", event: "emoji", payload: { to: toName, from: state.trainerName, src: emojiOption.src, message: emojiOption.message } });
       }
 
