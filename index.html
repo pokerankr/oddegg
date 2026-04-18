@@ -1642,7 +1642,7 @@
             const isMe = n.toLowerCase() === myName;
             const cooldownLeft = Math.max(0, Math.ceil((EMOJI_COOLDOWN_MS - (Date.now() - _emojiLastSent)) / 1000));
             const onCooldown = cooldownLeft > 0;
-            const btn  = (!isMe && myName) ? `<button onclick="_sendEmoji('${_escHtml(n)}')" ${onCooldown ? "disabled" : ""} style="margin-left:8px;background:none;border:none;cursor:${onCooldown ? 'default' : 'pointer'};font-size:${onCooldown ? '11px' : '16px'};padding:0;line-height:1;color:${onCooldown ? '#aaa' : 'inherit'};" title="${onCooldown ? `Wait ${cooldownLeft}s` : 'Send emoji'}">${onCooldown ? `${cooldownLeft}s` : '👋'}</button>` : "";
+            const btn  = (!isMe && myName && state.trainerName !== "Anonymous Trainer") ? `<button onclick="_sendEmoji('${_escHtml(n)}')" ${onCooldown ? "disabled" : ""} style="margin-left:8px;background:none;border:none;cursor:${onCooldown ? 'default' : 'pointer'};font-size:${onCooldown ? '11px' : '16px'};padding:0;line-height:1;color:${onCooldown ? '#aaa' : 'inherit'};" title="${onCooldown ? `Wait ${cooldownLeft}s` : 'Send emoji'}">${onCooldown ? `${cooldownLeft}s` : '👋'}</button>` : "";
             return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${btn}</div>`;
           }).join("");
           chip.style.position = "relative";
@@ -1661,6 +1661,7 @@
       const EMOJI_COOLDOWN_MS = 30000;
 
       function _sendEmoji(toName) {
+        if (!state.trainerName || state.trainerName === "Anonymous Trainer") return;
         if (Date.now() - _emojiLastSent < EMOJI_COOLDOWN_MS) return;
         const existing = document.getElementById("emojiPicker");
         if (existing) { existing.remove(); return; }
