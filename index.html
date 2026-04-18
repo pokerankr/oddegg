@@ -2870,11 +2870,12 @@
         const dexArray = state.recentLog.filter(e => !e.visibleAfter || now >= e.visibleAfter);
         const dexList  = document.getElementById("dexList");
         if (!dexArray.length) {
-          dexList.innerHTML = `<div class="empty">No hatches yet. Start stepping to fill the living dex!</div>`;
+          const empty = `<div class="empty">No hatches yet. Start stepping to fill the living dex!</div>`;
+          if (dexList.innerHTML !== empty) dexList.innerHTML = empty;
           return;
         }
 
-        dexList.innerHTML = dexArray.map(entry => {
+        const newHTML = dexArray.map(entry => {
           const count    = (entry.isShiny ? state.shinyFoundCounts : state.foundCounts)[entry.line] || 0;
           const isBase   = POKEMON_DATA[entry.slug]?.isBase;
           const entryClass = entry.isSpecial ? " special-entry" : entry.isShiny ? " shiny-entry" : "";
@@ -2897,6 +2898,7 @@
               </div>
             </div>`;
         }).join("");
+        if (dexList.innerHTML !== newHTML) dexList.innerHTML = newHTML;
       }
 
       // ─── Render: Full Dex Overlay ────────────────────────────────────────────
