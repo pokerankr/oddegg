@@ -1466,7 +1466,7 @@
         const megaCapableInDexNow = Object.keys(state.unlockedDex).filter(s => MEGA_CAPABLE_SLUGS.has(s)).length;
 
         // Mega egg roll — 1-in-50 chance after bracelet unlocked
-        if (!devEggSlug && (state.megaBraceletUnlocked || megaCapableInDexNow >= _bracketThreshold) && randomInt(1, 50) === 1) {
+        if (!devEggSlug && (state.megaBraceletUnlocked || megaCapableInDexNow >= _bracketThreshold) && randomInt(1, 2) === 1) {
           const eligibleMegas = MEGA_POKEMON.filter(m => state.unlockedDex[m.base]);
           if (eligibleMegas.length) {
             const mega    = randomFrom(eligibleMegas);
