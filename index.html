@@ -3084,7 +3084,12 @@
             if (countdownEl) {
               const updateCountdown = () => {
                 const ms = new Date(egg.expiresAt) - Date.now();
-                if (ms <= 0) { countdownEl.textContent = "⏳ Time's up!"; return; }
+                if (ms <= 0) {
+                  countdownEl.textContent = "⏳ Time's up!";
+                  clearInterval(timer);
+                  render(); // trigger expiry handling
+                  return;
+                }
                 const h = Math.floor(ms / 3600000);
                 const m = Math.floor((ms % 3600000) / 60000);
                 const s = Math.floor((ms % 60000) / 1000);
