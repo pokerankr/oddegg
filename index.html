@@ -1395,7 +1395,7 @@
         const newlyUnlocked = [];
         if (!state.megaBraceletUnlocked) {
           const megaCapableInDex = Object.keys(state.unlockedDex).filter(s => MEGA_CAPABLE_SLUGS.has(s)).length;
-          if (megaCapableInDex >= MEGA_BRACELET_THRESHOLD) {
+          if (megaCapableInDex >= (window._DEV_BRACELET_THRESHOLD ?? MEGA_BRACELET_THRESHOLD)) {
             state.megaBraceletUnlocked = true;
             newlyUnlocked.push("megabracelet");
           }
@@ -1460,14 +1460,19 @@
         // Random thresholds for hatching dialogue stages (as fractions of targetSteps)
         const hint1At = Math.random() * (0.44 - 0.15) + 0.15; // 15–44%
         const hint2At = Math.random() * (0.74 - 0.45) + 0.45; // 45–74%
+        const _megaStepMin = window._DEV_MEGA_STEPS ?? 500000;
+        const _megaStepMax = window._DEV_MEGA_STEPS ?? 1000000;
+        const _bracketThreshold = window._DEV_BRACELET_THRESHOLD ?? MEGA_BRACELET_THRESHOLD;
+        const megaCapableInDexNow = Object.keys(state.unlockedDex).filter(s => MEGA_CAPABLE_SLUGS.has(s)).length;
+
         // Mega egg roll — 1-in-50 chance after bracelet unlocked
-        if (!devEggSlug && state.megaBraceletUnlocked && randomInt(1, 50) === 1) {
+        if (!devEggSlug && (state.megaBraceletUnlocked || megaCapableInDexNow >= _bracketThreshold) && randomInt(1, 50) === 1) {
           const eligibleMegas = MEGA_POKEMON.filter(m => state.unlockedDex[m.base]);
           if (eligibleMegas.length) {
             const mega    = randomFrom(eligibleMegas);
             const isShiny = randomInt(1, 20) === 1;
             return {
-              targetSteps:  randomInt(500000, 1000000),
+              targetSteps:  randomInt(_megaStepMin, _megaStepMax),
               currentSteps: 0,
               targetSlug:   mega.slug,
               isMega:       true,
@@ -1486,7 +1491,7 @@
           }
         }
 
-        let targetSteps = randomInt(1, MAX_STEPS);
+        let targetSteps = randomInt(1, window._DEV_MAX_STEPS ?? MAX_STEPS);
         if (state.flameBodyCharmUnlocked) targetSteps = Math.max(1, Math.floor(targetSteps * 0.9));
         return {
           targetSteps,
@@ -3362,6 +3367,16 @@
           // Build derived data
           ALL_DEX_SLOTS = Object.keys(POKEMON_DATA).sort((a, b) => POKEMON_DATA[a].id - POKEMON_DATA[b].id);
           EGG_POOL      = Object.values(POKEMON_DATA).filter(p => p.isBase).map(p => p.slug);
+
+          // ── DEV TEST OVERRIDES (remove before merging to prod) ────────────
+          const DEV_TEST_POOL = ["aerodactyl","absol","dratini","charmander","pinsir","swablu","audino","heracross","latias","latios","sableye"];
+          EGG_POOL = EGG_POOL.filter(s => DEV_TEST_POOL.includes(s));
+          // Regular eggs: 5 steps. Mega eggs: 500 steps. Bracelet threshold: 5.
+          // (MAX_STEPS and Mega range overridden inline in buildFreshEgg via devOverride)
+          window._DEV_MAX_STEPS = 5;
+          window._DEV_MEGA_STEPS = 500;
+          window._DEV_BRACELET_THRESHOLD = 5;
+          // ── END DEV TEST OVERRIDES ────────────────────────────────────────
 
           // Init unlock maps
           ALL_DEX_SLOTS.forEach(s => {
