@@ -3204,8 +3204,8 @@
       }
 
       // ─── Mega Grid ───────────────────────────────────────────────────────────
-      function buildMegaGridHTML() {
-        return MEGA_POKEMON.map(m => {
+      function buildMegaGridHTML(pool = MEGA_POKEMON) {
+        return pool.map(m => {
           const unlocked  = state.unlockedMegaDex[m.slug];
           const hasShiny  = state.megaDex.some(e => e.slug === m.slug && e.isShiny);
           const canToggle = unlocked && hasShiny;
@@ -3229,7 +3229,9 @@
       window._setMegaForm = (slug, form) => {
         _megaFormView[slug] = form;
         const grid = document.getElementById("fullDexGrid");
-        if (grid) grid.innerHTML = buildMegaGridHTML();
+        const q    = document.getElementById("dexSearch")?.value.toLowerCase().trim() ?? "";
+        const pool = q ? MEGA_POKEMON.filter(m => m.name.toLowerCase().includes(q)) : MEGA_POKEMON;
+        if (grid) grid.innerHTML = buildMegaGridHTML(pool);
       };
 
       // ─── Render: Full Dex Overlay ────────────────────────────────────────────
@@ -3270,7 +3272,7 @@
                 ${state.megaBraceletUnlocked ? `<button class="dex-toggle-opt" id="toggleMega">Mega</button>` : ""}
               </div>
               <div class="full-dex-top-right">
-                <input class="full-dex-search" id="dexSearch" placeholder="Search Pokémon…" ${isMegaView ? "disabled" : ""} />
+                <input class="full-dex-search" id="dexSearch" placeholder="Search Pokémon…" />
                 <button class="close-dex-btn" id="closeFullDexBtn">Close</button>
               </div>
             </div>
@@ -3300,27 +3302,35 @@
           document.getElementById("dexNextBtn").addEventListener("click", () => { fullDexPage++; renderFullDexOverlay(); });
         }
 
-        // Restore search value and re-apply filter if there was one (not in Mega view)
+        // Restore search value and re-apply filter
         const searchEl = document.getElementById("dexSearch");
-        if (prevSearch && !isMegaView) {
+        if (prevSearch) {
           searchEl.value = prevSearch;
           const q = prevSearch.toLowerCase().trim();
-          const filtered = ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q));
-          document.getElementById("fullDexGrid").innerHTML = renderDexGrid(filtered, unlockMap, isShiny, getDexArray(isShiny));
-          document.getElementById("dexPagination").style.display = "none";
+          if (isMegaView) {
+            const pool = MEGA_POKEMON.filter(m => m.name.toLowerCase().includes(q));
+            document.getElementById("fullDexGrid").innerHTML = buildMegaGridHTML(pool);
+          } else {
+            const filtered = ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q));
+            document.getElementById("fullDexGrid").innerHTML = renderDexGrid(filtered, unlockMap, isShiny, getDexArray(isShiny));
+            document.getElementById("dexPagination").style.display = "none";
+          }
         }
 
-        // Search filter — searches full list, hides pagination while active (not in Mega view)
-        if (!isMegaView) {
-          searchEl.addEventListener("input", e => {
-            const q = e.target.value.toLowerCase().trim();
+        // Search filter — branches on view type
+        searchEl.addEventListener("input", e => {
+          const q = e.target.value.toLowerCase().trim();
+          if (isMegaView) {
+            const pool = q ? MEGA_POKEMON.filter(m => m.name.toLowerCase().includes(q)) : MEGA_POKEMON;
+            document.getElementById("fullDexGrid").innerHTML = buildMegaGridHTML(pool);
+          } else {
             const filtered = q
               ? ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q))
               : pageSlots;
             document.getElementById("fullDexGrid").innerHTML = renderDexGrid(filtered, unlockMap, isShiny, getDexArray(isShiny));
             document.getElementById("dexPagination").style.display = q ? "none" : "flex";
-          });
-        }
+          }
+        });
       }
 
       function renderDexGrid(slots, unlockMap, isShiny, dexArray) {
