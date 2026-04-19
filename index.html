@@ -737,6 +737,16 @@
       .mft-arrow { background: rgba(109,40,217,0.1); border: 2px solid rgba(109,40,217,0.22); border-radius: 8px; color: #6d28d9; font-size: 15px; font-weight: 900; padding: 1px 9px; cursor: pointer; line-height: 1.4; transition: background 0.15s, border-color 0.15s; }
       .mft-arrow:hover { background: rgba(109,40,217,0.22); border-color: rgba(109,40,217,0.45); }
       .mft-label { font-size: 10px; font-weight: 900; color: var(--ink-2); flex: 1; text-align: center; text-transform: uppercase; letter-spacing: 0.05em; }
+      .maintenance-overlay {
+        position: fixed; inset: 0; z-index: 99999;
+        background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 40px;
+        font-family: inherit;
+      }
+      .maintenance-overlay img { width: 120px; height: 120px; object-fit: contain; margin-bottom: 24px; animation: megaHeartbeat 2s ease-in-out infinite; }
+      .maintenance-overlay h1 { color: white; font-size: 28px; font-weight: 900; margin: 0 0 12px; }
+      .maintenance-overlay p  { color: rgba(255,255,255,0.65); font-size: 16px; font-weight: 700; margin: 0; line-height: 1.6; }
       .locked-icon {
         width: 90px; height: 90px; border-radius: 18px;
         display: flex; align-items: center; justify-content: center;
@@ -3479,6 +3489,20 @@
       }
 
       async function init() {
+        // Maintenance mode — check before anything else
+        try {
+          const { data: gs } = await db.from("shared_game_state").select("maintenance_mode").eq("id", 1).single();
+          if (gs?.maintenance_mode) {
+            document.body.innerHTML = `
+              <div class="maintenance-overlay">
+                <img src="standardegg.png" alt="Egg" />
+                <h1>OddEgg is taking a quick nap...</h1>
+                <p>We'll be back shortly.<br/>Check back in a few minutes! 🥚</p>
+              </div>`;
+            return;
+          }
+        } catch {}
+
         applyDayNightTheme();
         setInterval(applyDayNightTheme, 60_000); // re-check every minute
         document.addEventListener("visibilitychange", () => { if (!document.hidden) applyDayNightTheme(); });
