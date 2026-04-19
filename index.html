@@ -625,19 +625,33 @@
         width: calc(50% - 4px);
         background: white; border-radius: 22px;
         box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-        transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+        transition: transform 0.22s cubic-bezier(.4,0,.2,1), background 0.22s;
         pointer-events: none;
       }
-      .dex-view-toggle.is-shiny .dex-toggle-slider { transform: translateX(100%); }
+      /* 2-tab positions */
+      .dex-view-toggle.is-shiny:not(.has-mega) .dex-toggle-slider { transform: translateX(100%); }
+      /* 3-tab sizing & positions */
+      .dex-view-toggle.has-mega .dex-toggle-slider { width: calc(33.33% - 2.67px); }
+      .dex-view-toggle.has-mega.is-shiny  .dex-toggle-slider { transform: translateX(100%); }
+      .dex-view-toggle.has-mega.is-mega   .dex-toggle-slider {
+        transform: translateX(200%);
+        background: linear-gradient(135deg, #6d28d9, #a855f7);
+        box-shadow: 0 3px 14px rgba(139,92,246,0.55);
+      }
       .dex-toggle-opt {
         position: relative; z-index: 1; flex: 1;
-        padding: 7px 18px; text-align: center;
+        padding: 7px 20px; text-align: center;
         font-size: 13px; font-weight: 900; font-family: inherit;
-        color: rgba(255,255,255,0.65); white-space: nowrap;
+        color: rgba(255,255,255,0.6); white-space: nowrap;
         transition: color 0.22s; border: none; background: none; cursor: pointer;
       }
-      .dex-view-toggle:not(.is-shiny) .dex-toggle-opt:first-of-type,
-      .dex-view-toggle.is-shiny .dex-toggle-opt:last-of-type { color: var(--ink); }
+      /* 2-tab active labels */
+      .dex-view-toggle:not(.has-mega):not(.is-shiny) .dex-toggle-opt:nth-of-type(1),
+      .dex-view-toggle:not(.has-mega).is-shiny        .dex-toggle-opt:nth-of-type(2) { color: var(--ink); }
+      /* 3-tab active labels */
+      .dex-view-toggle.has-mega:not(.is-shiny):not(.is-mega) .dex-toggle-opt:nth-of-type(1),
+      .dex-view-toggle.has-mega.is-shiny                      .dex-toggle-opt:nth-of-type(2) { color: var(--ink); }
+      .dex-view-toggle.has-mega.is-mega .dex-toggle-opt:nth-of-type(3) { color: #fff; }
       .full-dex-body { padding: 18px; }
       .full-dex-search {
         flex: 1 1 180px; min-width: 120px; max-width: 340px;
@@ -719,6 +733,10 @@
       .slot-name { margin-top: 8px; font-size: 16px; font-weight: 900; line-height: 1.15; }
       .slot-status { margin-top: 6px; font-size: 11px; font-weight: 900; color: var(--slate); letter-spacing: 0.08em; text-transform: uppercase; }
       .slot-found { margin-top: 6px; font-size: 10px; font-weight: 900; color: var(--ink-2); letter-spacing: 0.05em; text-transform: uppercase; }
+      .mega-form-toggle { display: flex; align-items: center; gap: 4px; margin-top: 8px; width: 100%; }
+      .mft-arrow { background: rgba(109,40,217,0.1); border: 2px solid rgba(109,40,217,0.22); border-radius: 8px; color: #6d28d9; font-size: 15px; font-weight: 900; padding: 1px 9px; cursor: pointer; line-height: 1.4; transition: background 0.15s, border-color 0.15s; }
+      .mft-arrow:hover { background: rgba(109,40,217,0.22); border-color: rgba(109,40,217,0.45); }
+      .mft-label { font-size: 10px; font-weight: 900; color: var(--ink-2); flex: 1; text-align: center; text-transform: uppercase; letter-spacing: 0.05em; }
       .locked-icon {
         width: 90px; height: 90px; border-radius: 18px;
         display: flex; align-items: center; justify-content: center;
@@ -1378,6 +1396,7 @@
       let _spectatorTimer     = null;              // clears spectator reveal after 3s
       let _isCurrentClaimer   = false;             // this tab won the current claim
       let _generatingEgg      = false;             // prevents multiple clients racing to generate after Mega expiry
+      let _megaFormView       = {};                // slug → "normal" | "shiny" — which form each Mega dex slot displays
       let _dittoTrainerName   = null;              // saved trainer name for deferred ditto claim
       let _autoDittoTimer     = null;              // auto-pick timer for ditto picker
       let _dittoCountdown     = 0;                 // seconds left on ditto picker
@@ -3184,6 +3203,36 @@
         if (dexList.innerHTML !== newHTML) dexList.innerHTML = newHTML;
       }
 
+      // ─── Mega Grid ───────────────────────────────────────────────────────────
+      function buildMegaGridHTML() {
+        return MEGA_POKEMON.map(m => {
+          const unlocked  = state.unlockedMegaDex[m.slug];
+          const hasNormal = state.megaDex.some(e => e.slug === m.slug && !e.isShiny);
+          const hasShiny  = state.megaDex.some(e => e.slug === m.slug &&  e.isShiny);
+          const bothForms = unlocked && hasNormal && hasShiny;
+          const showShiny = bothForms && _megaFormView[m.slug] === "shiny";
+          return `<div class="dex-slot${unlocked ? " unlocked" : ""}${showShiny ? " shiny-slot" : ""}">
+            ${unlocked
+              ? `<img class="slot-img" src="${megaImage(m.id, showShiny)}" alt="${m.name}" loading="lazy" />`
+              : `<div class="locked-icon">?</div>`}
+            <div class="slot-name">${unlocked ? m.name : "???"}</div>
+            ${bothForms
+              ? `<div class="mega-form-toggle">
+                  <button class="mft-arrow" onclick="_setMegaForm('${m.slug}','normal')" title="Normal form">‹</button>
+                  <span class="mft-label">${showShiny ? "✨ Shiny" : "Normal"}</span>
+                  <button class="mft-arrow" onclick="_setMegaForm('${m.slug}','shiny')" title="Shiny form">›</button>
+                </div>`
+              : unlocked && hasShiny ? `<div class="slot-shiny-badge">✨</div>` : ""}
+          </div>`;
+        }).join("");
+      }
+
+      window._setMegaForm = (slug, form) => {
+        _megaFormView[slug] = form;
+        const grid = document.getElementById("fullDexGrid");
+        if (grid) grid.innerHTML = buildMegaGridHTML();
+      };
+
       // ─── Render: Full Dex Overlay ────────────────────────────────────────────
       function renderFullDexOverlay() {
         const overlay = document.getElementById("fullDexOverlay");
@@ -3203,17 +3252,7 @@
 
         const pageSlots = ALL_DEX_SLOTS.slice(fullDexPage * DEX_PAGE_SIZE, (fullDexPage + 1) * DEX_PAGE_SIZE);
 
-        const megaGridHTML = MEGA_POKEMON.map(m => {
-          const unlocked = state.unlockedMegaDex[m.slug];
-          const entry    = state.megaDex.find(e => e.slug === m.slug);
-          return `<div class="dex-slot${unlocked ? " unlocked" : ""}${entry?.isShiny ? " shiny" : ""}">
-            ${unlocked
-              ? `<img class="slot-img" src="${megaImage(m.id)}" alt="${m.name}" loading="lazy" />`
-              : `<div class="locked-icon">?</div>`}
-            <div class="slot-name">${unlocked ? m.name : "???"}</div>
-            ${entry?.isShiny ? `<div class="slot-shiny-badge">✨</div>` : ""}
-          </div>`;
-        }).join("");
+        const megaGridHTML = buildMegaGridHTML();
 
         overlay.className = "full-dex-overlay open";
         overlay.innerHTML = `
@@ -3225,7 +3264,7 @@
                   ? `${Object.keys(state.unlockedMegaDex).length} / ${MEGA_POKEMON.length} Mega caught`
                   : `${ALL_DEX_SLOTS.filter(s => unlockMap[s]).length} / ${ALL_DEX_SLOTS.length} caught`}</div>
               </div>
-              <div class="dex-view-toggle${isShiny ? ' is-shiny' : ''}${isMegaView ? ' is-mega' : ''}" id="dexViewToggle">
+              <div class="dex-view-toggle${isShiny ? ' is-shiny' : ''}${isMegaView ? ' is-mega' : ''}${state.megaBraceletUnlocked ? ' has-mega' : ''}" id="dexViewToggle">
                 <div class="dex-toggle-slider"></div>
                 <button class="dex-toggle-opt" id="toggleBase">Base</button>
                 <button class="dex-toggle-opt" id="toggleShiny">✨ Shiny</button>
@@ -3256,11 +3295,6 @@
         document.getElementById("toggleBase").addEventListener("click",  () => setDexView("normal"));
         document.getElementById("toggleShiny").addEventListener("click", () => setDexView("shiny"));
         document.getElementById("toggleMega")?.addEventListener("click", () => setDexView("mega"));
-        document.getElementById("dexViewToggle").addEventListener("click", e => {
-          if (!e.target.classList.contains("dex-toggle-opt")) {
-            setDexView(isShiny ? "normal" : "shiny"); // clicking the pill itself toggles
-          }
-        });
 
         if (!isMegaView) {
           document.getElementById("dexPrevBtn").addEventListener("click", () => { fullDexPage--; renderFullDexOverlay(); });
