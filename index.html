@@ -961,6 +961,21 @@
         .dex-screen { min-height: auto; }
         .dex-body { padding: 10px; }
       }
+      /* ── Time-of-day theming ──────────────────────────────────────────────── */
+      body[data-theme="night"] {
+        background: url('./backgroundnight.png') center / cover no-repeat fixed;
+      }
+      body[data-theme="night"] .field {
+        background: url('./hatching night time.png') center bottom / cover no-repeat;
+      }
+      body[data-theme="night"] .screen-shell {
+        border-color: rgba(160,190,255,0.25);
+        box-shadow: 0 22px 60px rgba(5,10,40,0.55), 0 0 0 1px rgba(160,190,255,0.15);
+      }
+      body[data-theme="night"] .dex-shell {
+        border-color: rgba(160,190,255,0.25);
+        box-shadow: 0 22px 60px rgba(5,10,40,0.55), 0 0 0 1px rgba(160,190,255,0.15);
+      }
     </style>
   </head>
   <body>
@@ -3088,7 +3103,18 @@
       }
 
       // ─── Init ────────────────────────────────────────────────────────────────
+      function applyDayNightTheme() {
+        const now = new Date();
+        const h = now.getHours(), m = now.getMinutes();
+        const minuteOfDay = h * 60 + m;
+        const isNight = minuteOfDay >= 20 * 60 || minuteOfDay < 6 * 60; // 8pm–5:59am = night
+        document.body.dataset.theme = isNight ? "night" : "day";
+      }
+
       async function init() {
+        applyDayNightTheme();
+        setInterval(applyDayNightTheme, 60_000); // re-check every minute
+        document.addEventListener("visibilitychange", () => { if (!document.hidden) applyDayNightTheme(); });
         try {
           const [pokeResponse, profanityResponse, namesResponse] = await Promise.all([
             fetch("./pokemon-data.json"),
