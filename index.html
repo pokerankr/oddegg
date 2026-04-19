@@ -1587,7 +1587,8 @@
           // Mega form — not in POKEMON_DATA
           const mega = MEGA_POKEMON_MAP[slug];
           if (!mega) return null;
-          return { id: mega.id, name: mega.name, slug, line: mega.base,
+          return { id: POKEMON_DATA[mega.base]?.id ?? mega.id, megaFormId: mega.id,
+                   name: mega.name, slug, line: mega.base,
                    image: megaImage(mega.id, isShiny), isShiny, isSpecial: true };
         }
         return { id:d.id, name:d.name, slug, line:d.line,
