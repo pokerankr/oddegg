@@ -3368,14 +3368,15 @@
         if (EGG_POOL.length && state.eggState?.isMega && state.eggState.expiresAt && state.eggState.status === 'hatching') {
           if (new Date(state.eggState.expiresAt) < new Date() && !_generatingEgg) {
             _generatingEgg = true;
-            const expiredSlug = state.eggState.targetSlug;
-            const toast = document.createElement("div");
-            toast.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#2d1b4e;color:#e0c4ff;border:3px solid #7a3fc0;border-radius:18px;padding:14px 22px;font-size:15px;font-weight:700;";
-            toast.textContent = "✨ The Mega Egg faded away… Better luck next time.";
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 5000);
-            generateAndSaveEgg().finally(() => { _generatingEgg = false; });
-            return;
+            if (!document.getElementById("megaExpiredToast")) {
+              const toast = document.createElement("div");
+              toast.id = "megaExpiredToast";
+              toast.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#2d1b4e;color:#e0c4ff;border:3px solid #7a3fc0;border-radius:18px;padding:14px 22px;font-size:15px;font-weight:700;";
+              toast.textContent = "✨ The Mega Egg faded away… Better luck next time.";
+              document.body.appendChild(toast);
+              setTimeout(() => toast.remove(), 5000);
+            }
+            generateAndSaveEgg().finally(() => { _generatingEgg = false; render(); });
           }
         }
         renderMainView();
