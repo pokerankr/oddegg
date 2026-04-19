@@ -965,15 +965,29 @@
       /* ── Mega egg ─────────────────────────────────────────────────────────── */
       .mega-egg-glow {
         animation: megaGlow 2s ease-in-out infinite alternate;
-        border-radius: 50%;
       }
       @keyframes megaGlow {
-        from { filter: drop-shadow(0 0 12px rgba(180,60,255,0.7)) drop-shadow(0 0 24px rgba(80,160,255,0.5)); }
-        to   { filter: drop-shadow(0 0 28px rgba(255,80,200,0.9)) drop-shadow(0 0 48px rgba(120,60,255,0.6)); }
+        from { filter: drop-shadow(0 0 14px rgba(140,40,255,0.8)) drop-shadow(0 0 28px rgba(100,0,200,0.5)); }
+        to   { filter: drop-shadow(0 0 32px rgba(180,80,255,1.0)) drop-shadow(0 0 56px rgba(140,0,255,0.7)); }
       }
       .mega-countdown {
-        font-size: 13px; font-weight: 700; color: #7a3fc0;
-        letter-spacing: 0.03em; margin-top: 4px;
+        position: absolute; top: 10px; left: 12px;
+        z-index: 5;
+        background: linear-gradient(135deg, #3d0080 0%, #7a3fc0 100%);
+        color: #f0ddff;
+        border: 3px solid #9b59d0;
+        border-radius: 999px;
+        padding: 5px 14px;
+        font-size: 13px; font-weight: 900;
+        letter-spacing: 0.05em;
+        box-shadow: 0 4px 16px rgba(100,0,200,0.45), 0 0 0 2px rgba(180,100,255,0.25);
+        white-space: nowrap;
+        pointer-events: none;
+        animation: megaPulse 2s ease-in-out infinite alternate;
+      }
+      @keyframes megaPulse {
+        from { box-shadow: 0 4px 16px rgba(100,0,200,0.45), 0 0 0 2px rgba(180,100,255,0.25); }
+        to   { box-shadow: 0 4px 24px rgba(140,0,255,0.75), 0 0 0 4px rgba(200,120,255,0.4); }
       }
     </style>
   </head>
@@ -3015,12 +3029,12 @@
                   <div class="${sparkClass} s4"></div>
                   <div class="${sparkClass} s5"></div>
                 </div>
+                ${egg?.isMega && egg.expiresAt ? `<div class="mega-countdown" id="megaCountdown"></div>` : ""}
                 <button class="egg-button${specialClass}" id="eggTapBtn" aria-label="Take a Step">
                   <div class="egg-glow"></div>
-                  <img class="egg-image${egg?.isMega ? " mega-egg-glow" : ""}" src="${egg?.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
+                  <img class="egg-image${egg?.isMega ? " mega-egg-glow" : ""}" src="${egg?.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : egg?.isMega ? "./megaegg.png" : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
                 </button>
                 <div class="${counterClass}" id="clickCounter">${fmt(displaySteps)} steps</div>
-                ${egg?.isMega && egg.expiresAt ? `<div class="mega-countdown" id="megaCountdown"></div>` : ""}
               </div>
               <div class="dialog-wrap">
                 <div class="dialog">
