@@ -1515,7 +1515,7 @@
               error:        "",
               hint1At:      0.25,
               hint2At:      0.60,
-              expiresAt:    new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              expiresAt:    new Date(Date.now() + 1 * 60 * 1000).toISOString(), // DEV: 1 min (prod: 24h)
             };
           }
         }
