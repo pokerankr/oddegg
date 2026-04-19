@@ -1377,6 +1377,7 @@
       let _spectatorPokemon   = null;              // non-claimer: pokemon to show briefly after hatch
       let _spectatorTimer     = null;              // clears spectator reveal after 3s
       let _isCurrentClaimer   = false;             // this tab won the current claim
+      let _generatingEgg      = false;             // prevents multiple clients racing to generate after Mega expiry
       let _dittoTrainerName   = null;              // saved trainer name for deferred ditto claim
       let _autoDittoTimer     = null;              // auto-pick timer for ditto picker
       let _dittoCountdown     = 0;                 // seconds left on ditto picker
@@ -3364,7 +3365,7 @@
       // ─── Render (top-level) ──────────────────────────────────────────────────
       function render() {
         // Mega expiry — if the community missed the window, expire and generate a new egg
-        if (state.eggState?.isMega && state.eggState.expiresAt && state.eggState.status === 'hatching') {
+        if (EGG_POOL.length && state.eggState?.isMega && state.eggState.expiresAt && state.eggState.status === 'hatching') {
           if (new Date(state.eggState.expiresAt) < new Date() && !_generatingEgg) {
             _generatingEgg = true;
             const expiredSlug = state.eggState.targetSlug;
