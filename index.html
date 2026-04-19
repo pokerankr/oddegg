@@ -1951,6 +1951,15 @@
             if (payload.to.toLowerCase() !== state.trainerName.toLowerCase()) return;
             _showEmojiToast(payload.from, payload.src, payload.message);
           })
+          .on("broadcast", { event: "admin_message" }, ({ payload }) => {
+            if (!payload || !state.trainerName) return;
+            if (payload.to.toLowerCase() !== state.trainerName.toLowerCase()) return;
+            _showAdminMessageToast(payload.message);
+          })
+          .on("broadcast", { event: "admin_broadcast" }, ({ payload }) => {
+            if (!payload) return;
+            _showAdminMessageToast(payload.message);
+          })
           .subscribe(async status => {
             if (status === "SUBSCRIBED" && state.trainerName) {
               await _presenceChannel.track({ name: state.trainerName });
@@ -1973,13 +1982,16 @@
           popup.id = "onlinePopup";
           popup.style.cssText = `position:absolute;z-index:9000;background:white;border:3px solid var(--screen-border);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.22);top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;min-width:120px;`;
           const myName = (state.trainerName || "").toLowerCase();
+          const isAdmin = myName === "sh1n1es";
+          const broadcastAllBtn = isAdmin ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminBroadcast()" style="display:block;width:100%;margin-top:8px;font-size:11px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;border-radius:8px;border:2px solid #6d28d9;background:#6d28d9;color:white;cursor:pointer;font-family:inherit;">📢 Broadcast All</button>` : "";
           popup.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Online Now</div>` + names.map(n => {
             const isMe = n.toLowerCase() === myName;
             const cooldownLeft = Math.max(0, Math.ceil((EMOJI_COOLDOWN_MS - (Date.now() - _emojiLastSent)) / 1000));
             const onCooldown = cooldownLeft > 0;
             const btn  = (!isMe && myName && state.trainerName !== "Anonymous Trainer") ? `<button onclick="_sendEmoji('${_escHtml(n)}')" ${onCooldown ? "disabled" : ""} style="margin-left:8px;background:none;border:none;cursor:${onCooldown ? 'default' : 'pointer'};font-size:${onCooldown ? '11px' : '16px'};padding:0;line-height:1;color:${onCooldown ? '#aaa' : 'inherit'};" title="${onCooldown ? `Wait ${cooldownLeft}s` : 'Send emoji'}">${onCooldown ? `${cooldownLeft}s` : '👋'}</button>` : "";
-            return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${btn}</div>`;
-          }).join("");
+            const adminBtn = (!isMe && isAdmin) ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminMessage('${_escHtml(n)}')" style="margin-left:6px;background:none;border:none;cursor:pointer;font-size:14px;padding:0;line-height:1;" title="Send message">📢</button>` : "";
+            return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${btn}${adminBtn}</div>`;
+          }).join("") + broadcastAllBtn;
           chip.style.position = "relative";
           chip.appendChild(popup);
           setTimeout(() => popup.remove(), 4000);
@@ -2055,6 +2067,69 @@
           });
         }
         setTimeout(() => toast.remove(), 5000);
+      }
+
+      function _sendAdminBroadcast() {
+        document.getElementById("adminMsgModal")?.remove();
+        const modal = document.createElement("div");
+        modal.id = "adminMsgModal";
+        modal.style.cssText = "position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;";
+        modal.innerHTML = `
+          <div style="background:#1a1a2e;border:2px solid #6d28d9;border-radius:16px;padding:24px 28px;min-width:280px;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.5);text-align:center;font-family:inherit;">
+            <div style="font-size:11px;font-weight:900;letter-spacing:0.15em;color:#a855f7;text-transform:uppercase;margin-bottom:12px;">📢 Broadcast to Everyone</div>
+            <textarea id="adminMsgInput" rows="3" maxlength="200" placeholder="Type your message..." style="width:100%;box-sizing:border-box;border:2px solid #6d28d9;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;resize:none;background:#0f0f1a;color:#e2e8f0;outline:none;"></textarea>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
+              <button onclick="_dispatchAdminBroadcast(document.getElementById('adminMsgInput')?.value)" style="font-size:13px;padding:8px 22px;border-radius:20px;border:2px solid #6d28d9;background:#6d28d9;color:white;font-weight:700;cursor:pointer;font-family:inherit;">Send All</button>
+              <button onclick="document.getElementById('adminMsgModal')?.remove()" style="font-size:13px;padding:8px 22px;border-radius:20px;border:2px solid #444;background:#222;color:#ccc;cursor:pointer;font-family:inherit;">Cancel</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+        setTimeout(() => document.getElementById("adminMsgInput")?.focus(), 50);
+      }
+
+      function _dispatchAdminBroadcast(message) {
+        if (!_presenceChannel || !message?.trim()) return;
+        document.getElementById("adminMsgModal")?.remove();
+        _presenceChannel.send({ type: "broadcast", event: "admin_broadcast", payload: { message: message.trim() } });
+      }
+
+      function _sendAdminMessage(toName) {
+        document.getElementById("adminMsgModal")?.remove();
+        const modal = document.createElement("div");
+        modal.id = "adminMsgModal";
+        modal.style.cssText = "position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;";
+        modal.innerHTML = `
+          <div style="background:#1a1a2e;border:2px solid #6d28d9;border-radius:16px;padding:24px 28px;min-width:280px;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.5);text-align:center;font-family:inherit;">
+            <div style="font-size:11px;font-weight:900;letter-spacing:0.15em;color:#a855f7;text-transform:uppercase;margin-bottom:12px;">📢 Message to ${_escHtml(toName)}</div>
+            <textarea id="adminMsgInput" rows="3" maxlength="200" placeholder="Type your message..." style="width:100%;box-sizing:border-box;border:2px solid #6d28d9;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;resize:none;background:#0f0f1a;color:#e2e8f0;outline:none;"></textarea>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
+              <button onclick="_dispatchAdminMessage('${_escHtml(toName)}',document.getElementById('adminMsgInput')?.value)" style="font-size:13px;padding:8px 22px;border-radius:20px;border:2px solid #6d28d9;background:#6d28d9;color:white;font-weight:700;cursor:pointer;font-family:inherit;">Send</button>
+              <button onclick="document.getElementById('adminMsgModal')?.remove()" style="font-size:13px;padding:8px 22px;border-radius:20px;border:2px solid #444;background:#222;color:#ccc;cursor:pointer;font-family:inherit;">Cancel</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+        setTimeout(() => document.getElementById("adminMsgInput")?.focus(), 50);
+      }
+
+      function _dispatchAdminMessage(toName, message) {
+        if (!_presenceChannel || !message?.trim()) return;
+        document.getElementById("adminMsgModal")?.remove();
+        _presenceChannel.send({ type: "broadcast", event: "admin_message", payload: { to: toName, message: message.trim() } });
+      }
+
+      function _showAdminMessageToast(message) {
+        document.getElementById("adminMsgToast")?.remove();
+        const toast = document.createElement("div");
+        toast.id = "adminMsgToast";
+        toast.style.cssText = "position:absolute;z-index:9999;bottom:10px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:2px solid #6d28d9;border-radius:14px;padding:14px 20px;box-shadow:0 6px 24px rgba(109,40,217,0.45);text-align:center;max-width:220px;min-width:160px;";
+        toast.innerHTML = `
+          <div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:#a855f7;text-transform:uppercase;margin-bottom:6px;">📢 Admin Message</div>
+          <div style="font-size:13px;font-weight:700;color:#e2e8f0;line-height:1.4;">${_escHtml(message)}</div>`;
+        const stage = document.querySelector('.battle-stage');
+        (stage || document.body).appendChild(toast);
+        setTimeout(() => toast.remove(), 7000);
       }
 
       // ─── Trainer ID modal ────────────────────────────────────────────────────
