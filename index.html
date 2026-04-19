@@ -1297,8 +1297,8 @@
       const MEGA_CAPABLE_SLUGS    = new Set(MEGA_POKEMON.map(m => m.base));
       const MEGA_BRACELET_THRESHOLD = 10;
       const MEGA_POKEMON_MAP      = Object.fromEntries(MEGA_POKEMON.map(m => [m.slug, m]));
-      function megaImage(id) {
-        return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+      function megaImage(id, shiny = false) {
+        return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${shiny ? "shiny/" : ""}${id}.png`;
       }
 
       // ─── Data (populated after fetch) ────────────────────────────────────────
@@ -1587,7 +1587,7 @@
           const mega = MEGA_POKEMON_MAP[slug];
           if (!mega) return null;
           return { id: mega.id, name: mega.name, slug, line: mega.base,
-                   image: megaImage(mega.id), isShiny, isSpecial: true };
+                   image: megaImage(mega.id, isShiny), isShiny, isSpecial: true };
         }
         return { id:d.id, name:d.name, slug, line:d.line,
                  image: isShiny ? d.shinyImage : d.image,
@@ -2684,7 +2684,7 @@
           const megaData = MEGA_POKEMON_MAP[pokemon.slug];
           if (megaData) {
             state.megaDex.unshift({
-              slug: pokemon.slug, name: megaData.name, image: megaImage(megaData.id),
+              slug: pokemon.slug, name: megaData.name, image: megaImage(megaData.id, pokemon.isShiny),
               id: megaData.id, base: megaData.base, isShiny: pokemon.isShiny,
               discoveredBy: trainerName, claimedAt: new Date().toISOString(),
               stepsToHatch: state.eggState.targetSteps,
