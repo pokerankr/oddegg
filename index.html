@@ -1579,6 +1579,13 @@
 
       function buildPokemonRecord(slug, isShiny = false) {
         const d = POKEMON_DATA[slug];
+        if (!d) {
+          // Mega form — not in POKEMON_DATA
+          const mega = MEGA_POKEMON_MAP[slug];
+          if (!mega) return null;
+          return { id: mega.id, name: mega.name, slug, line: mega.base,
+                   image: megaImage(mega.id), isShiny, isSpecial: true };
+        }
         return { id:d.id, name:d.name, slug, line:d.line,
                  image: isShiny ? d.shinyImage : d.image,
                  isShiny, isSpecial: d.isSpecial };
@@ -2664,40 +2671,38 @@
         const isShiny      = pokemon.isShiny;
         const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
         const visibleAfter = Date.now() + revealSeconds * 1000;
-        getFoundCounts(isShiny)[pokemon.line] = (getFoundCounts(isShiny)[pokemon.line] || 0) + 1;
-        unlockPokemon(pokemon.slug, isShiny);
         const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), visibleAfter };
         state.recentLog.unshift(entry);
         state.recentLog = state.recentLog.slice(0, 12);
         if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
-        const evoEntries = addPokemonToDex(pokemon.slug, isShiny, entry);
-        for (const { entry: evoEntry, isShiny: evoIsShiny } of evoEntries) {
-          const e = { ...evoEntry, visibleAfter };
-          state.recentLog.unshift(e);
-          state.recentLog = state.recentLog.slice(0, 12);
-          if (evoIsShiny) { state.shinyRecentLog.unshift(e); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
-        }
+
         if (state.eggState?.isMega) {
+          // Mega hatch — add to Mega Dex only, skip normal dex/evo flow
           const megaData = MEGA_POKEMON_MAP[pokemon.slug];
           if (megaData) {
-            const megaEntry = {
-              slug:         pokemon.slug,
-              name:         megaData.name,
-              image:        megaImage(megaData.id),
-              id:           megaData.id,
-              base:         megaData.base,
-              isShiny:      pokemon.isShiny,
-              discoveredBy: trainerName,
-              claimedAt:    new Date().toISOString(),
+            state.megaDex.unshift({
+              slug: pokemon.slug, name: megaData.name, image: megaImage(megaData.id),
+              id: megaData.id, base: megaData.base, isShiny: pokemon.isShiny,
+              discoveredBy: trainerName, claimedAt: new Date().toISOString(),
               stepsToHatch: state.eggState.targetSteps,
-            };
-            state.megaDex.unshift(megaEntry);
+            });
             state.unlockedMegaDex[pokemon.slug] = true;
+          }
+        } else {
+          // Normal hatch — unlock in dex and run evo merging
+          getFoundCounts(isShiny)[pokemon.line] = (getFoundCounts(isShiny)[pokemon.line] || 0) + 1;
+          unlockPokemon(pokemon.slug, isShiny);
+          const evoEntries = addPokemonToDex(pokemon.slug, isShiny, entry);
+          for (const { entry: evoEntry, isShiny: evoIsShiny } of evoEntries) {
+            const e = { ...evoEntry, visibleAfter };
+            state.recentLog.unshift(e);
+            state.recentLog = state.recentLog.slice(0, 12);
+            if (evoIsShiny) { state.shinyRecentLog.unshift(e); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
           }
         }
         state.claimer = "";
-        const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
-        saveState(true); // dex + log committed atomically in one sync
+        const newCharms = checkCharmUnlocks(pokemon);
+        saveState(true);
         return newCharms;
       }
 
