@@ -1100,7 +1100,7 @@
                   <img src="catchingcharm.png" alt="Catching Charm" />
                   <div class="charm-tooltip" id="dexCatchingTip">Catching Charm: locked</div>
                 </div>
-                <div class="dex-charm-icon charm-icon-locked" id="dexMegaBracelet" style="display:none">
+                <div class="dex-charm-icon charm-icon-locked" id="dexMegaBracelet">
                   <img src="megabracelet.png" alt="Mega Bracelet" />
                   <div class="charm-tooltip" id="dexMegaBraceletTip">Mega Bracelet: Mega Eggs can appear!</div>
                 </div>
@@ -3438,7 +3438,6 @@
         const megaTip  = document.getElementById("dexMegaBraceletTip");
         if (megaIcon) {
           const megaCapable = Object.keys(state.unlockedDex).filter(s => MEGA_CAPABLE_SLUGS.has(s)).length;
-          megaIcon.style.display = "";
           megaIcon.classList.toggle("charm-icon-locked", !state.megaBraceletUnlocked);
           if (megaTip) megaTip.textContent = state.megaBraceletUnlocked
             ? "Mega Bracelet: Mega Evolution Eggs can appear!"
