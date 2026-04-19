@@ -3207,22 +3207,21 @@
       function buildMegaGridHTML() {
         return MEGA_POKEMON.map(m => {
           const unlocked  = state.unlockedMegaDex[m.slug];
-          const hasNormal = state.megaDex.some(e => e.slug === m.slug && !e.isShiny);
-          const hasShiny  = state.megaDex.some(e => e.slug === m.slug &&  e.isShiny);
-          const bothForms = unlocked && hasNormal && hasShiny;
-          const showShiny = bothForms && _megaFormView[m.slug] === "shiny";
+          const hasShiny  = state.megaDex.some(e => e.slug === m.slug && e.isShiny);
+          const canToggle = unlocked && hasShiny;
+          const showShiny = canToggle && _megaFormView[m.slug] === "shiny";
           return `<div class="dex-slot${unlocked ? " unlocked" : ""}${showShiny ? " shiny-slot" : ""}">
             ${unlocked
               ? `<img class="slot-img" src="${megaImage(m.id, showShiny)}" alt="${m.name}" loading="lazy" />`
               : `<div class="locked-icon">?</div>`}
             <div class="slot-name">${unlocked ? m.name : "???"}</div>
-            ${bothForms
+            ${canToggle
               ? `<div class="mega-form-toggle">
                   <button class="mft-arrow" onclick="_setMegaForm('${m.slug}','normal')" title="Normal form">‹</button>
                   <span class="mft-label">${showShiny ? "✨ Shiny" : "Normal"}</span>
                   <button class="mft-arrow" onclick="_setMegaForm('${m.slug}','shiny')" title="Shiny form">›</button>
                 </div>`
-              : unlocked && hasShiny ? `<div class="slot-shiny-badge">✨</div>` : ""}
+              : ""}
           </div>`;
         }).join("");
       }
@@ -3301,9 +3300,9 @@
           document.getElementById("dexNextBtn").addEventListener("click", () => { fullDexPage++; renderFullDexOverlay(); });
         }
 
-        // Restore search value and re-apply filter if there was one
+        // Restore search value and re-apply filter if there was one (not in Mega view)
         const searchEl = document.getElementById("dexSearch");
-        if (prevSearch) {
+        if (prevSearch && !isMegaView) {
           searchEl.value = prevSearch;
           const q = prevSearch.toLowerCase().trim();
           const filtered = ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q));
@@ -3311,15 +3310,17 @@
           document.getElementById("dexPagination").style.display = "none";
         }
 
-        // Search filter — searches full list, hides pagination while active
-        searchEl.addEventListener("input", e => {
-          const q = e.target.value.toLowerCase().trim();
-          const filtered = q
-            ? ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q))
-            : pageSlots;
-          document.getElementById("fullDexGrid").innerHTML = renderDexGrid(filtered, unlockMap, isShiny, getDexArray(isShiny));
-          document.getElementById("dexPagination").style.display = q ? "none" : "flex";
-        });
+        // Search filter — searches full list, hides pagination while active (not in Mega view)
+        if (!isMegaView) {
+          searchEl.addEventListener("input", e => {
+            const q = e.target.value.toLowerCase().trim();
+            const filtered = q
+              ? ALL_DEX_SLOTS.filter(s => POKEMON_DATA[s].name.toLowerCase().includes(q))
+              : pageSlots;
+            document.getElementById("fullDexGrid").innerHTML = renderDexGrid(filtered, unlockMap, isShiny, getDexArray(isShiny));
+            document.getElementById("dexPagination").style.display = q ? "none" : "flex";
+          });
+        }
       }
 
       function renderDexGrid(slots, unlockMap, isShiny, dexArray) {
