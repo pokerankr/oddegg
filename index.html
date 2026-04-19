@@ -2050,23 +2050,35 @@
       }
 
       function _showEmojiToast(fromName, src, message) {
-        document.getElementById("emojiToast")?.remove();
         const text = (message || "{name} waved at you!").replace("{name}", _escHtml(fromName));
+        const stage = document.querySelector('.battle-stage') || document.body;
+
+        // Build or reuse stacking container
+        let container = stage.querySelector(".emoji-toast-stack");
+        if (!container) {
+          container = document.createElement("div");
+          container.className = "emoji-toast-stack";
+          container.style.cssText = "position:absolute;z-index:9;bottom:10px;right:12px;display:flex;flex-direction:column-reverse;gap:8px;align-items:flex-end;pointer-events:none;";
+          stage.appendChild(container);
+        }
+
         const toast = document.createElement("div");
-        toast.id = "emojiToast";
-        toast.style.cssText = "position:absolute;z-index:9;bottom:10px;right:12px;background:white;border:3px solid var(--screen-border);border-radius:16px;padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.22);text-align:center;max-width:160px;";
+        toast.style.cssText = "background:white;border:3px solid var(--screen-border);border-radius:16px;padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.22);text-align:center;max-width:160px;pointer-events:auto;";
         const imgSrc = new URL(src, window.location.origin).href;
         const canReply = state.trainerName && state.trainerName !== "Anonymous Trainer";
         toast.innerHTML = `<img src="${imgSrc}" style="width:72px;height:72px;object-fit:contain;display:block;margin:0 auto 6px;" /><div style="font-size:12px;font-weight:700;color:var(--slate);margin-bottom:${canReply ? '10px' : '0'};">${text}</div>${canReply ? `<button class="emoji-reply-btn" style="font-size:11px;padding:4px 14px;border-radius:20px;border:2px solid var(--screen-border);background:var(--screen-border);color:white;font-weight:700;cursor:pointer;font-family:inherit;">Reply</button>` : ''}`;
-        const stage = document.querySelector('.battle-stage');
-        (stage || document.body).appendChild(toast);
+        container.appendChild(toast);
         if (canReply) {
           toast.querySelector('.emoji-reply-btn').addEventListener('click', () => {
             toast.remove();
+            if (!container.children.length) container.remove();
             _sendEmoji(fromName);
           });
         }
-        setTimeout(() => toast.remove(), 5000);
+        setTimeout(() => {
+          toast.remove();
+          if (!container.children.length) container.remove();
+        }, 5000);
       }
 
       function _sendAdminBroadcast() {
