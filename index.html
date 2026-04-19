@@ -961,6 +961,20 @@
         .dex-screen { min-height: auto; }
         .dex-body { padding: 10px; }
       }
+
+      /* ── Mega egg ─────────────────────────────────────────────────────────── */
+      .mega-egg-glow {
+        animation: megaGlow 2s ease-in-out infinite alternate;
+        border-radius: 50%;
+      }
+      @keyframes megaGlow {
+        from { filter: drop-shadow(0 0 12px rgba(180,60,255,0.7)) drop-shadow(0 0 24px rgba(80,160,255,0.5)); }
+        to   { filter: drop-shadow(0 0 28px rgba(255,80,200,0.9)) drop-shadow(0 0 48px rgba(120,60,255,0.6)); }
+      }
+      .mega-countdown {
+        font-size: 13px; font-weight: 700; color: #7a3fc0;
+        letter-spacing: 0.03em; margin-top: 4px;
+      }
     </style>
   </head>
   <body>
@@ -1026,6 +1040,10 @@
                 <div class="dex-charm-icon charm-icon-locked" id="dexCatchingCharm">
                   <img src="catchingcharm.png" alt="Catching Charm" />
                   <div class="charm-tooltip" id="dexCatchingTip">Catching Charm: locked</div>
+                </div>
+                <div class="dex-charm-icon charm-icon-locked" id="dexMegaBracelet" style="display:none">
+                  <img src="megabracelet.png" alt="Mega Bracelet" />
+                  <div class="charm-tooltip" id="dexMegaBraceletTip">Mega Bracelet: Mega Eggs can appear!</div>
                 </div>
               </div>
             </div>
@@ -1149,6 +1167,114 @@
         "sizzlipede","centiskorch","charcadet"
       ]);
 
+      // ─── Mega Pokémon ────────────────────────────────────────────────────────
+      const MEGA_POKEMON = [
+        { id: 10033, slug: "venusaur-mega",           name: "Mega Venusaur",              base: "venusaur" },
+        { id: 10034, slug: "charizard-mega-x",        name: "Mega Charizard X",           base: "charizard" },
+        { id: 10035, slug: "charizard-mega-y",        name: "Mega Charizard Y",           base: "charizard" },
+        { id: 10036, slug: "blastoise-mega",          name: "Mega Blastoise",             base: "blastoise" },
+        { id: 10090, slug: "beedrill-mega",           name: "Mega Beedrill",              base: "beedrill" },
+        { id: 10073, slug: "pidgeot-mega",            name: "Mega Pidgeot",               base: "pidgeot" },
+        { id: 10304, slug: "raichu-mega-x",           name: "Mega Raichu X",              base: "raichu" },
+        { id: 10305, slug: "raichu-mega-y",           name: "Mega Raichu Y",              base: "raichu" },
+        { id: 10278, slug: "clefable-mega",           name: "Mega Clefable",              base: "clefable" },
+        { id: 10037, slug: "alakazam-mega",           name: "Mega Alakazam",              base: "alakazam" },
+        { id: 10279, slug: "victreebel-mega",         name: "Mega Victreebel",            base: "victreebel" },
+        { id: 10071, slug: "slowbro-mega",            name: "Mega Slowbro",               base: "slowbro" },
+        { id: 10038, slug: "gengar-mega",             name: "Mega Gengar",                base: "gengar" },
+        { id: 10039, slug: "kangaskhan-mega",         name: "Mega Kangaskhan",            base: "kangaskhan" },
+        { id: 10280, slug: "starmie-mega",            name: "Mega Starmie",               base: "starmie" },
+        { id: 10040, slug: "pinsir-mega",             name: "Mega Pinsir",                base: "pinsir" },
+        { id: 10041, slug: "gyarados-mega",           name: "Mega Gyarados",              base: "gyarados" },
+        { id: 10042, slug: "aerodactyl-mega",         name: "Mega Aerodactyl",            base: "aerodactyl" },
+        { id: 10281, slug: "dragonite-mega",          name: "Mega Dragonite",             base: "dragonite" },
+        { id: 10043, slug: "mewtwo-mega-x",           name: "Mega Mewtwo X",              base: "mewtwo" },
+        { id: 10044, slug: "mewtwo-mega-y",           name: "Mega Mewtwo Y",              base: "mewtwo" },
+        { id: 10282, slug: "meganium-mega",           name: "Mega Meganium",              base: "meganium" },
+        { id: 10283, slug: "feraligatr-mega",         name: "Mega Feraligatr",            base: "feraligatr" },
+        { id: 10045, slug: "ampharos-mega",           name: "Mega Ampharos",              base: "ampharos" },
+        { id: 10072, slug: "steelix-mega",            name: "Mega Steelix",               base: "steelix" },
+        { id: 10046, slug: "scizor-mega",             name: "Mega Scizor",                base: "scizor" },
+        { id: 10047, slug: "heracross-mega",          name: "Mega Heracross",             base: "heracross" },
+        { id: 10284, slug: "skarmory-mega",           name: "Mega Skarmory",              base: "skarmory" },
+        { id: 10048, slug: "houndoom-mega",           name: "Mega Houndoom",              base: "houndoom" },
+        { id: 10049, slug: "tyranitar-mega",          name: "Mega Tyranitar",             base: "tyranitar" },
+        { id: 10065, slug: "sceptile-mega",           name: "Mega Sceptile",              base: "sceptile" },
+        { id: 10050, slug: "blaziken-mega",           name: "Mega Blaziken",              base: "blaziken" },
+        { id: 10064, slug: "swampert-mega",           name: "Mega Swampert",              base: "swampert" },
+        { id: 10051, slug: "gardevoir-mega",          name: "Mega Gardevoir",             base: "gardevoir" },
+        { id: 10066, slug: "sableye-mega",            name: "Mega Sableye",               base: "sableye" },
+        { id: 10052, slug: "mawile-mega",             name: "Mega Mawile",                base: "mawile" },
+        { id: 10053, slug: "aggron-mega",             name: "Mega Aggron",                base: "aggron" },
+        { id: 10054, slug: "medicham-mega",           name: "Mega Medicham",              base: "medicham" },
+        { id: 10055, slug: "manectric-mega",          name: "Mega Manectric",             base: "manectric" },
+        { id: 10070, slug: "sharpedo-mega",           name: "Mega Sharpedo",              base: "sharpedo" },
+        { id: 10087, slug: "camerupt-mega",           name: "Mega Camerupt",              base: "camerupt" },
+        { id: 10067, slug: "altaria-mega",            name: "Mega Altaria",               base: "altaria" },
+        { id: 10056, slug: "banette-mega",            name: "Mega Banette",               base: "banette" },
+        { id: 10306, slug: "chimecho-mega",           name: "Mega Chimecho",              base: "chimecho" },
+        { id: 10057, slug: "absol-mega",              name: "Mega Absol",                 base: "absol" },
+        { id: 10307, slug: "absol-mega-z",            name: "Mega Absol Z",               base: "absol" },
+        { id: 10074, slug: "glalie-mega",             name: "Mega Glalie",                base: "glalie" },
+        { id: 10285, slug: "froslass-mega",           name: "Mega Froslass",              base: "froslass" },
+        { id: 10089, slug: "salamence-mega",          name: "Mega Salamence",             base: "salamence" },
+        { id: 10076, slug: "metagross-mega",          name: "Mega Metagross",             base: "metagross" },
+        { id: 10062, slug: "latias-mega",             name: "Mega Latias",                base: "latias" },
+        { id: 10063, slug: "latios-mega",             name: "Mega Latios",                base: "latios" },
+        { id: 10077, slug: "kyogre-primal",           name: "Primal Kyogre",              base: "kyogre" },
+        { id: 10078, slug: "groudon-primal",          name: "Primal Groudon",             base: "groudon" },
+        { id: 10079, slug: "rayquaza-mega",           name: "Mega Rayquaza",              base: "rayquaza" },
+        { id: 10308, slug: "staraptor-mega",          name: "Mega Staraptor",             base: "staraptor" },
+        { id: 10088, slug: "lopunny-mega",            name: "Mega Lopunny",               base: "lopunny" },
+        { id: 10058, slug: "garchomp-mega",           name: "Mega Garchomp",              base: "garchomp" },
+        { id: 10309, slug: "garchomp-mega-z",         name: "Mega Garchomp Z",            base: "garchomp" },
+        { id: 10059, slug: "lucario-mega",            name: "Mega Lucario",               base: "lucario" },
+        { id: 10310, slug: "lucario-mega-z",          name: "Mega Lucario Z",             base: "lucario" },
+        { id: 10060, slug: "abomasnow-mega",          name: "Mega Abomasnow",             base: "abomasnow" },
+        { id: 10068, slug: "gallade-mega",            name: "Mega Gallade",               base: "gallade" },
+        { id: 10311, slug: "heatran-mega",            name: "Mega Heatran",               base: "heatran" },
+        { id: 10312, slug: "darkrai-mega",            name: "Mega Darkrai",               base: "darkrai" },
+        { id: 10286, slug: "emboar-mega",             name: "Mega Emboar",                base: "emboar" },
+        { id: 10287, slug: "excadrill-mega",          name: "Mega Excadrill",             base: "excadrill" },
+        { id: 10069, slug: "audino-mega",             name: "Mega Audino",                base: "audino" },
+        { id: 10288, slug: "scolipede-mega",          name: "Mega Scolipede",             base: "scolipede" },
+        { id: 10289, slug: "scrafty-mega",            name: "Mega Scrafty",               base: "scrafty" },
+        { id: 10290, slug: "eelektross-mega",         name: "Mega Eelektross",            base: "eelektross" },
+        { id: 10291, slug: "chandelure-mega",         name: "Mega Chandelure",            base: "chandelure" },
+        { id: 10313, slug: "golurk-mega",             name: "Mega Golurk",                base: "golurk" },
+        { id: 10292, slug: "chesnaught-mega",         name: "Mega Chesnaught",            base: "chesnaught" },
+        { id: 10293, slug: "delphox-mega",            name: "Mega Delphox",               base: "delphox" },
+        { id: 10294, slug: "greninja-mega",           name: "Mega Greninja",              base: "greninja" },
+        { id: 10295, slug: "pyroar-mega",             name: "Mega Pyroar",                base: "pyroar" },
+        { id: 10296, slug: "floette-mega",            name: "Mega Floette",               base: "floette" },
+        { id: 10314, slug: "meowstic-mega",           name: "Mega Meowstic",              base: "meowstic" },
+        { id: 10297, slug: "malamar-mega",            name: "Mega Malamar",               base: "malamar" },
+        { id: 10298, slug: "barbaracle-mega",         name: "Mega Barbaracle",            base: "barbaracle" },
+        { id: 10299, slug: "dragalge-mega",           name: "Mega Dragalge",              base: "dragalge" },
+        { id: 10300, slug: "hawlucha-mega",           name: "Mega Hawlucha",              base: "hawlucha" },
+        { id: 10301, slug: "zygarde-mega",            name: "Mega Zygarde",               base: "zygarde" },
+        { id: 10075, slug: "diancie-mega",            name: "Mega Diancie",               base: "diancie" },
+        { id: 10315, slug: "crabominable-mega",       name: "Mega Crabominable",          base: "crabominable" },
+        { id: 10316, slug: "golisopod-mega",          name: "Mega Golisopod",             base: "golisopod" },
+        { id: 10302, slug: "drampa-mega",             name: "Mega Drampa",                base: "drampa" },
+        { id: 10317, slug: "magearna-mega",           name: "Mega Magearna",              base: "magearna" },
+        { id: 10318, slug: "magearna-original-mega",  name: "Mega Magearna (Original)",   base: "magearna" },
+        { id: 10319, slug: "zeraora-mega",            name: "Mega Zeraora",               base: "zeraora" },
+        { id: 10303, slug: "falinks-mega",            name: "Mega Falinks",               base: "falinks" },
+        { id: 10320, slug: "scovillain-mega",         name: "Mega Scovillain",            base: "scovillain" },
+        { id: 10321, slug: "glimmora-mega",           name: "Mega Glimmora",              base: "glimmora" },
+        { id: 10322, slug: "tatsugiri-curly-mega",    name: "Mega Tatsugiri (Curly)",     base: "tatsugiri" },
+        { id: 10323, slug: "tatsugiri-droopy-mega",   name: "Mega Tatsugiri (Droopy)",    base: "tatsugiri" },
+        { id: 10324, slug: "tatsugiri-stretchy-mega", name: "Mega Tatsugiri (Stretchy)",  base: "tatsugiri" },
+        { id: 10325, slug: "baxcalibur-mega",         name: "Mega Baxcalibur",            base: "baxcalibur" },
+      ];
+      const MEGA_CAPABLE_SLUGS    = new Set(MEGA_POKEMON.map(m => m.base));
+      const MEGA_BRACELET_THRESHOLD = 10;
+      const MEGA_POKEMON_MAP      = Object.fromEntries(MEGA_POKEMON.map(m => [m.slug, m]));
+      function megaImage(id) {
+        return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+      }
+
       // ─── Data (populated after fetch) ────────────────────────────────────────
       let POKEMON_DATA   = {};
       let EGG_POOL       = []; // base-form slugs only
@@ -1267,6 +1393,13 @@
       function checkCharmUnlocks(pokemon = null) {
         const count = getDexCount();
         const newlyUnlocked = [];
+        if (!state.megaBraceletUnlocked) {
+          const megaCapableInDex = Object.keys(state.unlockedDex).filter(s => MEGA_CAPABLE_SLUGS.has(s)).length;
+          if (megaCapableInDex >= MEGA_BRACELET_THRESHOLD) {
+            state.megaBraceletUnlocked = true;
+            newlyUnlocked.push("megabracelet");
+          }
+        }
         if (!state.flameBodyCharmUnlocked && pokemon?.slug && FLAME_BODY_POKEMON.has(pokemon.slug)) {
           state.flameBodyCharmUnlocked = true;
           newlyUnlocked.push("flamebody");
@@ -1291,7 +1424,8 @@
           flamebody: { name: "Flame Body",     img: "volcanobadge.png",  desc: "Eggs now hatch 10% faster!", cls: "" },
           catching:  { name: "Catching Charm", img: "catchingcharm.png", desc: "Ditto now appears 4× more often!", cls: "" },
           oval:      { name: "Oval Charm",     img: "ovalcharm.png",     desc: "Completed lines are now less common in eggs!", cls: "" },
-          shiny:     { name: "Shiny Charm",    img: "shinycharm.png",    desc: "Shiny odds improved to 1 in 128!", cls: " shiny-charm-toast" },
+          shiny:        { name: "Shiny Charm",    img: "shinycharm.png",    desc: "Shiny odds improved to 1 in 128!", cls: " shiny-charm-toast" },
+          megabracelet: { name: "Mega Bracelet",  img: "megabracelet.png",  desc: "Mega Evolution Eggs can now appear!", cls: "" },
         }[charmKey];
         if (!cfg) return;
 
@@ -1326,6 +1460,32 @@
         // Random thresholds for hatching dialogue stages (as fractions of targetSteps)
         const hint1At = Math.random() * (0.44 - 0.15) + 0.15; // 15–44%
         const hint2At = Math.random() * (0.74 - 0.45) + 0.45; // 45–74%
+        // Mega egg roll — 1-in-50 chance after bracelet unlocked
+        if (!devEggSlug && state.megaBraceletUnlocked && randomInt(1, 50) === 1) {
+          const eligibleMegas = MEGA_POKEMON.filter(m => state.unlockedDex[m.base]);
+          if (eligibleMegas.length) {
+            const mega    = randomFrom(eligibleMegas);
+            const isShiny = randomInt(1, 20) === 1;
+            return {
+              targetSteps:  randomInt(500000, 1000000),
+              currentSteps: 0,
+              targetSlug:   mega.slug,
+              isMega:       true,
+              isSpecial:    true,
+              isShiny,
+              isDitto:      false,
+              status:       'hatching',
+              hatched:      false,
+              loading:      false,
+              pokemon:      null,
+              error:        "",
+              hint1At:      0.25,
+              hint2At:      0.60,
+              expiresAt:    new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            };
+          }
+        }
+
         let targetSteps = randomInt(1, MAX_STEPS);
         if (state.flameBodyCharmUnlocked) targetSteps = Math.max(1, Math.floor(targetSteps * 0.9));
         return {
@@ -1364,6 +1524,9 @@
         shinyCharmUnlocked:     false,
         catchingCharmUnlocked:  false,
         flameBodyCharmUnlocked: false,
+        megaBraceletUnlocked:   false,
+        megaDex:                [],
+        unlockedMegaDex:        {},
       };
 
       // ─── Derived helpers ─────────────────────────────────────────────────────
@@ -1495,6 +1658,9 @@
           new_shiny_charm:        wasDirty ? state.shinyCharmUnlocked      : (snap?.shiny_charm_unlocked      ?? state.shinyCharmUnlocked),
           new_catching_charm:     wasDirty ? state.catchingCharmUnlocked   : (snap?.catching_charm_unlocked   ?? state.catchingCharmUnlocked),
           new_flame_body_charm:   wasDirty ? state.flameBodyCharmUnlocked  : (snap?.flame_body_charm_unlocked ?? state.flameBodyCharmUnlocked),
+          new_mega_bracelet:      wasDirty ? state.megaBraceletUnlocked    : (snap?.mega_bracelet_unlocked    ?? state.megaBraceletUnlocked),
+          new_mega_dex:           wasDirty ? state.megaDex                 : (snap?.mega_dex                  ?? state.megaDex),
+          new_unlocked_mega_dex:  wasDirty ? state.unlockedMegaDex         : (snap?.unlocked_mega_dex          ?? state.unlockedMegaDex),
         }).then(({ data, error }) => {
           if (error) {
             console.error("[OddEgg] Sync failed:", error);
@@ -1515,6 +1681,9 @@
                 shiny_charm_unlocked:     state.shinyCharmUnlocked,
                 catching_charm_unlocked:  state.catchingCharmUnlocked,
                 flame_body_charm_unlocked: state.flameBodyCharmUnlocked,
+                mega_bracelet_unlocked:   state.megaBraceletUnlocked,
+                mega_dex:                 state.megaDex,
+                unlocked_mega_dex:        state.unlockedMegaDex,
               };
             }
           }
@@ -2125,6 +2294,8 @@
           isSpecial:    row.is_special,
           isShiny:      row.is_shiny,
           isDitto:      row.is_ditto,
+          isMega:       row.is_mega    ?? false,
+          expiresAt:    row.expires_at ?? null,
           hint1At:      row.hint1_at,
           hint2At:      row.hint2_at,
           status:       row.status || 'hatching',
@@ -2193,6 +2364,8 @@
             p_is_special:   fresh.isSpecial,
             p_hint1_at:     fresh.hint1At,
             p_hint2_at:     fresh.hint2At,
+            p_is_mega:      fresh.isMega    ?? false,
+            p_expires_at:   fresh.expiresAt ?? null,
           });
           // Store reveal window so refreshing clients show spectator reveal instead of tapping immediately
           await db.from("egg_state").update({
@@ -2472,6 +2645,24 @@
           state.recentLog.unshift(e);
           state.recentLog = state.recentLog.slice(0, 12);
           if (evoIsShiny) { state.shinyRecentLog.unshift(e); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
+        }
+        if (state.eggState?.isMega) {
+          const megaData = MEGA_POKEMON_MAP[pokemon.slug];
+          if (megaData) {
+            const megaEntry = {
+              slug:         pokemon.slug,
+              name:         megaData.name,
+              image:        megaImage(megaData.id),
+              id:           megaData.id,
+              base:         megaData.base,
+              isShiny:      pokemon.isShiny,
+              discoveredBy: trainerName,
+              claimedAt:    new Date().toISOString(),
+              stepsToHatch: state.eggState.targetSteps,
+            };
+            state.megaDex.unshift(megaEntry);
+            state.unlockedMegaDex[pokemon.slug] = true;
+          }
         }
         state.claimer = "";
         const newCharms = checkCharmUnlocks(pokemon); // check first so charm state is correct when saved
@@ -2785,7 +2976,10 @@
           const hint1At = egg?.hint1At ?? 0.15;
           const hint2At = egg?.hint2At ?? 0.45;
           let eggTypeHint, subText;
-          if (!egg || displaySteps === 0) {
+          if (egg?.isMega) {
+            eggTypeHint = "An ancient power stirs within this Mysterious Egg…";
+            subText     = "A Mega Evolution Egg has appeared! The whole community must hatch it in time.";
+          } else if (!egg || displaySteps === 0) {
             eggTypeHint = egg?.isSpecial ? "A mysterious golden egg is waiting…" : "An Odd Egg is waiting.";
             subText     = egg?.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
           } else if (progress < hint1At) {
@@ -2818,9 +3012,10 @@
                 </div>
                 <button class="egg-button${specialClass}" id="eggTapBtn" aria-label="Take a Step">
                   <div class="egg-glow"></div>
-                  <img class="egg-image" src="${egg?.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
+                  <img class="egg-image${egg?.isMega ? " mega-egg-glow" : ""}" src="${egg?.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
                 </button>
                 <div class="${counterClass}" id="clickCounter">${fmt(displaySteps)} steps</div>
+                ${egg?.isMega && egg.expiresAt ? `<div class="mega-countdown" id="megaCountdown"></div>` : ""}
               </div>
               <div class="dialog-wrap">
                 <div class="dialog">
@@ -2840,6 +3035,22 @@
 
           document.getElementById("stepBtn").addEventListener("click", handleTakeStep);
           document.getElementById("eggTapBtn").addEventListener("click", handleTakeStep);
+          if (egg?.isMega && egg.expiresAt) {
+            const countdownEl = document.getElementById("megaCountdown");
+            if (countdownEl) {
+              const updateCountdown = () => {
+                const ms = new Date(egg.expiresAt) - Date.now();
+                if (ms <= 0) { countdownEl.textContent = "⏳ Time's up!"; return; }
+                const h = Math.floor(ms / 3600000);
+                const m = Math.floor((ms % 3600000) / 60000);
+                const s = Math.floor((ms % 60000) / 1000);
+                countdownEl.textContent = `⏳ ${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s remaining`;
+              };
+              updateCountdown();
+              const timer = setInterval(updateCountdown, 1000);
+              countdownEl._timer = timer;
+            }
+          }
           return;
         }
 
@@ -2932,6 +3143,7 @@
         // Preserve search state across re-renders (e.g. triggered by realtime updates)
         const prevSearch = document.getElementById("dexSearch")?.value ?? "";
 
+        const isMegaView = state.activeDexView === "mega";
         const isShiny    = state.activeDexView === "shiny";
         const unlockMap  = getUnlockMap(isShiny);
         const foundCounts= getFoundCounts(isShiny);
@@ -2941,34 +3153,49 @@
 
         const pageSlots = ALL_DEX_SLOTS.slice(fullDexPage * DEX_PAGE_SIZE, (fullDexPage + 1) * DEX_PAGE_SIZE);
 
+        const megaGridHTML = MEGA_POKEMON.map(m => {
+          const unlocked = state.unlockedMegaDex[m.slug];
+          const entry    = state.megaDex.find(e => e.slug === m.slug);
+          return `<div class="dex-slot${unlocked ? " unlocked" : ""}${entry?.isShiny ? " shiny" : ""}">
+            ${unlocked
+              ? `<img class="slot-img" src="${megaImage(m.id)}" alt="${m.name}" loading="lazy" />`
+              : `<div class="locked-icon">?</div>`}
+            <div class="slot-name">${unlocked ? m.name : "???"}</div>
+            ${entry?.isShiny ? `<div class="slot-shiny-badge">✨</div>` : ""}
+          </div>`;
+        }).join("");
+
         overlay.className = "full-dex-overlay open";
         overlay.innerHTML = `
           <div class="full-dex-shell">
             <div class="full-dex-top">
               <div style="flex-shrink:0;">
-                <div class="full-dex-title">${isShiny ? "✨ Shiny Dex" : "Living Dex"}</div>
-                <div class="full-dex-sub">${ALL_DEX_SLOTS.filter(s => unlockMap[s]).length} / ${ALL_DEX_SLOTS.length} caught</div>
+                <div class="full-dex-title">${isMegaView ? "Mega Dex" : isShiny ? "✨ Shiny Dex" : "Living Dex"}</div>
+                <div class="full-dex-sub">${isMegaView
+                  ? `${Object.keys(state.unlockedMegaDex).length} / ${MEGA_POKEMON.length} Mega caught`
+                  : `${ALL_DEX_SLOTS.filter(s => unlockMap[s]).length} / ${ALL_DEX_SLOTS.length} caught`}</div>
               </div>
-              <div class="dex-view-toggle${isShiny ? ' is-shiny' : ''}" id="dexViewToggle">
+              <div class="dex-view-toggle${isShiny ? ' is-shiny' : ''}${isMegaView ? ' is-mega' : ''}" id="dexViewToggle">
                 <div class="dex-toggle-slider"></div>
                 <button class="dex-toggle-opt" id="toggleBase">Base</button>
                 <button class="dex-toggle-opt" id="toggleShiny">✨ Shiny</button>
+                ${state.megaBraceletUnlocked ? `<button class="dex-toggle-opt" id="toggleMega">Mega</button>` : ""}
               </div>
               <div class="full-dex-top-right">
-                <input class="full-dex-search" id="dexSearch" placeholder="Search Pokémon…" />
+                <input class="full-dex-search" id="dexSearch" placeholder="Search Pokémon…" ${isMegaView ? "disabled" : ""} />
                 <button class="close-dex-btn" id="closeFullDexBtn">Close</button>
               </div>
             </div>
             <div class="full-dex-body">
               <div class="full-dex-screen">
                 <div class="full-dex-grid" id="fullDexGrid">
-                  ${renderDexGrid(pageSlots, unlockMap, isShiny, getDexArray(isShiny))}
+                  ${isMegaView ? megaGridHTML : renderDexGrid(pageSlots, unlockMap, isShiny, getDexArray(isShiny))}
                 </div>
-                <div class="dex-pagination" id="dexPagination">
+                ${!isMegaView ? `<div class="dex-pagination" id="dexPagination">
                   <button class="dex-page-btn" id="dexPrevBtn" ${fullDexPage === 0 ? "disabled" : ""}>&laquo; Prev</button>
                   <span class="dex-page-info">Page ${fullDexPage + 1} / ${totalPages}</span>
                   <button class="dex-page-btn" id="dexNextBtn" ${fullDexPage >= totalPages - 1 ? "disabled" : ""}>Next &raquo;</button>
-                </div>
+                </div>` : ""}
               </div>
             </div>
           </div>
@@ -2978,14 +3205,17 @@
         overlay.addEventListener("click", e => { if (e.target === overlay) closeFullDex(); });
         document.getElementById("toggleBase").addEventListener("click",  () => setDexView("normal"));
         document.getElementById("toggleShiny").addEventListener("click", () => setDexView("shiny"));
+        document.getElementById("toggleMega")?.addEventListener("click", () => setDexView("mega"));
         document.getElementById("dexViewToggle").addEventListener("click", e => {
           if (!e.target.classList.contains("dex-toggle-opt")) {
             setDexView(isShiny ? "normal" : "shiny"); // clicking the pill itself toggles
           }
         });
 
-        document.getElementById("dexPrevBtn").addEventListener("click", () => { fullDexPage--; renderFullDexOverlay(); });
-        document.getElementById("dexNextBtn").addEventListener("click", () => { fullDexPage++; renderFullDexOverlay(); });
+        if (!isMegaView) {
+          document.getElementById("dexPrevBtn").addEventListener("click", () => { fullDexPage--; renderFullDexOverlay(); });
+          document.getElementById("dexNextBtn").addEventListener("click", () => { fullDexPage++; renderFullDexOverlay(); });
+        }
 
         // Restore search value and re-apply filter if there was one
         const searchEl = document.getElementById("dexSearch");
@@ -3076,10 +3306,34 @@
             ? "Catching Charm: Ditto odds 1 in 256"
             : "Catching Charm: Find first Ditto";
         }
+        const megaIcon = document.getElementById("dexMegaBracelet");
+        const megaTip  = document.getElementById("dexMegaBraceletTip");
+        if (megaIcon) {
+          const megaCapable = Object.keys(state.unlockedDex).filter(s => MEGA_CAPABLE_SLUGS.has(s)).length;
+          megaIcon.style.display = "";
+          megaIcon.classList.toggle("charm-icon-locked", !state.megaBraceletUnlocked);
+          if (megaTip) megaTip.textContent = state.megaBraceletUnlocked
+            ? "Mega Bracelet: Mega Evolution Eggs can appear!"
+            : `Mega Bracelet: ${megaCapable}/${MEGA_BRACELET_THRESHOLD} Mega-capable caught`;
+        }
       }
 
       // ─── Render (top-level) ──────────────────────────────────────────────────
       function render() {
+        // Mega expiry — if the community missed the window, expire and generate a new egg
+        if (state.eggState?.isMega && state.eggState.expiresAt && state.eggState.status === 'hatching') {
+          if (new Date(state.eggState.expiresAt) < new Date() && !_generatingEgg) {
+            _generatingEgg = true;
+            const expiredSlug = state.eggState.targetSlug;
+            const toast = document.createElement("div");
+            toast.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#2d1b4e;color:#e0c4ff;border:3px solid #7a3fc0;border-radius:18px;padding:14px 22px;font-size:15px;font-weight:700;";
+            toast.textContent = "✨ The Mega Egg faded away… Better luck next time.";
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+            generateAndSaveEgg().finally(() => { _generatingEgg = false; });
+            return;
+          }
+        }
         renderMainView();
         renderDex();
         renderFullDexOverlay();
@@ -3199,6 +3453,9 @@
               if (typeof data.shiny_charm_unlocked      === "boolean") state.shinyCharmUnlocked      = data.shiny_charm_unlocked;
               if (typeof data.catching_charm_unlocked   === "boolean") state.catchingCharmUnlocked   = data.catching_charm_unlocked;
               if (typeof data.flame_body_charm_unlocked === "boolean") state.flameBodyCharmUnlocked  = data.flame_body_charm_unlocked;
+              if (typeof data.mega_bracelet_unlocked    === "boolean") state.megaBraceletUnlocked    = data.mega_bracelet_unlocked;
+              if (Array.isArray(data.mega_dex))                        state.megaDex                 = data.mega_dex;
+              if (data.unlocked_mega_dex && typeof data.unlocked_mega_dex === "object") state.unlockedMegaDex = data.unlocked_mega_dex;
               if (typeof data.global_clicks === "number") {
                 state.globalClicks = data.global_clicks;
                 const el = document.getElementById("globalClickCount");
@@ -3219,6 +3476,9 @@
                 shiny_charm_unlocked:     data.shiny_charm_unlocked      ?? _serverSharedSnapshot?.shiny_charm_unlocked,
                 catching_charm_unlocked:  data.catching_charm_unlocked   ?? _serverSharedSnapshot?.catching_charm_unlocked,
                 flame_body_charm_unlocked: data.flame_body_charm_unlocked ?? _serverSharedSnapshot?.flame_body_charm_unlocked,
+                mega_bracelet_unlocked:   data.mega_bracelet_unlocked    ?? _serverSharedSnapshot?.mega_bracelet_unlocked,
+                mega_dex:                 data.mega_dex                  ?? _serverSharedSnapshot?.mega_dex,
+                unlocked_mega_dex:        data.unlocked_mega_dex         ?? _serverSharedSnapshot?.unlocked_mega_dex,
               };
 
               renderDex();
@@ -3244,6 +3504,9 @@
             if (typeof data.shiny_charm_unlocked      === "boolean") state.shinyCharmUnlocked      = data.shiny_charm_unlocked;
             if (typeof data.catching_charm_unlocked   === "boolean") state.catchingCharmUnlocked   = data.catching_charm_unlocked;
             if (typeof data.flame_body_charm_unlocked === "boolean") state.flameBodyCharmUnlocked  = data.flame_body_charm_unlocked;
+            if (typeof data.mega_bracelet_unlocked    === "boolean") state.megaBraceletUnlocked    = data.mega_bracelet_unlocked;
+            if (Array.isArray(data.mega_dex))                        state.megaDex                 = data.mega_dex;
+            if (data.unlocked_mega_dex && typeof data.unlocked_mega_dex === "object") state.unlockedMegaDex = data.unlocked_mega_dex;
             if (typeof data.global_clicks             === "number")  state.globalClicks            = data.global_clicks;
             // Snapshot what the server currently holds — used as safe baseline for click-only syncs
             _serverSharedSnapshot = {
@@ -3259,6 +3522,9 @@
               shiny_charm_unlocked:     data.shiny_charm_unlocked,
               catching_charm_unlocked:  data.catching_charm_unlocked,
               flame_body_charm_unlocked: data.flame_body_charm_unlocked,
+              mega_bracelet_unlocked:   data.mega_bracelet_unlocked,
+              mega_dex:                 data.mega_dex,
+              unlocked_mega_dex:        data.unlocked_mega_dex,
             };
             renderDex();
             _scheduleVisibleAfterRender();
