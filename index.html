@@ -1492,7 +1492,7 @@
         const megaCapableInDexNow = Object.keys(state.unlockedDex).filter(s => MEGA_CAPABLE_SLUGS.has(s)).length;
 
         // Mega egg roll — 1-in-50 chance after bracelet unlocked
-        if (!devEggSlug && (state.megaBraceletUnlocked || megaCapableInDexNow >= _bracketThreshold) && randomInt(1, 2) === 1) {
+        if (false && !devEggSlug && (state.megaBraceletUnlocked || megaCapableInDexNow >= _bracketThreshold) && randomInt(1, 2) === 1) {
           const eligibleMegas = MEGA_POKEMON.filter(m => state.unlockedDex[m.base]);
           if (eligibleMegas.length) {
             const mega    = randomFrom(eligibleMegas);
@@ -3404,7 +3404,7 @@
           EGG_POOL      = Object.values(POKEMON_DATA).filter(p => p.isBase).map(p => p.slug);
 
           // ── DEV TEST OVERRIDES (remove before merging to prod) ────────────
-          const DEV_TEST_POOL = ["aerodactyl","absol","dratini","charmander","pinsir","swablu","audino","heracross","latias","latios","sableye"];
+          const DEV_TEST_POOL = ["dratini","charmander"];
           EGG_POOL = EGG_POOL.filter(s => DEV_TEST_POOL.includes(s));
           // Regular eggs: 5 steps. Mega eggs: 500 steps. Bracelet threshold: 5.
           // (MAX_STEPS and Mega range overridden inline in buildFreshEgg via devOverride)
