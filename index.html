@@ -2511,7 +2511,7 @@
         const expectedSlug = state.eggState.targetSlug; // snapshot — server discards if egg has changed
         _pendingEggSteps = 0;
         _inFlightSteps += steps;
-        db.rpc("increment_egg_steps", { amount: steps, expected_slug: expectedSlug }).then(async ({ data, error }) => {
+        db.rpc("increment_egg_steps", { amount: steps, expected_slug: expectedSlug, p_trainer: state.trainerName || null }).then(async ({ data, error }) => {
           if (error) {
             console.error("[OddEgg] Egg step flush failed:", error);
             _pendingEggSteps += steps;
