@@ -2864,7 +2864,7 @@
 
         // ── Hatch burst animation ──
         if (_hatchAnimPlaying && egg) {
-          const eggSrc      = egg.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : EGG_IMAGE;
+          const eggSrc      = egg.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : egg.isMega ? "./megaegg.png" : EGG_IMAGE;
           const specialClass = egg.isShiny ? " shiny" : egg.isSpecial ? " special" : "";
           view.innerHTML = `
             <div class="field">
