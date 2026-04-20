@@ -2374,12 +2374,13 @@
 
       async function _pollVelocity() {
         if (!_onlineTrainers.length) return;
-        const names = _onlineTrainers.map(n => n.toLowerCase());
-        const { data } = await db.from("trainer_hatches").select("trainer_name, step_count").in("trainer_name", names);
+        const { data } = await db.from("trainer_hatches").select("display_name, step_count");
         if (!data) return;
+        const onlineSet = new Set(_onlineTrainers.map(n => n.toLowerCase()));
         const now = Date.now();
         data.forEach(row => {
-          const name  = row.trainer_name;
+          const name  = (row.display_name || "").toLowerCase();
+          if (!onlineSet.has(name)) return;
           const steps = row.step_count || 0;
           const prev  = _velocitySnapshots[name];
           if (prev && now - prev.time > 0 && steps >= prev.steps) {
