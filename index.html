@@ -1966,6 +1966,7 @@
           .on("broadcast", { event: "step_update" }, ({ payload }) => {
             if (!payload || !state.eggState || state.eggState.status !== 'hatching') return;
             if (_isCurrentClaimer || _revealActive) return;
+            if (payload.slug && payload.slug !== state.eggState.targetSlug) return;
             const serverSteps = payload.current_steps;
             if (typeof serverSteps === 'number' && serverSteps > (state.eggState.currentSteps || 0)) {
               state.eggState.currentSteps = serverSteps;
@@ -2751,7 +2752,7 @@
               const actualAdded = Math.max(0, (state.eggState?.currentSteps ?? 0) - prevSteps);
               if (actualAdded > 0) _incrementStepCount(actualAdded);
               if (row.status === 'hatching' && row.current_steps !== undefined) {
-                _presenceChannel?.send({ type: "broadcast", event: "step_update", payload: { current_steps: row.current_steps } });
+                _presenceChannel?.send({ type: "broadcast", event: "step_update", payload: { current_steps: row.current_steps, slug: row.target_slug } });
               }
               if (wasHatching && state.eggState.status !== 'hatching') {
                 _playHatchSequence(); // egg just hatched — play burst then reveal
