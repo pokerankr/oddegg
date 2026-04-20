@@ -2384,7 +2384,7 @@
           if (!onlineSet.has(name)) return;
           const steps = row.step_count || 0;
           const prev  = _velocitySnapshots[name];
-          if (prev && now - prev.time > 0 && steps >= prev.steps) {
+          if (prev && now - prev.time > 2000 && steps >= prev.steps) {
             _velocityReadings[name] = (steps - prev.steps) / ((now - prev.time) / 1000);
           }
           _velocitySnapshots[name] = { steps, time: now };
