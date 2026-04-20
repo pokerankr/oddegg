@@ -2638,12 +2638,14 @@
             return;
           }
           _inFlightSteps = Math.max(0, _inFlightSteps - steps); // server confirmed
-          _incrementStepCount(steps);
           if (data) {
             const row = Array.isArray(data) ? data[0] : data;
             if (row && typeof row === 'object' && 'status' in row) {
+              const prevSteps = state.eggState?.currentSteps ?? 0;
               const wasHatching = state.eggState?.status === 'hatching';
               _applyEggRow(row);
+              const actualAdded = Math.max(0, (state.eggState?.currentSteps ?? 0) - prevSteps);
+              if (actualAdded > 0) _incrementStepCount(actualAdded);
               if (wasHatching && state.eggState.status !== 'hatching') {
                 _playHatchSequence(); // egg just hatched — play burst then reveal
                 // Auto-claim as the player whose step caused this hatch
