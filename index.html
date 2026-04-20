@@ -3927,14 +3927,24 @@
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "egg_events" },
             async (payload) => {
-              const eventStatus = payload.new?.status; // what just changed TO — trust this, not the re-fetch
+              const eventStatus  = payload.new?.status;
+              const eventSlug    = payload.new?.target_slug;
+              const eventShiny   = payload.new?.is_shiny ?? false;
+              const eventSteps   = payload.new?.target_steps;
               const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
               if (!eggRow) return;
               const prevStatus  = state.eggState?.status;
               const prevPokemon = state.eggState?.pokemon;
               _applyEggRow(eggRow);
               if (eventStatus === 'hatched' && prevStatus === 'hatching') {
-                if (!_spectatorPokemon) _playHatchSequence();
+                // Build pokemon from event payload — egg_state may already be past 'hatched'
+                if (!_spectatorPokemon) {
+                  if (eventSlug) {
+                    state.eggState.pokemon = { ...buildPokemonRecord(eventSlug, eventShiny), stepsToHatch: eventSteps };
+                    state.eggState.hatched = true;
+                  }
+                  _playHatchSequence();
+                }
               } else if (eventStatus === 'hatching' && !_isCurrentClaimer && !_revealActive
                          && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
                 if (!_spectatorPokemon) _showSpectatorReveal(prevPokemon, 5);
