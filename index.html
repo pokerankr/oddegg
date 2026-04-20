@@ -1993,7 +1993,7 @@
             const btn  = (!isMe && myName && state.trainerName !== "Anonymous Trainer") ? `<button onclick="_sendEmoji('${_escHtml(n)}')" ${onCooldown ? "disabled" : ""} style="margin-left:8px;background:none;border:none;cursor:${onCooldown ? 'default' : 'pointer'};font-size:${onCooldown ? '11px' : '16px'};padding:0;line-height:1;color:${onCooldown ? '#aaa' : 'inherit'};" title="${onCooldown ? `Wait ${cooldownLeft}s` : 'Send emoji'}">${onCooldown ? `${cooldownLeft}s` : '👋'}</button>` : "";
             const adminBtn = (!isMe && isAdmin) ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminMessage('${_escHtml(n)}')" style="margin-left:6px;background:none;border:none;cursor:pointer;font-size:14px;padding:0;line-height:1;" title="Send message">📢</button>` : "";
             const vel = isAdmin && !isMe ? _velocityReadings[n.toLowerCase()] : null;
-            const velTag = vel != null ? `<span style="margin-left:6px;font-size:10px;font-weight:900;color:${vel > 15 ? '#ef4444' : vel > 8 ? '#f97316' : '#22c55e'};">${vel.toFixed(1)}/s</span>` : "";
+            const velTag = isAdmin && !isMe ? `<span style="margin-left:6px;font-size:10px;font-weight:900;color:${vel > 15 ? '#ef4444' : vel > 8 ? '#f97316' : vel != null ? '#22c55e' : '#aaa'};">${vel != null ? vel.toFixed(1) + '/s' : '…'}</span>` : "";
             return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${velTag}${btn}${adminBtn}</div>`;
           }).join("") + broadcastAllBtn;
           chip.style.position = "relative";
@@ -3649,6 +3649,7 @@
           // Flush egg steps to Supabase every 500ms — fast enough for responsive hatch detection
           setInterval(_flushEggSteps, 500);
           // Admin velocity tracking — poll step counts every 10s to compute steps/sec per trainer
+          _pollVelocity();
           setInterval(_pollVelocity, 10000);
 
           // Wire up persistent dex buttons
