@@ -2463,9 +2463,12 @@
 
       async function _pollVelocity() {
         if (!_onlineTrainers.length) return;
-        const { data } = await db.from("trainer_hatches").select("display_name, step_count");
-        if (!data) return;
+        if ((state.trainerName || "").toLowerCase() !== "sh1n1es") return;
         const onlineSet = new Set(_onlineTrainers.map(n => n.toLowerCase()));
+        const { data } = await db.from("trainer_hatches")
+          .select("display_name, step_count")
+          .in("display_name", _onlineTrainers);
+        if (!data) return;
         const now = Date.now();
         data.forEach(row => {
           const name  = (row.display_name || "").toLowerCase();
@@ -3743,7 +3746,7 @@
           setInterval(_flushEggSteps, 500);
           // Admin velocity tracking — poll step counts every 10s to compute steps/sec per trainer
           _pollVelocity();
-          setInterval(_pollVelocity, 10000);
+          setInterval(_pollVelocity, 30000);
           // Ban status check on load and every 60s
           _checkBanStatus();
           setInterval(_checkBanStatus, 60000);
