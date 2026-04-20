@@ -3946,6 +3946,12 @@
           });
       }
 
+      db.channel("banned_trainers_changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "banned_trainers" }, () => {
+          _checkBanStatus();
+        })
+        .subscribe();
+
       init();
     </script>
   </body>
