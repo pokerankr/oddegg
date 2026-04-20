@@ -3926,21 +3926,20 @@
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "egg_events" },
-            async () => {
+            async (payload) => {
+              const eventStatus = payload.new?.status; // what just changed TO — trust this, not the re-fetch
               const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
               if (!eggRow) return;
               const prevStatus  = state.eggState?.status;
               const prevPokemon = state.eggState?.pokemon;
               _applyEggRow(eggRow);
-              if (eggRow.status !== prevStatus) {
-                if (eggRow.status === 'hatched' && prevStatus === 'hatching') {
-                  if (!_spectatorPokemon) _playHatchSequence();
-                } else if (eggRow.status === 'hatching' && !_isCurrentClaimer && !_revealActive
-                           && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
-                  if (!_spectatorPokemon) _showSpectatorReveal(prevPokemon, 5);
-                } else if (!_revealActive && !_isCurrentClaimer && !_spectatorPokemon) {
-                  render();
-                }
+              if (eventStatus === 'hatched' && prevStatus === 'hatching') {
+                if (!_spectatorPokemon) _playHatchSequence();
+              } else if (eventStatus === 'hatching' && !_isCurrentClaimer && !_revealActive
+                         && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
+                if (!_spectatorPokemon) _showSpectatorReveal(prevPokemon, 5);
+              } else if (eventStatus !== prevStatus && !_revealActive && !_isCurrentClaimer && !_spectatorPokemon) {
+                render();
               }
             }
           )
