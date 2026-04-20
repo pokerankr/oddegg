@@ -1069,7 +1069,7 @@
                 <span class="label">Total Steps</span>
                 <span class="value" id="globalClickCount">0</span>
               </div>
-              <span class="version-tag" style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;flex-shrink:0;">v1.1.2</span>
+              <span class="version-tag" style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;flex-shrink:0;">v1.1.1</span>
             </div>
           </div>
           <div id="mainView">
@@ -1161,7 +1161,7 @@
 
         <div style="margin-bottom:24px;">
           <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
-            <span style="font-size:13px;font-weight:900;background:var(--screen-border);color:white;border-radius:8px;padding:2px 10px;">v1.1.2</span>
+            <span style="font-size:13px;font-weight:900;background:var(--screen-border);color:white;border-radius:8px;padding:2px 10px;">v1.1.1</span>
             <span style="font-size:12px;color:var(--slate);font-weight:700;">April 2025</span>
           </div>
           <p style="margin:0 0 10px;font-size:14px;font-weight:800;">🥚 An EGGciting Mega Update!</p>
@@ -1963,18 +1963,6 @@
             if (!payload) return;
             _showAdminMessageToast(payload.message);
           })
-          .on("broadcast", { event: "step_update" }, ({ payload }) => {
-            if (!payload || !state.eggState || state.eggState.status !== 'hatching') return;
-            if (_isCurrentClaimer || _revealActive) return;
-            if (payload.slug && payload.slug !== state.eggState.targetSlug) return;
-            const serverSteps = payload.current_steps;
-            if (typeof serverSteps === 'number' && serverSteps > (state.eggState.currentSteps || 0)) {
-              state.eggState.currentSteps = serverSteps;
-              const el = document.getElementById("clickCounter");
-              if (el) el.textContent = fmt(serverSteps + _pendingEggSteps + _inFlightSteps) + " steps";
-              _updateEggDialogue();
-            }
-          })
           .subscribe(async status => {
             if (status === "SUBSCRIBED" && state.trainerName) {
               await _presenceChannel.track({ name: state.trainerName });
@@ -2751,9 +2739,6 @@
               _applyEggRow(row);
               const actualAdded = Math.max(0, (state.eggState?.currentSteps ?? 0) - prevSteps);
               if (actualAdded > 0) _incrementStepCount(actualAdded);
-              if (row.status === 'hatching' && row.current_steps !== undefined) {
-                _presenceChannel?.send({ type: "broadcast", event: "step_update", payload: { current_steps: row.current_steps, slug: row.target_slug } });
-              }
               if (wasHatching && state.eggState.status !== 'hatching') {
                 _playHatchSequence(); // egg just hatched — play burst then reveal
                 // Auto-claim as the player whose step caused this hatch
@@ -3921,44 +3906,50 @@
             if (state.fullDexOpen) renderFullDexOverlay();
           });
 
-        // Egg status changes — fires only when status transitions (hatching/hatched/claiming)
-        db.channel("egg_status_events")
+        // Shared egg changes — drives the main game view for all players
+        db.channel("egg_state_changes")
           .on(
             "postgres_changes",
-            { event: "INSERT", schema: "public", table: "egg_events" },
-            async (payload) => {
-              const eventStatus  = payload.new?.status;
-              const eventSlug    = payload.new?.target_slug;
-              const eventShiny   = payload.new?.is_shiny ?? false;
-              const eventSteps   = payload.new?.target_steps;
-              const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
-              if (!eggRow) return;
+            { event: "UPDATE", schema: "public", table: "egg_state" },
+            (payload) => {
+              const data = payload.new;
+              if (!data) return;
               const prevStatus  = state.eggState?.status;
-              const prevPokemon = state.eggState?.pokemon;
-              _applyEggRow(eggRow);
-              if (eventStatus === 'hatched' && prevStatus === 'hatching') {
-                // Build pokemon from event payload — egg_state may already be past 'hatched'
-                if (!_spectatorPokemon) {
-                  if (eventSlug) {
-                    state.eggState.pokemon = { ...buildPokemonRecord(eventSlug, eventShiny), stepsToHatch: eventSteps };
-                    state.eggState.hatched = true;
-                  }
-                  _playHatchSequence();
+              const prevPokemon = state.eggState?.pokemon; // capture before overwrite
+              _applyEggRow(data);
+              // Only do a full re-render when the egg status changes (hatch, claim, new egg).
+              // During active stepping the status stays 'hatching' — just update the counter
+              // text so we don't rebuild the DOM and disrupt rapid taps.
+              if (data.status !== prevStatus) {
+                if (data.status === 'hatched' && prevStatus === 'hatching') {
+                  // Skip hatch animation if already mid-reveal (rapid successive hatches)
+                  if (!_spectatorPokemon) _playHatchSequence();
+                } else if (data.status === 'hatching' && !_isCurrentClaimer && !_revealActive
+                           && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
+                  // New egg arrived — show reveal of what just hatched, but only if not
+                  // already in one (rapid hatches: let current finish, render new egg after)
+                  if (!_spectatorPokemon) _showSpectatorReveal(prevPokemon, 5);
+                } else if (!_revealActive && !_isCurrentClaimer && !_spectatorPokemon) {
+                  // Don't interrupt any reveal screen
+                  render();
                 }
-              } else if (eventStatus === 'hatching' && !_isCurrentClaimer && !_revealActive
-                         && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
-                if (!_spectatorPokemon) _showSpectatorReveal(prevPokemon, 5);
-              } else if (eventStatus !== prevStatus && !_revealActive && !_isCurrentClaimer && !_spectatorPokemon) {
-                render();
+              } else if (data.status === 'hatching' && !_revealActive && !_spectatorPokemon) {
+                const el = document.getElementById("clickCounter");
+                if (el) el.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
+                _updateEggDialogue();
               }
             }
           )
           .subscribe(async (status) => {
             if (status !== "SUBSCRIBED") return;
+            // Re-fetch on (re)connect to catch up on any events missed while disconnected
             const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
             if (!eggRow) return;
             const prevStatus = state.eggState?.status;
             _applyEggRow(eggRow);
+            // On reconnect, skip the hatch animation even if we missed the hatch event —
+            // the egg may already be claimed elsewhere and showing the animation would be
+            // misleading. Just render the current state directly.
             if (eggRow.status !== prevStatus && !_revealActive && !_isCurrentClaimer) {
               render();
             } else if (eggRow.status === 'hatching' && !_revealActive) {
