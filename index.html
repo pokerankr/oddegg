@@ -1445,6 +1445,8 @@
       let _dittoCountdown     = 0;                 // seconds left on ditto picker
       let _presenceChannel    = null;
       let _onlineTrainers     = [];
+      let _velocitySnapshots  = {};  // { lowerName: { steps, time } }
+      let _velocityReadings   = {};  // { lowerName: steps/sec }
 
       // ─── Helpers ─────────────────────────────────────────────────────────────
       function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -1990,11 +1992,13 @@
             const onCooldown = cooldownLeft > 0;
             const btn  = (!isMe && myName && state.trainerName !== "Anonymous Trainer") ? `<button onclick="_sendEmoji('${_escHtml(n)}')" ${onCooldown ? "disabled" : ""} style="margin-left:8px;background:none;border:none;cursor:${onCooldown ? 'default' : 'pointer'};font-size:${onCooldown ? '11px' : '16px'};padding:0;line-height:1;color:${onCooldown ? '#aaa' : 'inherit'};" title="${onCooldown ? `Wait ${cooldownLeft}s` : 'Send emoji'}">${onCooldown ? `${cooldownLeft}s` : '👋'}</button>` : "";
             const adminBtn = (!isMe && isAdmin) ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminMessage('${_escHtml(n)}')" style="margin-left:6px;background:none;border:none;cursor:pointer;font-size:14px;padding:0;line-height:1;" title="Send message">📢</button>` : "";
-            return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${btn}${adminBtn}</div>`;
+            const vel = isAdmin && !isMe ? _velocityReadings[n.toLowerCase()] : null;
+            const velTag = vel != null ? `<span style="margin-left:6px;font-size:10px;font-weight:900;color:${vel > 15 ? '#ef4444' : vel > 8 ? '#f97316' : '#22c55e'};">${vel.toFixed(1)}/s</span>` : "";
+            return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${velTag}${btn}${adminBtn}</div>`;
           }).join("") + broadcastAllBtn;
           chip.style.position = "relative";
           chip.appendChild(popup);
-          setTimeout(() => popup.remove(), 4000);
+          setTimeout(() => popup.remove(), isAdmin ? 15000 : 4000);
         };
       }
 
@@ -2366,6 +2370,23 @@
           : `<div style="text-align:center;padding:32px;color:var(--slate);font-weight:700;">${emptyMsg}</div>`;
 
         overlay.querySelector("#lbContent").innerHTML = `<div style="width:100%;">${rows}</div>`;
+      }
+
+      async function _pollVelocity() {
+        if (!_onlineTrainers.length) return;
+        const names = _onlineTrainers.map(n => n.toLowerCase());
+        const { data } = await db.from("trainer_hatches").select("trainer_name, step_count").in("trainer_name", names);
+        if (!data) return;
+        const now = Date.now();
+        data.forEach(row => {
+          const name  = row.trainer_name;
+          const steps = row.step_count || 0;
+          const prev  = _velocitySnapshots[name];
+          if (prev && now - prev.time > 0 && steps >= prev.steps) {
+            _velocityReadings[name] = (steps - prev.steps) / ((now - prev.time) / 1000);
+          }
+          _velocitySnapshots[name] = { steps, time: now };
+        });
       }
 
       function closeLeaderboard() {
@@ -3627,6 +3648,8 @@
           setInterval(_syncToSupabase, 2000);
           // Flush egg steps to Supabase every 500ms — fast enough for responsive hatch detection
           setInterval(_flushEggSteps, 500);
+          // Admin velocity tracking — poll step counts every 10s to compute steps/sec per trainer
+          setInterval(_pollVelocity, 10000);
 
           // Wire up persistent dex buttons
           document.getElementById("baseDexBtn").addEventListener("click", openBaseDex);
