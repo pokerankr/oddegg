@@ -3223,8 +3223,8 @@
             </div>
           `;
 
-          document.getElementById("stepBtn").addEventListener("click", handleTakeStep);
-          document.getElementById("eggTapBtn").addEventListener("click", handleTakeStep);
+          document.getElementById("stepBtn").onclick = handleTakeStep;
+          document.getElementById("eggTapBtn").onclick = handleTakeStep;
           if (egg?.isMega) {
             const hbSpeed = progress < 0.25 ? 5.0 : progress < 0.5 ? 3.5 : progress < 0.75 ? 2.2 : 1.3;
             document.querySelector(".mega-egg-glow")?.style.setProperty("--hb-speed", hbSpeed + "s");
