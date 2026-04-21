@@ -1065,11 +1065,18 @@
                 <span class="label">Trainer</span>
                 <span class="value" id="trainerNameDisplay">—</span>
               </div>
-              <div class="status-chip" id="stepCountChip">
-                <span class="label">Total Steps</span>
+              <div class="status-chip" id="stepCountChip" title="Total steps update once per egg hatch, not in real time" style="cursor:pointer;position:relative;" onclick="
+                const tip = document.getElementById('stepsTip');
+                if(tip) { tip.style.display = tip.style.display === 'none' ? 'block' : 'none'; }
+              ">
+                <span class="label">Total Steps ℹ️</span>
                 <span class="value" id="globalClickCount">0</span>
+                <div id="stepsTip" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#1e293b;color:white;font-size:12px;font-weight:700;padding:10px 14px;border-radius:12px;width:220px;line-height:1.5;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+                  Total steps are tallied once per egg hatch, not in real time — your clicks are always counting!
+                  <div style="position:absolute;top:-6px;right:18px;width:12px;height:12px;background:#1e293b;transform:rotate(45deg);border-radius:2px;"></div>
+                </div>
               </div>
-              <span class="version-tag" style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;flex-shrink:0;">v1.1.1</span>
+              <span class="version-tag" style="font-size:10px;opacity:0.45;font-family:monospace;align-self:center;flex-shrink:0;cursor:pointer;" onclick="document.getElementById('releaseNotesModal').style.display='flex'">v1.5.0</span>
             </div>
           </div>
           <div id="mainView">
@@ -1161,8 +1168,25 @@
 
         <div style="margin-bottom:24px;">
           <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
-            <span style="font-size:13px;font-weight:900;background:var(--screen-border);color:white;border-radius:8px;padding:2px 10px;">v1.1.1</span>
-            <span style="font-size:12px;color:var(--slate);font-weight:700;">April 2025</span>
+            <span style="font-size:13px;font-weight:900;background:var(--screen-border);color:white;border-radius:8px;padding:2px 10px;">v1.5.0</span>
+            <span style="font-size:12px;color:var(--slate);font-weight:700;">April 2026</span>
+          </div>
+          <p style="margin:0 0 10px;font-size:14px;font-weight:800;">⚡ Under the Hood — Performance Update</p>
+          <p style="margin:0 0 8px;font-size:13px;color:var(--slate);line-height:1.6;">A major infrastructure overhaul to keep OddEgg fast and sustainable as the community grows.</p>
+          <ul style="margin:0 0 8px;padding-left:18px;font-size:13px;color:var(--slate);line-height:1.8;">
+            <li><strong>Realtime optimization</strong> — the game previously sent a realtime message on every single tap. It now only fires on meaningful egg events (hatching, claiming, hatched), cutting message volume by over 99%</li>
+            <li><strong>Step sync via broadcast</strong> — spectators see live step updates through a free broadcast channel instead of the metered realtime feed</li>
+            <li><strong>Narrower database queries</strong> — every fetch now requests only the columns it needs, reducing egress significantly</li>
+            <li><strong>Total steps</strong> — now tallied once per hatch rather than on every tap. Your clicks always count — they just post to the global total when the egg hatches</li>
+          </ul>
+        </div>
+
+        <hr style="border:none;border-top:2px solid #eee;margin-bottom:20px;" />
+
+        <div style="margin-bottom:24px;">
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
+            <span style="font-size:13px;font-weight:900;background:#e0e0e0;color:#555;border-radius:8px;padding:2px 10px;">v1.1.1</span>
+            <span style="font-size:12px;color:var(--slate);font-weight:700;">April 2026</span>
           </div>
           <p style="margin:0 0 10px;font-size:14px;font-weight:800;">🥚 An EGGciting Mega Update!</p>
           <p style="margin:0 0 8px;font-size:13px;color:var(--slate);line-height:1.6;">Something ancient is stirring in the egg fields… Hatch 10 Mega-capable Pokémon and unlock the <strong>Mega Bracelet</strong> — a rare charm that opens the door to something much, much bigger.</p>
