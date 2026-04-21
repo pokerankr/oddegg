@@ -1192,8 +1192,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       // ─── Supabase ─────────────────────────────────────────────────────────────
-      const SUPABASE_URL = "https://wwrqmuzwwsfrjyqaspav.supabase.co";
-      const SUPABASE_KEY = "sb_publishable_5DCXwRPFIF2HLvKZUjnubA_crwVkRJQ";
+      const SUPABASE_URL = "https://oqaofleqgncldniiqyft.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_0sL_DkUoADf9mZHqh03uXg_1ELi3O-6";
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // ─── Config ──────────────────────────────────────────────────────────────
@@ -1825,7 +1825,7 @@
         const { data: won } = await db.rpc("try_claim_egg", { p_trainer_name: state.trainerName ? state.trainerName.toLowerCase() : null, p_display_name: state.trainerName || null });
         if (!won) {
           // Someone else already claimed — re-fetch current state so we don't stay stuck
-          const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
           if (eggRow) { _applyEggRow(eggRow); render(); }
           return;
         }
@@ -1870,7 +1870,7 @@
             .eq("status", "claiming");
           // Fetch and apply so _applyEggRow detects the hatched transition
           // and restarts the auto-claim timer
-          const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
           if (eggRow) { _applyEggRow(eggRow); render(); }
         }, recoveryMs);
       }
@@ -1907,6 +1907,15 @@
             if (!payload || !state.trainerName) return;
             if (payload.to.toLowerCase() !== state.trainerName.toLowerCase()) return;
             _showEmojiToast(payload.from, payload.src, payload.message);
+          })
+          .on("broadcast", { event: "step_update" }, ({ payload }) => {
+            if (!payload?.slug || payload.slug !== state.eggState?.targetSlug) return;
+            if (!state.eggState || state.eggState.status !== 'hatching') return;
+            if (payload.steps <= (state.eggState.currentSteps ?? 0)) return;
+            state.eggState.currentSteps = payload.steps;
+            const el = document.getElementById("clickCounter");
+            if (el) el.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
+            _updateEggDialogue();
           })
           .subscribe(async status => {
             if (status === "SUBSCRIBED" && state.trainerName) {
@@ -2347,29 +2356,46 @@
       // Maps an egg_state DB row to state.eggState
       function _applyEggRow(row) {
         if (!row) return;
-        const prevStatus = state.eggState?.status;
-        const isActive = row.status === 'hatched' || row.status === 'claiming';
+        const prev = state.eggState ?? {};
+        const prevStatus = prev.status;
+
+        // Partial-row guard: narrow RPC responses (e.g. increment_egg_steps) only return a few
+        // columns. Fall back to existing state for any field absent from the response so we
+        // don't wipe out targetSlug, isShiny, etc. with undefined.
+        const targetSlug   = row.target_slug   !== undefined ? row.target_slug   : prev.targetSlug;
+        const targetSteps  = row.target_steps  !== undefined ? row.target_steps  : prev.targetSteps;
+        const currentSteps = row.current_steps !== undefined ? row.current_steps : prev.currentSteps;
+        const isShiny      = row.is_shiny      !== undefined ? row.is_shiny      : prev.isShiny;
+        const isDitto      = row.is_ditto      !== undefined ? row.is_ditto      : prev.isDitto;
+        const isSpecial    = row.is_special    !== undefined ? row.is_special    : prev.isSpecial;
+        const isMega       = row.is_mega    !== undefined ? (row.is_mega    ?? false) : (prev.isMega    ?? false);
+        const expiresAt    = row.expires_at !== undefined ? (row.expires_at ?? null)  : (prev.expiresAt ?? null);
+        const hint1At      = row.hint1_at   !== undefined ? row.hint1_at   : prev.hint1At;
+        const hint2At      = row.hint2_at   !== undefined ? row.hint2_at   : prev.hint2At;
+        const status       = row.status !== undefined ? (row.status || 'hatching') : (prevStatus || 'hatching');
+        const isActive     = status === 'hatched' || status === 'claiming';
+
         state.eggState = {
-          targetSteps:  row.target_steps,
-          currentSteps: row.current_steps,  // always trust server — display adds local pending/inflight
-          targetSlug:   row.target_slug,
-          isSpecial:    row.is_special,
-          isShiny:      row.is_shiny,
-          isDitto:      row.is_ditto,
-          isMega:       row.is_mega    ?? false,
-          expiresAt:    row.expires_at ?? null,
-          hint1At:      row.hint1_at,
-          hint2At:      row.hint2_at,
-          status:       row.status || 'hatching',
-          hatched:      isActive,
-          loading:      false,
-          pokemon:      isActive && row.target_slug
-            ? { ...buildPokemonRecord(row.target_slug, row.is_shiny), stepsToHatch: row.target_steps }
+          targetSteps,
+          currentSteps,
+          targetSlug,
+          isSpecial,
+          isShiny,
+          isDitto,
+          isMega,
+          expiresAt,
+          hint1At,
+          hint2At,
+          status,
+          hatched:  isActive,
+          loading:  false,
+          pokemon:  isActive && targetSlug
+            ? { ...buildPokemonRecord(targetSlug, isShiny), stepsToHatch: targetSteps }
             : null,
           error: "",
         };
         // Manage timers based on status transitions
-        if (row.status === 'hatched') {
+        if (status === 'hatched') {
           _clearStuckClaimTimer();
           _pendingEggSteps = 0; // stop queuing steps the moment we know the egg is done
           _inFlightSteps   = 0;
@@ -2377,12 +2403,12 @@
             // Fallback timer — fires only if the claiming client crashes before completing
             _startAutoClaimTimer(3);
           }
-        } else if (row.status === 'claiming' && prevStatus !== 'claiming') {
+        } else if (status === 'claiming' && prevStatus !== 'claiming') {
           _clearAutoClaimTimer();
           _startStuckClaimTimer(); // safety net if claimer disappears
           _pendingEggSteps = 0; // stop queuing steps while claiming is in progress
           _inFlightSteps   = 0;
-        } else if (row.status === 'hatching') {
+        } else if (status === 'hatching') {
           _clearAutoClaimTimer();
           _clearStuckClaimTimer();
           // New egg arrived — drain any remaining steps so they don't overflow into it
@@ -2407,7 +2433,7 @@
 
       // Generates egg params locally, saves to Supabase, and updates local state.
       // Pass revealPokemon + revealSeconds so refreshing clients can sync to the reveal countdown.
-      async function generateAndSaveEgg(revealPokemon = null, revealSeconds = 0) {
+      async function generateAndSaveEgg(revealPokemon = null, revealSeconds = 0, completedSteps = 0) {
         if (_autoDittoTimer) { clearTimeout(_autoDittoTimer); _autoDittoTimer = null; }
         dittoChosenSlug    = null;
         _isCurrentClaimer  = false;
@@ -2419,15 +2445,16 @@
         if (!fresh.targetSlug) return; // EGG_POOL not ready yet
         try {
           await db.rpc("save_new_egg", {
-            p_target_slug:  fresh.targetSlug,
-            p_target_steps: fresh.targetSteps,
-            p_is_shiny:     fresh.isShiny,
-            p_is_ditto:     fresh.isDitto,
-            p_is_special:   fresh.isSpecial,
-            p_hint1_at:     fresh.hint1At,
-            p_hint2_at:     fresh.hint2At,
-            p_is_mega:      fresh.isMega    ?? false,
-            p_expires_at:   fresh.expiresAt ?? null,
+            p_target_slug:      fresh.targetSlug,
+            p_target_steps:     fresh.targetSteps,
+            p_is_shiny:         fresh.isShiny,
+            p_is_ditto:         fresh.isDitto,
+            p_is_special:       fresh.isSpecial,
+            p_hint1_at:         fresh.hint1At,
+            p_hint2_at:         fresh.hint2At,
+            p_is_mega:          fresh.isMega    ?? false,
+            p_expires_at:       fresh.expiresAt ?? null,
+            p_completed_steps:  completedSteps,
           });
           // Store reveal window so refreshing clients show spectator reveal instead of tapping immediately
           await db.from("egg_state").update({
@@ -2492,6 +2519,13 @@
             if (row && typeof row === 'object' && 'status' in row) {
               const wasHatching = state.eggState?.status === 'hatching';
               _applyEggRow(row);
+              if (_presenceChannel && state.eggState?.status === 'hatching' && state.eggState?.targetSlug) {
+                _presenceChannel.send({
+                  type:    'broadcast',
+                  event:   'step_update',
+                  payload: { steps: state.eggState.currentSteps, slug: state.eggState.targetSlug },
+                });
+              }
               if (wasHatching && state.eggState.status !== 'hatching') {
                 _playHatchSequence(); // egg just hatched — play burst then reveal
                 // Auto-claim as the player whose step caused this hatch
@@ -2571,7 +2605,7 @@
 
         // Load shared dex/charm state from Supabase
         try {
-          const { data } = await db.from("shared_game_state").select("*").eq("id", 1).single();
+          const { data } = await db.from("shared_game_state").select("global_clicks,dex,shiny_dex,recent_log,shiny_recent_log,found_counts,shiny_found_counts,unlocked_dex,unlocked_shiny_dex,oval_charm_unlocked,shiny_charm_unlocked,catching_charm_unlocked,flame_body_charm_unlocked,mega_bracelet_unlocked,mega_dex,unlocked_mega_dex").eq("id", 1).single();
           if (data) {
             if (Array.isArray(data.dex))              state.dex            = data.dex;
             if (Array.isArray(data.shiny_dex))        state.shinyDex       = data.shiny_dex;
@@ -2595,7 +2629,7 @@
 
         // Load shared egg from Supabase egg_state table
         try {
-          const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
           if (eggRow && eggRow.target_slug) {
             _applyEggRow(eggRow);
           } else {
@@ -2781,7 +2815,7 @@
 
         // Save the next egg to DB immediately with reveal window — refreshing clients will
         // show a spectator reveal for the remaining seconds instead of jumping to the new egg.
-        await generateAndSaveEgg(_revealPokemon, seconds);
+        await generateAndSaveEgg(_revealPokemon, seconds, _revealPokemon?.stepsToHatch ?? 0);
 
         if (_revealTickTimer) clearInterval(_revealTickTimer);
         _revealTickTimer = setInterval(() => {
@@ -2866,7 +2900,7 @@
         await db.from("egg_state")
           .update({ status: 'hatched', current_steps: egg.targetSteps, hatched_at: new Date().toISOString() })
           .eq("id", 1);
-        const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+        const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
         if (eggRow) { _applyEggRow(eggRow); render(); }
       }
 
@@ -3587,7 +3621,7 @@
           .subscribe(async (status) => {
             if (status !== "SUBSCRIBED") return;
             // Re-fetch on (re)connect to catch up on any events missed while disconnected
-            const { data } = await db.from("shared_game_state").select("*").eq("id", 1).single();
+            const { data } = await db.from("shared_game_state").select("global_clicks,dex,shiny_dex,recent_log,shiny_recent_log,found_counts,shiny_found_counts,unlocked_dex,unlocked_shiny_dex,oval_charm_unlocked,shiny_charm_unlocked,catching_charm_unlocked,flame_body_charm_unlocked,mega_bracelet_unlocked,mega_dex,unlocked_mega_dex").eq("id", 1).single();
             if (!data) return;
             if (Array.isArray(data.dex))              state.dex            = data.dex;
             if (Array.isArray(data.shiny_dex))        state.shinyDex       = data.shiny_dex;
@@ -3629,50 +3663,38 @@
             if (state.fullDexOpen) renderFullDexOverlay();
           });
 
-        // Shared egg changes — drives the main game view for all players
-        db.channel("egg_state_changes")
+        // Egg lifecycle events — fires only on status changes, not every step flush.
+        // Spectator step counter updates arrive via step_update broadcast instead.
+        db.channel("egg_events_changes")
           .on(
             "postgres_changes",
-            { event: "UPDATE", schema: "public", table: "egg_state" },
+            { event: "INSERT", schema: "public", table: "egg_events" },
             (payload) => {
-              const data = payload.new;
-              if (!data) return;
+              const row = payload.new;
+              if (!row) return;
               const prevStatus  = state.eggState?.status;
-              const prevPokemon = state.eggState?.pokemon; // capture before overwrite
-              _applyEggRow(data);
-              // Only do a full re-render when the egg status changes (hatch, claim, new egg).
-              // During active stepping the status stays 'hatching' — just update the counter
-              // text so we don't rebuild the DOM and disrupt rapid taps.
-              if (data.status !== prevStatus) {
-                if (data.status === 'hatched' && prevStatus === 'hatching') {
-                  // Skip hatch animation if already mid-reveal (rapid successive hatches)
-                  if (!_spectatorPokemon) _playHatchSequence();
-                } else if (data.status === 'hatching' && !_isCurrentClaimer && !_revealActive
-                           && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
-                  // New egg arrived — show reveal of what just hatched, but only if not
-                  // already in one (rapid hatches: let current finish, render new egg after)
-                  if (!_spectatorPokemon) _showSpectatorReveal(prevPokemon, 5);
-                } else if (!_revealActive && !_isCurrentClaimer && !_spectatorPokemon) {
-                  // Don't interrupt any reveal screen
-                  render();
-                }
-              } else if (data.status === 'hatching' && !_revealActive && !_spectatorPokemon) {
-                const el = document.getElementById("clickCounter");
-                if (el) el.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
-                _updateEggDialogue();
+              const prevPokemon = state.eggState?.pokemon; // capture before _applyEggRow overwrites
+
+              _applyEggRow(row);
+
+              if (row.status === 'hatched' && prevStatus === 'hatching') {
+                if (!_spectatorPokemon && !_isCurrentClaimer) _playHatchSequence();
+              } else if (row.status === 'hatching' && !_isCurrentClaimer && !_revealActive
+                         && (prevStatus === 'claiming' || prevStatus === 'hatched') && prevPokemon) {
+                // New egg arrived — show reveal of what just hatched
+                if (!_spectatorPokemon) _showSpectatorReveal(prevPokemon, 5);
+              } else if (!_revealActive && !_isCurrentClaimer && !_spectatorPokemon) {
+                render();
               }
             }
           )
           .subscribe(async (status) => {
             if (status !== "SUBSCRIBED") return;
-            // Re-fetch on (re)connect to catch up on any events missed while disconnected
-            const { data: eggRow } = await db.from("egg_state").select("*").eq("id", 1).single();
+            // Re-fetch full egg_state on (re)connect to catch up on missed events
+            const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
             if (!eggRow) return;
             const prevStatus = state.eggState?.status;
             _applyEggRow(eggRow);
-            // On reconnect, skip the hatch animation even if we missed the hatch event —
-            // the egg may already be claimed elsewhere and showing the animation would be
-            // misleading. Just render the current state directly.
             if (eggRow.status !== prevStatus && !_revealActive && !_isCurrentClaimer) {
               render();
             } else if (eggRow.status === 'hatching' && !_revealActive) {
