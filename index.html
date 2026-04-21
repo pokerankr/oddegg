@@ -1447,6 +1447,7 @@
       const SESSION_ID      = crypto.randomUUID(); // per-tab claim identity
       let _pendingEggSteps  = 0;                   // egg steps tapped, not yet sent to server
       let _inFlightSteps   = 0;                   // egg steps sent to server, awaiting RPC response
+      let _lastStepBroadcast = 0;                 // timestamp of last step_update broadcast (ms)
       let _autoClaimTimer     = null;              // fires if egg goes unclaimed for 10s
       let _autoClaimTick      = null;              // 1s interval driving the countdown display
       let _autoClaimRemaining = 0;                 // seconds left on the countdown
@@ -2790,7 +2791,9 @@
               _applyEggRow(row);
               const actualAdded = Math.max(0, (state.eggState?.currentSteps ?? 0) - prevSteps);
               if (actualAdded > 0) _incrementStepCount(actualAdded);
-              if (_presenceChannel && state.eggState?.status === 'hatching' && state.eggState?.targetSlug) {
+              const now = Date.now();
+              if (_presenceChannel && state.eggState?.status === 'hatching' && state.eggState?.targetSlug && now - _lastStepBroadcast >= 3000) {
+                _lastStepBroadcast = now;
                 _presenceChannel.send({
                   type:    'broadcast',
                   event:   'step_update',
