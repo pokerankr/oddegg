@@ -2829,11 +2829,8 @@
           if (data) {
             const row = Array.isArray(data) ? data[0] : data;
             if (row && typeof row === 'object' && 'status' in row) {
-              const prevSteps = state.eggState?.currentSteps ?? 0;
               const wasHatching = state.eggState?.status === 'hatching';
               _applyEggRow(row);
-              const actualAdded = Math.min(steps, 8); // use sent amount capped to server cap, not shared-counter diff
-              if (actualAdded > 0) _incrementStepCount(actualAdded);
               const now = Date.now();
               if (_presenceChannel && state.eggState?.status === 'hatching' && state.eggState?.targetSlug && now - _lastStepBroadcast >= 3000) {
                 _lastStepBroadcast = now;
