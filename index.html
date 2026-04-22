@@ -2644,6 +2644,10 @@
           const oldTarget = state.eggState.targetSteps;
           const { data, error } = await db.rpc("add_hooh_bonus", { expected_slug: expectedSlug });
           if (error || !data?.[0]) return;
+          if (!data[0].hooh_applied) {
+            showHoohAlreadyUsedToast();
+            return;
+          }
           const newTarget = data[0].target_steps;
           const saved = oldTarget - newTarget;
           state.eggState.targetSteps = newTarget;
@@ -2655,6 +2659,28 @@
 
         // Remove after animation completes (+ 1s buffer)
         setTimeout(() => { if (hooh.parentNode) hooh.remove(); }, (duration + 1) * 1000);
+      }
+
+      function showHoohAlreadyUsedToast() {
+        const toast = document.createElement("div");
+        toast.style.cssText = `
+          position: fixed; top: 50%; left: 50%; z-index: 9999;
+          transform: translate(-50%, -50%);
+          background: linear-gradient(180deg, #fff8e8 0%, #ffe5a0 100%);
+          border: 5px solid #c8850a; border-radius: 24px;
+          padding: 20px 32px; text-align: center;
+          font-family: inherit; font-weight: 900; font-size: 18px;
+          color: #5f3a00; box-shadow: 0 20px 50px rgba(20,30,60,0.3);
+          animation: slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1);
+          pointer-events: none;
+        `;
+        toast.innerHTML = `🔥 Ho-Oh has already blessed this egg!`;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.style.transition = "opacity 0.4s";
+          toast.style.opacity = "0";
+          setTimeout(() => toast.remove(), 500);
+        }, 2800);
       }
 
       function showHoohToast(bonus) {
