@@ -2990,7 +2990,7 @@
 
         const displaySteps = egg.currentSteps + _pendingEggSteps + _inFlightSteps;
         if (displaySteps >= egg.targetSteps) return; // at server cap — wait for hatch
-        _pendingEggSteps += (state.trainerName === 'garyoak' ? 20 : 1);
+        _pendingEggSteps++;
 
         // Small tap indicator at click position
         if (e) {
