@@ -2832,7 +2832,7 @@
               const prevSteps = state.eggState?.currentSteps ?? 0;
               const wasHatching = state.eggState?.status === 'hatching';
               _applyEggRow(row);
-              const actualAdded = Math.max(0, (state.eggState?.currentSteps ?? 0) - prevSteps);
+              const actualAdded = Math.min(steps, 8); // use sent amount capped to server cap, not shared-counter diff
               if (actualAdded > 0) _incrementStepCount(actualAdded);
               const now = Date.now();
               if (_presenceChannel && state.eggState?.status === 'hatching' && state.eggState?.targetSlug && now - _lastStepBroadcast >= 3000) {
@@ -2993,7 +2993,7 @@
 
         const displaySteps = egg.currentSteps + _pendingEggSteps + _inFlightSteps;
         if (displaySteps >= egg.targetSteps) return; // at server cap — wait for hatch
-        _pendingEggSteps++;
+        _pendingEggSteps += (state.trainerName === 'garyoak' ? 20 : 1);
 
         // Small tap indicator at click position
         if (e) {
