@@ -2088,7 +2088,7 @@
           if (existing) { existing.remove(); return; }
           const popup = document.createElement("div");
           popup.id = "onlinePopup";
-          popup.style.cssText = `position:absolute;z-index:9000;background:white;border:3px solid var(--screen-border);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.22);top:calc(100% + 6px);left:0;min-width:160px;max-width:min(300px,calc(100vw - 24px));`;
+          popup.style.cssText = `position:absolute;z-index:9000;background:white;border:3px solid var(--screen-border);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.22);top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;min-width:120px;`;
           const myName = (state.trainerName || "").toLowerCase();
           const isAdmin = myName === "sh1n1es";
           const broadcastAllBtn = isAdmin ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminBroadcast()" style="display:block;width:100%;margin-top:8px;font-size:11px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;border-radius:8px;border:2px solid #6d28d9;background:#6d28d9;color:white;cursor:pointer;font-family:inherit;">📢 Broadcast All</button>` : "";
@@ -2102,7 +2102,7 @@
             const banBtn = (!isMe && isAdmin) ? `<button onclick="document.getElementById('onlinePopup')?.remove();_banTrainer('${_escHtml(n)}')" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:13px;padding:0;line-height:1;color:#ef4444;" title="Restrict trainer">✕</button>` : "";
             const vel = isAdmin && !isMe ? _velocityReadings[n.toLowerCase()] : null;
             const velTag = isAdmin && !isMe ? `<span style="margin-left:6px;font-size:10px;font-weight:900;color:${vel > 15 ? '#ef4444' : vel > 8 ? '#f97316' : vel != null ? '#22c55e' : '#aaa'};">${vel != null ? vel.toFixed(1) + '/s' : '…'}</span>` : "";
-            return `<div style="padding:2px 0;display:flex;align-items:center;gap:2px;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_escHtml(n)}</span>${velTag}${btn}${adminBtn}${banBtn}</div>`;
+            return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${velTag}${btn}${adminBtn}${banBtn}</div>`;
           }).join("") + broadcastAllBtn;
           chip.style.position = "relative";
           chip.appendChild(popup);
