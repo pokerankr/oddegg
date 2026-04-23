@@ -2066,6 +2066,10 @@
             if (!payload) return;
             _showAdminMessageToast(payload.message);
           })
+          .on("broadcast", { event: "hooh_found" }, ({ payload }) => {
+            if (!payload) return;
+            _showHoohFoundToast(payload.name, payload.saved);
+          })
           .subscribe(async status => {
             if (status === "SUBSCRIBED" && state.trainerName) {
               await _presenceChannel.track({ name: state.trainerName });
@@ -2711,7 +2715,10 @@
           const newTarget = data[0].target_steps;
           const saved = oldTarget - newTarget;
           state.eggState.targetSteps = newTarget;
-          showHoohToast(saved);
+          const catcher = state.trainerName && state.trainerName !== "Anonymous Trainer" ? state.trainerName : "A trainer";
+          if (_presenceChannel) {
+            _presenceChannel.send({ type: "broadcast", event: "hooh_found", payload: { name: catcher, saved } });
+          }
           const counterEl = document.getElementById("clickCounter");
           if (counterEl) counterEl.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
           _updateEggDialogue();
@@ -2741,6 +2748,28 @@
           toast.style.opacity = "0";
           setTimeout(() => toast.remove(), 500);
         }, 2800);
+      }
+
+      function _showHoohFoundToast(name, saved) {
+        const toast = document.createElement("div");
+        toast.style.cssText = `
+          position: fixed; top: 50%; left: 50%; z-index: 9999;
+          transform: translate(-50%, -50%);
+          background: linear-gradient(180deg, #fff8e8 0%, #ffe5a0 100%);
+          border: 5px solid #c8850a; border-radius: 24px;
+          padding: 16px 24px; text-align: center;
+          font-family: inherit; font-weight: 900; font-size: 15px;
+          color: #5f3a00; box-shadow: 0 20px 50px rgba(20,30,60,0.3);
+          animation: slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1);
+          pointer-events: none; max-width: 280px;
+        `;
+        toast.innerHTML = `<img src="./hooh.gif" style="width:56px;height:56px;object-fit:contain;display:block;margin:0 auto 8px;" /><strong>${_escHtml(name)}</strong> found Ho-Oh!<br><span style="font-size:13px;font-weight:700;">${fmt(saved)} fewer steps to hatch!</span>`;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.style.transition = "opacity 0.4s";
+          toast.style.opacity = "0";
+          setTimeout(() => toast.remove(), 500);
+        }, 3500);
       }
 
       function showHoohToast(bonus) {
