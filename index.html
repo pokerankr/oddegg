@@ -1724,6 +1724,7 @@
         unlockedShinyDex:   {},
         claimer:            "",
         trainerName:        "",   // stored in localStorage, used for all claims
+        trainerTeam:        null, // 'nest', 'hatch', or null
         activeDexView:      "normal",
         fullDexOpen:        false,
         globalClicks:       0,
@@ -2053,7 +2054,7 @@
         _presenceChannel
           .on("presence", { event: "sync" }, () => {
             const ps = _presenceChannel.presenceState();
-            _onlineTrainers = Object.values(ps).flat().map(p => p.name).filter(Boolean);
+            _onlineTrainers = Object.values(ps).flat().map(p => ({ name: p.name, team: p.team || null })).filter(p => p.name);
             renderOnlineTrainers();
           })
           .on("broadcast", { event: "emoji" }, ({ payload }) => {
@@ -2085,9 +2086,20 @@
           })
           .subscribe(async status => {
             if (status === "SUBSCRIBED" && state.trainerName) {
-              await _presenceChannel.track({ name: state.trainerName });
+              await _presenceChannel.track({ name: state.trainerName, team: state.trainerTeam });
             }
           });
+      }
+
+      function teamColor(team) {
+        if (team === 'nest')  return '#22c55e';
+        if (team === 'hatch') return '#ef4444';
+        return 'inherit';
+      }
+      function teamBadge(team, size = 16) {
+        if (!team) return '';
+        const src = team === 'nest' ? './teamnest.png' : './teamhatch.png';
+        return `<img src="${src}" style="width:${size}px;height:${size}px;object-fit:contain;vertical-align:middle;margin-right:3px;" />`;
       }
 
       function renderOnlineTrainers() {
@@ -2096,8 +2108,10 @@
         if (!countEl || !chip) return;
         const count = _onlineTrainers.length || 1;
         countEl.textContent = count;
-        const names = _onlineTrainers.length ? _onlineTrainers : [state.trainerName || "Just you"];
-        chip.title = names.join(", ");
+        const entries = _onlineTrainers.length
+          ? _onlineTrainers
+          : [{ name: state.trainerName || "Just you", team: state.trainerTeam }];
+        chip.title = entries.map(e => e.name).join(", ");
         chip.onclick = () => {
           const existing = document.getElementById("onlinePopup");
           if (existing) { existing.remove(); return; }
@@ -2108,16 +2122,17 @@
           const isAdmin = myName === "sh1n1es";
           const broadcastAllBtn = isAdmin ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminBroadcast()" style="display:block;width:100%;margin-top:8px;font-size:11px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;border-radius:8px;border:2px solid #6d28d9;background:#6d28d9;color:white;cursor:pointer;font-family:inherit;">📢 Broadcast All</button>` : "";
           const refreshBtn = isAdmin ? `<button onclick="_pollVelocity().then(()=>{document.getElementById('onlinePopup')?.remove();document.getElementById('onlineChip')?.click();})" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0;margin-left:6px;opacity:0.6;" title="Refresh speeds">↻</button>` : "";
-          popup.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Online Now${refreshBtn}</div>` + names.map(n => {
+          popup.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Online Now${refreshBtn}</div>` + entries.map(({ name: n, team }) => {
             const isMe = n.toLowerCase() === myName;
             const cooldownLeft = Math.max(0, Math.ceil((EMOJI_COOLDOWN_MS - (Date.now() - _emojiLastSent)) / 1000));
             const onCooldown = cooldownLeft > 0;
-            const btn  = (!isMe && myName && state.trainerName !== "Anonymous Trainer") ? `<button onclick="_sendEmoji('${_escHtml(n)}')" ${onCooldown ? "disabled" : ""} style="margin-left:8px;background:none;border:none;cursor:${onCooldown ? 'default' : 'pointer'};font-size:${onCooldown ? '11px' : '16px'};padding:0;line-height:1;color:${onCooldown ? '#aaa' : 'inherit'};" title="${onCooldown ? `Wait ${cooldownLeft}s` : 'Send emoji'}">${onCooldown ? `${cooldownLeft}s` : '👋'}</button>` : "";
+            const btn      = (!isMe && myName && state.trainerName !== "Anonymous Trainer") ? `<button onclick="_sendEmoji('${_escHtml(n)}')" ${onCooldown ? "disabled" : ""} style="margin-left:8px;background:none;border:none;cursor:${onCooldown ? 'default' : 'pointer'};font-size:${onCooldown ? '11px' : '16px'};padding:0;line-height:1;color:${onCooldown ? '#aaa' : 'inherit'};" title="${onCooldown ? `Wait ${cooldownLeft}s` : 'Send emoji'}">${onCooldown ? `${cooldownLeft}s` : '👋'}</button>` : "";
             const adminBtn = (!isMe && isAdmin) ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminMessage('${_escHtml(n)}')" style="margin-left:6px;background:none;border:none;cursor:pointer;font-size:14px;padding:0;line-height:1;" title="Send message">📢</button>` : "";
-            const banBtn = (!isMe && isAdmin) ? `<button onclick="document.getElementById('onlinePopup')?.remove();_banTrainer('${_escHtml(n)}')" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:13px;padding:0;line-height:1;color:#ef4444;" title="Restrict trainer">✕</button>` : "";
-            const vel = isAdmin && !isMe ? _velocityReadings[n.toLowerCase()] : null;
+            const banBtn   = (!isMe && isAdmin) ? `<button onclick="document.getElementById('onlinePopup')?.remove();_banTrainer('${_escHtml(n)}')" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:13px;padding:0;line-height:1;color:#ef4444;" title="Restrict trainer">✕</button>` : "";
+            const vel    = isAdmin && !isMe ? _velocityReadings[n.toLowerCase()] : null;
             const velTag = isAdmin && !isMe ? `<span style="margin-left:6px;font-size:10px;font-weight:900;color:${vel > 15 ? '#ef4444' : vel > 8 ? '#f97316' : vel != null ? '#22c55e' : '#aaa'};">${vel != null ? vel.toFixed(1) + '/s' : '…'}</span>` : "";
-            return `<div style="padding:2px 0;display:flex;align-items:center;">${_escHtml(n)}${velTag}${btn}${adminBtn}${banBtn}</div>`;
+            const nameHtml = `${teamBadge(team, 14)}<span style="color:${teamColor(team)};font-weight:900;">${_escHtml(n)}</span>`;
+            return `<div style="padding:2px 0;display:flex;align-items:center;">${nameHtml}${velTag}${btn}${adminBtn}${banBtn}</div>`;
           }).join("") + broadcastAllBtn;
           chip.style.position = "relative";
           chip.appendChild(popup);
@@ -2428,6 +2443,73 @@
         document.getElementById("trainerModal").style.display = "none";
       }
 
+      // ─── Team Selection Modal ─────────────────────────────────────────────────
+      function _showTeamSelectModal() {
+        const overlay = document.createElement("div");
+        overlay.id = "teamSelectOverlay";
+        overlay.style.cssText = `position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(18,28,44,0.88);`;
+
+        overlay.innerHTML = `
+          <div id="teamSelectInner" style="background:linear-gradient(180deg,#fffef7 0%,#fff8e8 100%);border:6px solid var(--screen-border);border-radius:34px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 22px 60px rgba(20,30,60,0.35);text-align:center;">
+            <div style="font-size:13px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Choose Your Side</div>
+            <p style="font-size:13px;color:var(--slate);font-weight:700;margin:0 0 20px;line-height:1.5;">This choice is <strong>permanent</strong>. Choose wisely.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+              <button id="teamNestBtn" style="background:linear-gradient(180deg,#f0fdf4 0%,#dcfce7 100%);border:3px solid #22c55e;border-radius:18px;padding:16px 10px;cursor:pointer;font-family:inherit;">
+                <img src="./teamnest.png" style="width:56px;height:56px;object-fit:contain;display:block;margin:0 auto 8px;" />
+                <div style="font-size:15px;font-weight:900;color:#15803d;">Team Nest</div>
+                <div style="font-size:11px;font-weight:700;color:#16a34a;margin-top:4px;line-height:1.4;">Guardians of the egg. Patience. Preservation.</div>
+              </button>
+              <button id="teamHatchBtn" style="background:linear-gradient(180deg,#fff1f2 0%,#ffe4e6 100%);border:3px solid #ef4444;border-radius:18px;padding:16px 10px;cursor:pointer;font-family:inherit;">
+                <img src="./teamhatch.png" style="width:56px;height:56px;object-fit:contain;display:block;margin:0 auto 8px;" />
+                <div style="font-size:15px;font-weight:900;color:#b91c1c;">Team Hatch</div>
+                <div style="font-size:11px;font-weight:700;color:#dc2626;margin-top:4px;line-height:1.4;">Ambition. Growth. Break the shell.</div>
+              </button>
+            </div>
+            <div id="teamConfirm" style="display:none;">
+              <div style="font-size:13px;font-weight:900;color:#b45309;background:#fef3c7;border-radius:10px;padding:10px 12px;margin-bottom:14px;">This choice is permanent and cannot be undone.</div>
+              <div style="display:flex;gap:10px;">
+                <button id="teamConfirmYes" style="flex:1;background:var(--screen-border);color:white;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">Confirm</button>
+                <button id="teamConfirmNo" style="flex:1;background:#e5e7eb;color:var(--ink);border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;">Go Back</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        let pendingTeam = null;
+
+        function showConfirm(team) {
+          pendingTeam = team;
+          const nestBtn  = overlay.querySelector("#teamNestBtn");
+          const hatchBtn = overlay.querySelector("#teamHatchBtn");
+          nestBtn.style.opacity  = team === 'nest'  ? '1' : '0.4';
+          hatchBtn.style.opacity = team === 'hatch' ? '1' : '0.4';
+          overlay.querySelector("#teamConfirm").style.display = "block";
+        }
+
+        overlay.querySelector("#teamNestBtn").addEventListener("click",  () => showConfirm('nest'));
+        overlay.querySelector("#teamHatchBtn").addEventListener("click", () => showConfirm('hatch'));
+
+        overlay.querySelector("#teamConfirmNo").addEventListener("click", () => {
+          pendingTeam = null;
+          overlay.querySelector("#teamNestBtn").style.opacity  = "1";
+          overlay.querySelector("#teamHatchBtn").style.opacity = "1";
+          overlay.querySelector("#teamConfirm").style.display = "none";
+        });
+
+        overlay.querySelector("#teamConfirmYes").addEventListener("click", async () => {
+          if (!pendingTeam) return;
+          const btn = overlay.querySelector("#teamConfirmYes");
+          btn.disabled = true; btn.textContent = "Saving…";
+          await db.rpc("set_trainer_team", { p_name: state.trainerName, p_team: pendingTeam });
+          state.trainerTeam = pendingTeam;
+          if (_presenceChannel) _presenceChannel.track({ name: state.trainerName, team: state.trainerTeam });
+          renderOnlineTrainers();
+          overlay.remove();
+        });
+      }
+
       function _renderTrainerPhase1(errorMsg = "") {
         const inner = document.getElementById("trainerModalInner");
         const hasExistingName = !!(state.trainerName && state.trainerName !== "Anonymous Trainer");
@@ -2544,13 +2626,26 @@
         _finalizeTrainer(name, enteredHash);
       }
 
-      function _finalizeTrainer(name, pinHash) {
+      async function _finalizeTrainer(name, pinHash) {
         state.trainerName = name || "Anonymous Trainer";
         localStorage.setItem("oddegg-trainer-name", state.trainerName);
         localStorage.setItem("oddegg-trainer-pin", pinHash || "");
         const display = document.getElementById("trainerNameDisplay");
         if (display) display.textContent = state.trainerName;
-        if (_presenceChannel) _presenceChannel.track({ name: state.trainerName });
+
+        const isPinned = !!pinHash;
+        const isAnon = state.trainerName === "Anonymous Trainer";
+        if (!isAnon && isPinned) {
+          const { data: team } = await db.rpc("get_trainer_team", { p_name: state.trainerName });
+          state.trainerTeam = team || null;
+          if (!state.trainerTeam) {
+            closeTrainerModal();
+            _showTeamSelectModal();
+            return;
+          }
+        }
+
+        if (_presenceChannel) _presenceChannel.track({ name: state.trainerName, team: state.trainerTeam });
         renderOnlineTrainers();
         closeTrainerModal();
       }
@@ -3034,10 +3129,16 @@
       async function loadState() {
         // Load trainer name from localStorage
         const savedTrainer = localStorage.getItem("oddegg-trainer-name");
+        const savedPin     = localStorage.getItem("oddegg-trainer-pin");
         if (savedTrainer) {
           state.trainerName = savedTrainer;
           const display = document.getElementById("trainerNameDisplay");
           if (display) display.textContent = savedTrainer;
+          // Load team for returning PIN'd trainers
+          if (savedPin && savedTrainer !== "Anonymous Trainer") {
+            const { data: team } = await db.rpc("get_trainer_team", { p_name: savedTrainer });
+            state.trainerTeam = team || null;
+          }
         }
 
         // Clean up old combined localStorage key — stale local data should not override shared dex
