@@ -901,8 +901,6 @@
         padding: 32px; max-width: 420px; width: 100%;
         box-shadow: 0 22px 60px rgba(20,30,60,0.35); text-align: center;
       }
-      .trainer-modal .t-icon { font-size: 52px; margin-bottom: 14px; }
-      .trainer-modal h2 { margin: 0 0 10px; font-size: 26px; font-weight: 900; }
       .trainer-modal p { margin: 0 0 20px; font-size: 14px; font-weight: 700; color: var(--slate); line-height: 1.55; }
       .trainer-modal input {
         width: 100%; border: 4px solid var(--screen-border); border-radius: 16px;
@@ -2355,9 +2353,58 @@
       let _trainerPendingName = "";
 
       function showTrainerModal() {
-        _trainerPendingName = state.trainerName && state.trainerName !== "Anonymous Trainer" ? state.trainerName : "";
         document.getElementById("trainerModal").style.display = "flex";
-        _renderTrainerPhase1();
+        const isAnon = !state.trainerName || state.trainerName === "Anonymous Trainer";
+        if (isAnon) {
+          _trainerPendingName = "";
+          _renderTrainerPhase1();
+        } else {
+          _renderTrainerProfile();
+        }
+      }
+
+      async function _renderTrainerProfile() {
+        const inner = document.getElementById("trainerModalInner");
+        const name   = state.trainerName;
+        const hasPin = !!localStorage.getItem("oddegg-trainer-pin");
+        inner.innerHTML = `
+          <div style="width:100%;background:linear-gradient(135deg,var(--accent-2) 0%,#1a5fa8 100%);border-radius:18px;padding:20px 20px 16px;margin-bottom:18px;text-align:left;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:-18px;right:-18px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>
+            <div style="position:absolute;bottom:-30px;right:10px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.05);"></div>
+            <div style="font-size:10px;font-weight:900;letter-spacing:0.18em;color:rgba(255,255,255,0.65);text-transform:uppercase;margin-bottom:6px;">Trainer ID</div>
+            <div style="font-size:22px;font-weight:900;color:white;letter-spacing:0.02em;">${_escHtml(name)}</div>
+            <div style="margin-top:4px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);">${hasPin ? "PIN Protected" : "No PIN set"}</div>
+          </div>
+          <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+            <div style="background:var(--cream);border:3px solid var(--screen-border);border-radius:14px;padding:12px 14px;text-align:center;">
+              <div style="font-size:11px;font-weight:900;letter-spacing:0.1em;color:var(--slate);text-transform:uppercase;margin-bottom:4px;">Steps</div>
+              <div id="trainerStatSteps" style="font-size:20px;font-weight:900;color:var(--ink);">…</div>
+            </div>
+            <div style="background:var(--cream);border:3px solid var(--screen-border);border-radius:14px;padding:12px 14px;text-align:center;">
+              <div style="font-size:11px;font-weight:900;letter-spacing:0.1em;color:var(--slate);text-transform:uppercase;margin-bottom:4px;">Hatched</div>
+              <div id="trainerStatHatched" style="font-size:20px;font-weight:900;color:var(--ink);">…</div>
+            </div>
+          </div>
+          ${!hasPin ? `<button class="success-btn" id="trainerAddPinBtn" style="width:100%;margin-bottom:8px;">Add PIN</button>` : ""}
+          <button class="util-btn" id="trainerSwitchBtn" style="width:100%;">Switch User</button>
+          <button class="util-btn" id="trainerCloseBtn" style="width:100%;margin-top:8px;font-size:12px;opacity:0.6;">Close</button>
+        `;
+        if (!hasPin) {
+          inner.querySelector("#trainerAddPinBtn").addEventListener("click", () => _renderTrainerPhase2aPin(name));
+        }
+        inner.querySelector("#trainerSwitchBtn").addEventListener("click", () => {
+          _trainerPendingName = "";
+          _renderTrainerPhase1();
+        });
+        inner.querySelector("#trainerCloseBtn").addEventListener("click", closeTrainerModal);
+        const { data } = await db.from("trainer_hatches")
+          .select("step_count, hatch_count")
+          .eq("name", name.toLowerCase())
+          .maybeSingle();
+        const stepsEl   = document.getElementById("trainerStatSteps");
+        const hatchedEl = document.getElementById("trainerStatHatched");
+        if (stepsEl)   stepsEl.textContent   = fmt(data?.step_count  ?? 0);
+        if (hatchedEl) hatchedEl.textContent = data?.hatch_count ?? 0;
       }
 
       function closeTrainerModal() {
@@ -2366,19 +2413,20 @@
 
       function _renderTrainerPhase1(errorMsg = "") {
         const inner = document.getElementById("trainerModalInner");
+        const hasExistingName = !!(state.trainerName && state.trainerName !== "Anonymous Trainer");
         inner.innerHTML = `
-          <div class="t-icon">🎮</div>
-          <h2>Welcome, Trainer!</h2>
-          <p>Enter your trainer name. It will be used whenever you claim a hatched Pokémon.</p>
-          <input id="trainerNameInput" placeholder="Your trainer name" maxlength="20" autocomplete="off" value="${_escHtml(_trainerPendingName)}" />
-          <div class="trainer-modal-error" style="${errorMsg ? 'display:block' : 'display:none'}">${_escHtml(errorMsg)}</div>
-          <button class="success-btn" id="trainerPhase1Btn" style="width:100%;">Continue</button>
-          <button class="util-btn" id="trainerAnonBtn" style="width:100%;margin-top:10px;font-size:13px;">Play as Anonymous</button>
+          <div style="font-size:13px;font-weight:900;letter-spacing:0.12em;color:var(--slate);text-transform:uppercase;margin-bottom:14px;">Who are you?</div>
+          <input id="trainerNameInput" placeholder="Enter your trainer name" maxlength="20" autocomplete="off" value="${_escHtml(_trainerPendingName)}" style="margin-bottom:6px;" />
+          <div class="trainer-modal-error" style="${errorMsg ? 'display:block' : 'display:none'};margin-bottom:10px;">${_escHtml(errorMsg)}</div>
+          <button class="success-btn" id="trainerPhase1Btn" style="width:100%;margin-bottom:8px;">Continue</button>
+          <button class="util-btn" id="trainerAnonBtn" style="width:100%;font-size:13px;">Play as Anonymous</button>
+          ${hasExistingName ? `<button class="util-btn" id="trainerBackToProfileBtn" style="width:100%;margin-top:8px;font-size:12px;opacity:0.6;">← Back</button>` : ""}
         `;
         const input = inner.querySelector("#trainerNameInput");
         input.focus();
         inner.querySelector("#trainerPhase1Btn").addEventListener("click", _trainerPhase1);
         inner.querySelector("#trainerAnonBtn").addEventListener("click", () => _finalizeTrainer("Anonymous Trainer", ""));
+        inner.querySelector("#trainerBackToProfileBtn")?.addEventListener("click", _renderTrainerProfile);
         input.addEventListener("keydown", e => { if (e.key === "Enter") _trainerPhase1(); });
       }
 
@@ -2400,11 +2448,11 @@
       function _renderTrainerPhase2a(name) {
         const inner = document.getElementById("trainerModalInner");
         inner.innerHTML = `
-          <div class="t-icon">🎮</div>
-          <h2>${_escHtml(name)}</h2>
-          <p>This name is available! Play freely, or claim it with a PIN so no one else can use it.</p>
-          <button class="success-btn" id="trainerFreeBtn" style="width:100%;">Play freely</button>
-          <button class="util-btn" id="trainerClaimBtn" style="width:100%;margin-top:10px;">🔒 Claim with PIN</button>
+          <div style="font-size:13px;font-weight:900;letter-spacing:0.12em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Name Available</div>
+          <div style="font-size:22px;font-weight:900;margin-bottom:10px;">${_escHtml(name)}</div>
+          <p style="font-size:13px;color:var(--slate);margin-bottom:18px;">Play freely, or claim this name with a PIN so no one else can use it.</p>
+          <button class="success-btn" id="trainerFreeBtn" style="width:100%;margin-bottom:8px;">Play Freely</button>
+          <button class="util-btn" id="trainerClaimBtn" style="width:100%;">Claim with PIN</button>
           <button class="util-btn" id="trainerBackBtn" style="width:100%;margin-top:8px;font-size:12px;opacity:0.6;">← Back</button>
         `;
         inner.querySelector("#trainerFreeBtn").addEventListener("click", () => _finalizeTrainer(name, ""));
@@ -2415,14 +2463,13 @@
       function _renderTrainerPhase2aPin(name, errorMsg = "") {
         const inner = document.getElementById("trainerModalInner");
         inner.innerHTML = `
-          <div class="t-icon">🔒</div>
-          <h2>Set a PIN</h2>
-          <p>Choose a PIN for <strong>${_escHtml(name)}</strong>. Anyone using this name will need it.</p>
-          <p style="font-size:12px;font-weight:900;color:#b45309;background:#fef3c7;border-radius:8px;padding:8px 10px;margin:0 0 14px;">⚠️ NO RECOVERY METHOD. REMEMBER YOUR NAME AND PIN.</p>
+          <div style="font-size:13px;font-weight:900;letter-spacing:0.12em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Set a PIN</div>
+          <div style="font-size:22px;font-weight:900;margin-bottom:14px;">${_escHtml(name)}</div>
+          <div style="font-size:12px;font-weight:900;color:#b45309;background:#fef3c7;border-radius:10px;padding:10px 12px;margin-bottom:14px;line-height:1.5;">No recovery method exists. Write down your name and PIN.</div>
           <input id="trainerPinInput" type="password" inputmode="numeric" placeholder="Digits only, max 8" maxlength="8" autocomplete="off" />
           <div class="trainer-modal-error" style="${errorMsg ? 'display:block' : 'display:none'}">${_escHtml(errorMsg)}</div>
-          <button class="success-btn" id="trainerSetPinBtn" style="width:100%;">Set PIN &amp; Start</button>
-          <button class="util-btn" id="trainerBackBtn" style="width:100%;margin-top:8px;font-size:12px;opacity:0.6;">← Back</button>
+          <button class="success-btn" id="trainerSetPinBtn" style="width:100%;margin-bottom:8px;">Set PIN &amp; Start</button>
+          <button class="util-btn" id="trainerBackBtn" style="width:100%;font-size:12px;opacity:0.6;">← Back</button>
         `;
         const pinInput = inner.querySelector("#trainerPinInput");
         pinInput.focus();
@@ -2452,13 +2499,12 @@
       function _renderTrainerPhase2b(name, serverPinHash, errorMsg = "") {
         const inner = document.getElementById("trainerModalInner");
         inner.innerHTML = `
-          <div class="t-icon">🔒</div>
-          <h2>${_escHtml(name)}</h2>
-          <p>This name is claimed. Enter the PIN to sign in.</p>
-          <input id="trainerPinInput" type="password" inputmode="numeric" placeholder="PIN" maxlength="8" autocomplete="off" />
+          <div style="font-size:13px;font-weight:900;letter-spacing:0.12em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">PIN Required</div>
+          <div style="font-size:22px;font-weight:900;margin-bottom:14px;">${_escHtml(name)}</div>
+          <input id="trainerPinInput" type="password" inputmode="numeric" placeholder="Enter your PIN" maxlength="8" autocomplete="off" />
           <div class="trainer-modal-error" style="${errorMsg ? 'display:block' : 'display:none'}">${_escHtml(errorMsg)}</div>
-          <button class="success-btn" id="trainerSignInBtn" style="width:100%;">Sign In</button>
-          <button class="util-btn" id="trainerBackBtn" style="width:100%;margin-top:8px;font-size:12px;opacity:0.6;">← Choose a different name</button>
+          <button class="success-btn" id="trainerSignInBtn" style="width:100%;margin-bottom:8px;">Sign In</button>
+          <button class="util-btn" id="trainerBackBtn" style="width:100%;font-size:12px;opacity:0.6;">← Different name</button>
         `;
         const pinInput = inner.querySelector("#trainerPinInput");
         pinInput.focus();
