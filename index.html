@@ -2718,7 +2718,6 @@
           setTimeout(() => hooh.remove(), 400);
           if (state.eggState?.status !== 'hatching') return;
           const expectedSlug = state.eggState.targetSlug;
-          const oldTarget = state.eggState.targetSteps;
           const { data, error } = await db.rpc("add_hooh_bonus", { expected_slug: expectedSlug });
           if (error || !data?.[0]) return;
           if (!data[0].hooh_applied) {
@@ -2726,7 +2725,7 @@
             return;
           }
           const newTarget = data[0].target_steps;
-          const saved = oldTarget - newTarget;
+          const saved = data[0].steps_saved;
           state.eggState.targetSteps = newTarget;
           const catcher = state.trainerName && state.trainerName !== "Anonymous Trainer" ? state.trainerName : "A trainer";
           if (_presenceChannel) {
