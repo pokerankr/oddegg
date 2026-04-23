@@ -251,8 +251,8 @@
       .spark.s4 { right:25%; bottom:28%; animation-delay:1.1s; }
       .spark.s5 { left:49%; top:16%; animation-delay:1.35s; }
       @keyframes slideDown {
-        from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
-        to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+        from { transform: translate(-50%, -50%) translateY(-14px); opacity: 0; }
+        to   { transform: translate(-50%, -50%) translateY(0);     opacity: 1; }
       }
       @keyframes sparkle {
         0%, 100% { transform: scale(0.45); opacity: 0.35; }
@@ -2751,25 +2751,22 @@
       }
 
       function _showHoohFoundToast(name, saved) {
+        const stage = document.querySelector('.battle-stage') || document.body;
+        let container = stage.querySelector(".emoji-toast-stack");
+        if (!container) {
+          container = document.createElement("div");
+          container.className = "emoji-toast-stack";
+          container.style.cssText = "position:absolute;z-index:9;bottom:10px;right:12px;display:flex;flex-direction:column-reverse;gap:8px;align-items:flex-end;pointer-events:none;";
+          stage.appendChild(container);
+        }
         const toast = document.createElement("div");
-        toast.style.cssText = `
-          position: fixed; top: 50%; left: 50%; z-index: 9999;
-          transform: translate(-50%, -50%);
-          background: linear-gradient(180deg, #fff8e8 0%, #ffe5a0 100%);
-          border: 5px solid #c8850a; border-radius: 24px;
-          padding: 16px 24px; text-align: center;
-          font-family: inherit; font-weight: 900; font-size: 15px;
-          color: #5f3a00; box-shadow: 0 20px 50px rgba(20,30,60,0.3);
-          animation: slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1);
-          pointer-events: none; max-width: 280px;
-        `;
-        toast.innerHTML = `<img src="./hooh.gif" style="width:56px;height:56px;object-fit:contain;display:block;margin:0 auto 8px;" /><strong>${_escHtml(name)}</strong> found Ho-Oh!<br><span style="font-size:13px;font-weight:700;">${fmt(saved)} fewer steps to hatch!</span>`;
-        document.body.appendChild(toast);
+        toast.style.cssText = "background:linear-gradient(180deg,#fff8e8 0%,#ffe5a0 100%);border:3px solid #c8850a;border-radius:16px;padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.22);text-align:center;max-width:160px;pointer-events:none;";
+        toast.innerHTML = `<img src="./hooh.gif" style="width:72px;height:72px;object-fit:contain;display:block;margin:0 auto 6px;" /><div style="font-size:12px;font-weight:900;color:#5f3a00;"><strong>${_escHtml(name)}</strong> found Ho-Oh!<br><span style="font-size:11px;font-weight:700;">${fmt(saved)} fewer steps!</span></div>`;
+        container.appendChild(toast);
         setTimeout(() => {
-          toast.style.transition = "opacity 0.4s";
-          toast.style.opacity = "0";
-          setTimeout(() => toast.remove(), 500);
-        }, 3500);
+          toast.remove();
+          if (!container.children.length) container.remove();
+        }, 4000);
       }
 
       function showHoohToast(bonus) {
