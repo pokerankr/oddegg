@@ -2088,7 +2088,7 @@
           if (existing) { existing.remove(); return; }
           const popup = document.createElement("div");
           popup.id = "onlinePopup";
-          popup.style.cssText = `position:absolute;z-index:9000;background:white;border:3px solid var(--screen-border);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.22);top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;min-width:120px;`;
+          popup.style.cssText = `position:absolute;z-index:9000;background:white;border:3px solid var(--screen-border);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.22);top:calc(100% + 6px);left:0;white-space:nowrap;min-width:120px;`;
           const myName = (state.trainerName || "").toLowerCase();
           const isAdmin = myName === "sh1n1es";
           const broadcastAllBtn = isAdmin ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminBroadcast()" style="display:block;width:100%;margin-top:8px;font-size:11px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;border-radius:8px;border:2px solid #6d28d9;background:#6d28d9;color:white;cursor:pointer;font-family:inherit;">📢 Broadcast All</button>` : "";
