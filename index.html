@@ -1368,6 +1368,7 @@
 
     <div id="fullDexOverlay" class="full-dex-overlay"></div>
     <div id="leaderboardOverlay" class="full-dex-overlay"></div>
+    <div id="teamLeaderboardOverlay" class="full-dex-overlay"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
@@ -2999,6 +3000,21 @@
         closeTrainerModal();
       }
 
+      // ─── Team rank constants ──────────────────────────────────────────────────
+      const _TEAM_THRESHOLDS = [0, 5000, 25000, 75000, 200000, 500000, 1000000, 2000000, 3500000, 5000000];
+      const _NEST_RANKS  = ["Wanderer","Nester","Keeper","Guardian","Warden","Elder","Sentinel","Archon","Prime","Sovereign"];
+      const _HATCH_RANKS = ["Drifter","Crackler","Breaker","Striker","Enforcer","Commander","Vanguard","Marshal","Warlord","Overlord"];
+
+      function _teamRankIdx(score) {
+        for (let i = _TEAM_THRESHOLDS.length - 1; i >= 0; i--) {
+          if (score >= _TEAM_THRESHOLDS[i]) return i;
+        }
+        return 0;
+      }
+      function _teamRankName(score, team) {
+        return (team === "nest" ? _NEST_RANKS : _HATCH_RANKS)[_teamRankIdx(score)];
+      }
+
       // ─── Hatch leaderboard ───────────────────────────────────────────────────
       async function _incrementHatchCount(trainerName) {
         if (!trainerName || trainerName === "Anonymous Trainer") return;
@@ -3097,6 +3113,192 @@
       function closeLeaderboard() {
         const overlay = document.getElementById("leaderboardOverlay");
         overlay.className = "full-dex-overlay";
+        overlay.innerHTML = "";
+      }
+
+      // ─── Team leaderboard ─────────────────────────────────────────────────────
+      let _teamLbTab = "yourrank";
+
+      async function _showTeamLeaderboard() {
+        _teamLbTab = "yourrank";
+        _renderTeamLeaderboard();
+      }
+
+      async function _renderTeamLeaderboard() {
+        const team = state.trainerTeam;
+        if (!team) return;
+
+        const isNest   = team === "nest";
+        const clr      = isNest ? "#4ade80" : "#f87171";
+        const clrBold  = isNest ? "#22c55e" : "#ef4444";
+        const clrGlow  = isNest ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)";
+        const clrGlowS = isNest ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)";
+        const clrRow   = isNest ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)";
+        const clrRowHi = isNest ? "rgba(34,197,94,0.22)" : "rgba(239,68,68,0.22)";
+        const clrBar   = isNest ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)";
+        const bgGrad   = isNest
+          ? "radial-gradient(ellipse at 40% 20%,#0d2e0d 0%,#071507 55%,#030a03 100%)"
+          : "radial-gradient(ellipse at 60% 20%,#3d0b0b 0%,#1a0404 55%,#0d0202 100%)";
+        const teamName = isNest ? "Team Nest" : "Team Hatch";
+        const logo     = isNest ? "./teamnest.png" : "./teamhatch.png";
+        const tabDefs  = [
+          { id: "yourrank", label: "Your Rank" },
+          { id: "leaders",  label: "Leaders" },
+          { id: "allranks", label: "All Ranks" },
+        ];
+
+        const overlay = document.getElementById("teamLeaderboardOverlay");
+        overlay.className = "full-dex-overlay open";
+        overlay.style.cssText = "display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);padding:16px;";
+        overlay.innerHTML = `
+          <div id="teamLbShell" style="
+            width:min(460px,96vw);height:min(480px,88vh);border-radius:24px;overflow:hidden;
+            display:flex;flex-direction:column;
+            background:${bgGrad};
+            border:1.5px solid ${clrGlow};
+            box-shadow:0 0 60px ${clrGlow}, 0 24px 80px rgba(0,0,0,0.7);
+          ">
+            <div style="
+              padding:20px 20px 0;
+              background:linear-gradient(180deg,${clrGlowS} 0%,transparent 100%);
+              border-bottom:1px solid ${clrGlow};
+            ">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <img src="${logo}" style="width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 0 8px ${clrBold});">
+                  <span style="font-size:19px;font-weight:900;color:${clr};letter-spacing:0.5px;">${teamName}</span>
+                </div>
+                <button id="closeTeamLbBtn" style="
+                  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+                  color:rgba(255,255,255,0.6);border-radius:20px;padding:5px 16px;
+                  font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;
+                ">Close</button>
+              </div>
+              <div style="display:flex;gap:4px;padding-bottom:0;">
+                ${tabDefs.map(t => `
+                  <button id="teamLbTab_${t.id}" style="
+                    flex:1;padding:10px 6px;font-size:12px;font-weight:800;font-family:inherit;
+                    border:none;border-radius:10px 10px 0 0;cursor:pointer;
+                    background:${_teamLbTab===t.id ? clrGlowS : 'transparent'};
+                    color:${_teamLbTab===t.id ? clr : 'rgba(255,255,255,0.4)'};
+                    border-bottom:${_teamLbTab===t.id ? `2px solid ${clrBold}` : '2px solid transparent'};
+                  ">${t.label}</button>`).join("")}
+              </div>
+            </div>
+            <div id="teamLbContent" style="flex:1;overflow-y:auto;display:flex;align-items:center;justify-content:center;">
+              <div style="font-size:28px;opacity:0.5;">⏳</div>
+            </div>
+          </div>`;
+
+        overlay.querySelector("#closeTeamLbBtn").addEventListener("click", _closeTeamLeaderboard);
+        overlay.addEventListener("click", e => { if (e.target === overlay) _closeTeamLeaderboard(); });
+        tabDefs.forEach(t => {
+          overlay.querySelector(`#teamLbTab_${t.id}`).addEventListener("click", () => { _teamLbTab = t.id; _renderTeamLeaderboard(); });
+        });
+
+        const content = overlay.querySelector("#teamLbContent");
+        const ranks   = isNest ? _NEST_RANKS : _HATCH_RANKS;
+
+        const textMain  = "rgba(255,255,255,0.92)";
+        const textMuted = "rgba(255,255,255,0.45)";
+
+        if (_teamLbTab === "yourrank") {
+          const { data: myData } = await db
+            .from("trainer_hatches")
+            .select("step_count, hatch_count")
+            .ilike("display_name", state.trainerName)
+            .single();
+
+          const steps   = myData?.step_count  || 0;
+          const hatches = myData?.hatch_count || 0;
+          const score   = steps + hatches * 5000;
+          const idx     = _teamRankIdx(score);
+          const isMax   = idx === _TEAM_THRESHOLDS.length - 1;
+          const nextIdx = Math.min(idx + 1, _TEAM_THRESHOLDS.length - 1);
+          const pct     = isMax ? 100 : Math.min(100, (score - _TEAM_THRESHOLDS[idx]) / (_TEAM_THRESHOLDS[nextIdx] - _TEAM_THRESHOLDS[idx]) * 100);
+
+          content.style.cssText = "flex:1;overflow-y:auto;display:block;";
+          content.innerHTML = `
+            <div style="padding:28px 20px 12px;text-align:center;">
+              <div style="font-size:11px;font-weight:800;color:${clrBold};letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Your Rank</div>
+              <div style="font-size:42px;font-weight:900;color:${textMain};text-shadow:0 0 24px ${clrBold};margin-bottom:4px;">${ranks[idx]}</div>
+              <div style="font-size:13px;color:${textMuted};font-weight:600;">${score.toLocaleString()} pts</div>
+            </div>
+            <div style="padding:0 20px 20px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:12px;font-weight:700;color:${textMuted};">${isMax ? 'MAX RANK ACHIEVED' : `Next: ${ranks[nextIdx]}`}</span>
+                <span style="font-size:12px;font-weight:700;color:${textMuted};">${isMax ? '' : `${(_TEAM_THRESHOLDS[nextIdx] - score).toLocaleString()} to go`}</span>
+              </div>
+              <div style="height:10px;border-radius:5px;background:rgba(255,255,255,0.07);overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${clrBold},${clr});border-radius:5px;box-shadow:0 0 8px ${clrGlow};"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;padding:0 20px 16px;">
+              <div style="flex:1;background:${clrBar};border:1px solid ${clrGlow};border-radius:14px;padding:16px;text-align:center;">
+                <div style="font-size:24px;font-weight:900;color:${textMain};">${steps.toLocaleString()}</div>
+                <div style="font-size:11px;font-weight:700;color:${textMuted};margin-top:3px;text-transform:uppercase;letter-spacing:1px;">Steps</div>
+              </div>
+              <div style="flex:1;background:${clrBar};border:1px solid ${clrGlow};border-radius:14px;padding:16px;text-align:center;">
+                <div style="font-size:24px;font-weight:900;color:${textMain};">${hatches.toLocaleString()}</div>
+                <div style="font-size:11px;font-weight:700;color:${textMuted};margin-top:3px;text-transform:uppercase;letter-spacing:1px;">Hatches</div>
+              </div>
+            </div>
+            <div style="text-align:center;padding:0 20px 20px;font-size:11px;color:${textMuted};">Score = steps + (hatches x 5,000)</div>`;
+
+        } else if (_teamLbTab === "leaders") {
+          const { data, error } = await db.rpc("get_team_leaderboard", { p_team: team });
+
+          if (error || !data?.length) {
+            content.style.cssText = "flex:1;overflow-y:auto;display:flex;align-items:center;justify-content:center;";
+            content.innerHTML = `<div style="text-align:center;padding:32px;color:${textMuted};font-weight:700;">No teammates on record yet.<br>Spread the word!</div>`;
+            return;
+          }
+
+          const rows = data.map((row, i) => {
+            const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+            const isYou = (row.display_name || "").toLowerCase() === (state.trainerName || "").toLowerCase();
+            const score = row.score ?? 0;
+            return `<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;background:${isYou ? clrRowHi : clrRow};border:1px solid ${isYou ? clrGlow : 'transparent'};margin-bottom:6px;">
+              <span style="font-size:18px;width:30px;text-align:center;flex-shrink:0;">${medal}</span>
+              <div style="flex:1;overflow:hidden;">
+                <div style="font-weight:800;color:${textMain};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_escHtml(row.display_name)}${isYou ? ` <span style="font-size:11px;color:${textMuted};">(you)</span>` : ''}</div>
+                <div style="font-size:11px;color:${clr};font-weight:700;margin-top:1px;">${_teamRankName(score, team)}</div>
+              </div>
+              <span style="font-weight:900;color:${clr};font-size:15px;flex-shrink:0;">${score.toLocaleString()}</span>
+            </div>`;
+          }).join("");
+
+          content.style.cssText = "flex:1;overflow-y:auto;display:block;";
+          content.innerHTML = `<div style="padding:12px 16px;">${rows}</div>`;
+
+        } else {
+          const rows = ranks.map((name, i) => {
+            const isMax   = i === _TEAM_THRESHOLDS.length - 1;
+            const fillPct = Math.round(30 + (i / (ranks.length - 1)) * 70);
+            return `<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;background:${clrRow};margin-bottom:6px;">
+              <div style="
+                width:32px;height:32px;border-radius:50%;flex-shrink:0;
+                background:linear-gradient(135deg,${clrBold},${clr});
+                opacity:${(fillPct/100).toFixed(2)};
+                box-shadow:0 0 ${Math.round(4 + i * 2)}px ${clrGlow};
+              "></div>
+              <div style="flex:1;">
+                <div style="font-weight:800;color:${textMain};">${name}</div>
+                <div style="font-size:11px;color:${textMuted};font-weight:600;margin-top:1px;">Rank ${i + 1} of ${ranks.length}</div>
+              </div>
+              <span style="font-weight:700;color:${textMuted};font-size:12px;">${isMax ? `${_TEAM_THRESHOLDS[i].toLocaleString()}+` : _TEAM_THRESHOLDS[i].toLocaleString()}</span>
+            </div>`;
+          }).join("");
+
+          content.style.cssText = "flex:1;overflow-y:auto;display:block;";
+          content.innerHTML = `<div style="padding:12px 16px;">${rows}</div>`;
+        }
+      }
+
+      function _closeTeamLeaderboard() {
+        const overlay = document.getElementById("teamLeaderboardOverlay");
+        overlay.className = "full-dex-overlay";
+        overlay.style.cssText = "";
         overlay.innerHTML = "";
       }
 
@@ -4445,6 +4647,7 @@
           // Wire up persistent dex buttons
           document.getElementById("baseDexBtn").addEventListener("click", openBaseDex);
           document.getElementById("leaderboardBtn").addEventListener("click", openLeaderboard);
+          document.getElementById("teamLeaderboardBtn").addEventListener("click", _showTeamLeaderboard);
 
           // Mobile tab buttons
           document.getElementById("tabEgg").addEventListener("click", () => setMobileTab("egg"));
