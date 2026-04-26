@@ -183,6 +183,26 @@
         filter: drop-shadow(0 20px 16px rgba(0, 80, 200, 0.28)) drop-shadow(0 0 28px rgba(80, 160, 255, 0.55));
       }
 
+      /* Team Hatch egg glow (red) */
+      .egg-button.team-hatch .egg-glow {
+        background: radial-gradient(circle, rgba(255,80,80,0.95) 0%, rgba(220,40,40,0.5) 38%, rgba(200,60,60,0.15) 65%, rgba(255,255,255,0) 78%);
+        width: 280px; height: 280px;
+        animation: glowPulseRed 2.2s ease-in-out infinite;
+      }
+      .egg-button.team-hatch .egg-image {
+        filter: drop-shadow(0 20px 16px rgba(180,0,0,0.3)) drop-shadow(0 0 28px rgba(240,60,60,0.55));
+      }
+
+      /* Team Nest egg glow (green) */
+      .egg-button.team-nest .egg-glow {
+        background: radial-gradient(circle, rgba(80,230,120,0.95) 0%, rgba(30,180,80,0.5) 38%, rgba(40,200,80,0.15) 65%, rgba(255,255,255,0) 78%);
+        width: 280px; height: 280px;
+        animation: glowPulseGreen 2.2s ease-in-out infinite;
+      }
+      .egg-button.team-nest .egg-image {
+        filter: drop-shadow(0 20px 16px rgba(0,120,40,0.3)) drop-shadow(0 0 28px rgba(40,200,80,0.55));
+      }
+
       @keyframes glowPulse {
         0%, 100% { transform: scale(0.96); opacity: 0.85; }
         50% { transform: scale(1.03); opacity: 1; }
@@ -195,6 +215,34 @@
         0%, 100% { transform: scale(0.94); opacity: 0.88; }
         50% { transform: scale(1.07); opacity: 1; }
       }
+      @keyframes glowPulseRed {
+        0%, 100% { transform: scale(0.94); opacity: 0.9; }
+        50% { transform: scale(1.06); opacity: 1; }
+      }
+      @keyframes glowPulseGreen {
+        0%, 100% { transform: scale(0.94); opacity: 0.9; }
+        50% { transform: scale(1.06); opacity: 1; }
+      }
+      @keyframes tugNestPulse {
+        0%, 100% { box-shadow: 0 0 6px rgba(34,197,94,0.5), inset 0 0 6px rgba(255,255,255,0.15); }
+        50%       { box-shadow: 0 0 20px rgba(34,197,94,0.95), 0 0 40px rgba(34,197,94,0.4), inset 0 0 8px rgba(255,255,255,0.25); }
+      }
+      @keyframes tugHatchPulse {
+        0%, 100% { box-shadow: 0 0 6px rgba(239,68,68,0.5), inset 0 0 6px rgba(255,255,255,0.15); }
+        50%       { box-shadow: 0 0 20px rgba(239,68,68,0.95), 0 0 40px rgba(239,68,68,0.4), inset 0 0 8px rgba(255,255,255,0.25); }
+      }
+      @keyframes tugSparkFlicker {
+        0%, 100% { opacity: 1; transform: translate(-50%,-50%) scaleY(1); }
+        40%       { opacity: 0.6; transform: translate(-50%,-50%) scaleY(0.75); }
+        70%       { opacity: 1; transform: translate(-50%,-50%) scaleY(1.2); }
+      }
+      @keyframes tugTitlePulse {
+        0%, 100% { text-shadow: 0 0 8px rgba(255,220,50,0.8), 0 1px 3px rgba(0,0,0,0.9); }
+        50%       { text-shadow: 0 0 20px rgba(255,220,50,1), 0 0 35px rgba(255,180,0,0.6), 0 1px 3px rgba(0,0,0,0.9); }
+      }
+      .tug-nest-lead  { animation: tugNestPulse  1.1s ease-in-out infinite; }
+      .tug-hatch-lead { animation: tugHatchPulse 1.1s ease-in-out infinite; }
+      .tug-spark      { animation: tugSparkFlicker 0.6s ease-in-out infinite; }
 
       .egg-image {
         position: relative; z-index: 2;
@@ -526,6 +574,7 @@
         border: 5px solid var(--screen-border);
         border-radius: 28px; padding: 16px;
         flex: 1; min-height: 0; display: flex; flex-direction: column;
+        overflow: hidden;
       }
       .dex-meta { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }
       .dex-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
@@ -549,7 +598,7 @@
         grid-column: 1 / -1;
         font-size: 16px; padding: 14px 20px;
       }
-      .dex-list { display: grid; gap: 10px; flex: 1; overflow: auto; padding-right: 4px; align-content: start; }
+      .dex-list { display: grid; gap: 10px; flex: 1; overflow: auto; padding-right: 4px; align-content: start; background: linear-gradient(180deg, #eaf8d8 0%, #d5efb9 100%); background-attachment: local; }
       .dex-list::-webkit-scrollbar { width: 10px; }
       .dex-list::-webkit-scrollbar-thumb { background: rgba(49,63,89,0.28); border-radius: 999px; }
       .empty {
@@ -578,6 +627,18 @@
       .entry.special-entry {
         background: linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(255,240,160,0.9) 100%);
         border-color: rgba(168,104,0,0.5);
+      }
+      .entry.team-hatch-entry {
+        background: linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(255,220,220,0.95) 100%);
+        border: 2px solid rgba(220,38,38,0.65) !important;
+        box-shadow: inset 0 0 10px rgba(239,68,68,0.18);
+        position: relative;
+      }
+      .entry.team-nest-entry {
+        background: linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(210,245,225,0.95) 100%);
+        border: 2px solid rgba(22,163,74,0.65) !important;
+        box-shadow: inset 0 0 10px rgba(34,197,94,0.18);
+        position: relative;
       }
       .entry img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 8px 8px rgba(22,31,48,0.12)); }
       .entry-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -962,8 +1023,8 @@
         width: fit-content;
         border: 3px solid #22c55e; border-radius: 999px;
         padding: 4px 12px; cursor: pointer; font-family: inherit;
-        font-size: 12px; font-weight: 900;
-        letter-spacing: 0.06em; white-space: nowrap;
+        font-size: 13px; font-weight: 900;
+        letter-spacing: 0.14em; white-space: nowrap;
         animation: jtbShift 5s ease-in-out infinite, jtbPulse 2.2s ease-in-out infinite;
       }
       @keyframes jtbShift {
@@ -1115,7 +1176,7 @@
               </div>
               <div class="status-chip trainer-chip" id="trainerChip" title="Change trainer name">
                 <span class="label">Trainer</span>
-                <span class="value" id="trainerNameDisplay">—</span>
+                <span class="value" id="trainerNameDisplay">-</span>
               </div>
               <div class="status-chip" id="stepCountChip" title="Total steps update once per egg hatch, not in real time" style="cursor:pointer;position:relative;" onclick="
                 const tip = document.getElementById('stepsTip');
@@ -1124,7 +1185,7 @@
                 <span class="label">Total Steps ℹ️</span>
                 <span class="value" id="globalClickCount">0</span>
                 <div id="stepsTip" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#1e293b;color:white;font-size:12px;font-weight:700;padding:10px 14px;border-radius:12px;width:220px;line-height:1.5;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);">
-                  Total steps are tallied once per egg hatch, not in real time — your clicks are always counting!
+                  Total steps are tallied once per egg hatch, not in real time. Your clicks are always counting!
                   <div style="position:absolute;top:-6px;right:18px;width:12px;height:12px;background:#1e293b;transform:rotate(45deg);border-radius:2px;"></div>
                 </div>
               </div>
@@ -1231,7 +1292,7 @@
           </div>
           <p style="margin:0 0 10px;font-size:14px;font-weight:800;">🔥 Ho-Oh Community Alert</p>
           <ul style="margin:0 0 8px;padding-left:18px;font-size:13px;color:var(--slate);line-height:1.8;">
-            <li><strong>Ho-Oh sightings are now announced</strong> — when a trainer catches Ho-Oh, everyone online sees a notification with the trainer's name and how many steps were saved</li>
+            <li><strong>Ho-Oh sightings are now announced:</strong> when a trainer catches Ho-Oh, everyone online sees a notification with the trainer's name and how many steps were saved</li>
           </ul>
         </div>
 
@@ -1244,7 +1305,7 @@
           </div>
           <p style="margin:0 0 10px;font-size:14px;font-weight:800;">🔥 Ho-Oh Rebalance</p>
           <ul style="margin:0 0 8px;padding-left:18px;font-size:13px;color:var(--slate);line-height:1.8;">
-            <li><strong>Ho-Oh can only bless each egg once</strong> — clicking Ho-Oh a second time on the same egg now shows a message instead of stacking reductions</li>
+            <li><strong>Ho-Oh can only bless each egg once:</strong> clicking Ho-Oh a second time on the same egg now shows a message instead of stacking reductions</li>
             <li>The blessing resets with each new egg</li>
           </ul>
         </div>
@@ -1258,8 +1319,8 @@
           </div>
           <p style="margin:0 0 10px;font-size:14px;font-weight:800;">🛡️ Anti-Cheat Improvements</p>
           <ul style="margin:0 0 8px;padding-left:18px;font-size:13px;color:var(--slate);line-height:1.8;">
-            <li><strong>Server-side step attribution</strong> — trainer step counts are now recorded directly on the server, making it impossible to inflate leaderboard stats from the client</li>
-            <li><strong>Auto-clicker mitigation</strong> — further measures put in place to ensure no single player can exceed the step cap regardless of tap speed or tooling</li>
+            <li><strong>Server-side step attribution:</strong> trainer step counts are now recorded directly on the server, making it impossible to inflate leaderboard stats from the client</li>
+            <li><strong>Auto-clicker mitigation:</strong> further measures put in place to ensure no single player can exceed the step cap regardless of tap speed or tooling</li>
           </ul>
         </div>
 
@@ -1272,8 +1333,8 @@
           </div>
           <p style="margin:0 0 10px;font-size:14px;font-weight:800;">⚡ Realtime Tuning</p>
           <ul style="margin:0 0 8px;padding-left:18px;font-size:13px;color:var(--slate);line-height:1.8;">
-            <li><strong>Broadcast rate-limit</strong> — step counter sync messages now send at most once every 3 seconds per tapper, down from every 500ms. Reduces realtime message volume by ~6x during active play. Active tappers see no change; spectators see the counter update in small jumps rather than a smooth tick</li>
-            <li><strong>Step cap enforcement</strong> — server now enforces a maximum of 7 steps per flush, capping any single player at 14 steps/second regardless of tap speed</li>
+            <li><strong>Broadcast rate-limit:</strong> step counter sync messages now send at most once every 3 seconds per tapper, down from every 500ms. Reduces realtime message volume by ~6x during active play. Active tappers see no change; spectators see the counter update in small jumps rather than a smooth tick</li>
+            <li><strong>Step cap enforcement:</strong> server now enforces a maximum of 7 steps per flush, capping any single player at 14 steps/second regardless of tap speed</li>
           </ul>
         </div>
 
@@ -1284,13 +1345,13 @@
             <span style="font-size:13px;font-weight:900;background:#e0e0e0;color:#555;border-radius:8px;padding:2px 10px;">v1.5.0</span>
             <span style="font-size:12px;color:var(--slate);font-weight:700;">April 2026</span>
           </div>
-          <p style="margin:0 0 10px;font-size:14px;font-weight:800;">⚡ Under the Hood — Performance Update</p>
+          <p style="margin:0 0 10px;font-size:14px;font-weight:800;">⚡ Under the Hood: Performance Update</p>
           <p style="margin:0 0 8px;font-size:13px;color:var(--slate);line-height:1.6;">A major infrastructure overhaul to keep OddEgg fast and sustainable as the community grows.</p>
           <ul style="margin:0 0 8px;padding-left:18px;font-size:13px;color:var(--slate);line-height:1.8;">
-            <li><strong>Realtime optimization</strong> — the game previously sent a realtime message on every single tap. It now only fires on meaningful egg events (hatching, claiming, hatched), cutting message volume by over 99%</li>
-            <li><strong>Step sync via broadcast</strong> — spectators see live step updates through a free broadcast channel instead of the metered realtime feed</li>
-            <li><strong>Narrower database queries</strong> — every fetch now requests only the columns it needs, reducing egress significantly</li>
-            <li><strong>Total steps</strong> — now tallied once per hatch rather than on every tap. Your clicks always count — they just post to the global total when the egg hatches</li>
+            <li><strong>Realtime optimization:</strong> the game previously sent a realtime message on every single tap. It now only fires on meaningful egg events (hatching, claiming, hatched), cutting message volume by over 99%</li>
+            <li><strong>Step sync via broadcast:</strong> spectators see live step updates through a free broadcast channel instead of the metered realtime feed</li>
+            <li><strong>Narrower database queries:</strong> every fetch now requests only the columns it needs, reducing egress significantly</li>
+            <li><strong>Total steps:</strong> now tallied once per hatch rather than on every tap. Your clicks always count and post to the global total when the egg hatches</li>
           </ul>
         </div>
 
@@ -1302,13 +1363,13 @@
             <span style="font-size:12px;color:var(--slate);font-weight:700;">April 2026</span>
           </div>
           <p style="margin:0 0 10px;font-size:14px;font-weight:800;">🥚 An EGGciting Mega Update!</p>
-          <p style="margin:0 0 8px;font-size:13px;color:var(--slate);line-height:1.6;">Something ancient is stirring in the egg fields… Hatch 10 Mega-capable Pokémon and unlock the <strong>Mega Bracelet</strong> — a rare charm that opens the door to something much, much bigger.</p>
+          <p style="margin:0 0 8px;font-size:13px;color:var(--slate);line-height:1.6;">Something ancient is stirring in the egg fields… Hatch 10 Mega-capable Pokémon and unlock the <strong>Mega Bracelet</strong>, a rare charm that opens the door to something much, much bigger.</p>
           <ul style="margin:0 0 8px;padding-left:18px;font-size:13px;color:var(--slate);line-height:1.8;">
-            <li><strong>Mega Eggs</strong> — 1-in-50 chance to appear once the bracelet is unlocked. Up to one million steps, 24-hour community countdown, and a menacing heartbeat that speeds up near hatch</li>
-            <li><strong>Shiny Megas</strong> — 1-in-20 odds on Mega Eggs (way better than base shinies)</li>
-            <li><strong>Dynamic Mega pool</strong> — only Mega forms of Pokémon already in your Living Dex are eligible</li>
-            <li><strong>Mega Dex tab</strong> — track all 98 Mega forms; flip between normal and shiny artwork with ‹ › arrows</li>
-            <li><strong>Mega Bracelet charm</strong> — appears in the charm bar with a progress tooltip</li>
+            <li><strong>Mega Eggs:</strong> 1-in-50 chance to appear once the bracelet is unlocked. Up to one million steps, 24-hour community countdown, and a menacing heartbeat that speeds up near hatch</li>
+            <li><strong>Shiny Megas:</strong> 1-in-20 odds on Mega Eggs (way better than base shinies)</li>
+            <li><strong>Dynamic Mega pool:</strong> only Mega forms of Pokémon already in your Living Dex are eligible</li>
+            <li><strong>Mega Dex tab:</strong> track all 98 Mega forms; flip between normal and shiny artwork with ‹ › arrows</li>
+            <li><strong>Mega Bracelet charm:</strong> appears in the charm bar with a progress tooltip</li>
           </ul>
         </div>
 
@@ -1320,7 +1381,7 @@
             <span style="font-size:12px;color:var(--slate);font-weight:700;">April 2025</span>
           </div>
           <p style="margin:0 0 10px;font-size:14px;font-weight:800;">Ho-Oh Rework</p>
-          <p style="margin:0 0 8px;font-size:13px;color:var(--slate);line-height:1.6;">Clicking Ho-Oh as it flies across the screen now reduces the egg's required steps by 10% — making it noticeably easier to hatch without ever triggering it early. The more trainers who catch it, the closer the egg gets!</p>
+          <p style="margin:0 0 8px;font-size:13px;color:var(--slate);line-height:1.6;">Clicking Ho-Oh as it flies across the screen now reduces the egg's required steps by 10%, making it noticeably easier to hatch without ever triggering it early. The more trainers who catch it, the closer the egg gets!</p>
           <ul style="margin:0 0 16px;padding-left:18px;font-size:13px;color:var(--slate);line-height:1.8;">
             <li>Ho-Oh now appears on mobile too</li>
             <li>Flies by roughly every 20–30 minutes per device</li>
@@ -1373,8 +1434,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       // ─── Supabase ─────────────────────────────────────────────────────────────
-      const SUPABASE_URL = "https://dizaikxbbhyzrwhofrtz.supabase.co";
-      const SUPABASE_KEY = "sb_publishable_ndpgtZVILuhY4xKt9CeX1A_mKOUjFsw";
+      const SUPABASE_URL = "https://wwrqmuzwwsfrjyqaspav.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_5DCXwRPFIF2HLvKZUjnubA_crwVkRJQ";
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // ─── Config ──────────────────────────────────────────────────────────────
@@ -2011,7 +2072,7 @@
         const { data: won } = await db.rpc("try_claim_egg", { p_trainer_name: state.trainerName ? state.trainerName.toLowerCase() : null, p_display_name: state.trainerName || null });
         if (!won) {
           // Someone else already claimed — re-fetch current state so we don't stay stuck
-          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
+          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny,is_team_egg,nest_steps,hatch_steps").eq("id", 1).single();
           if (eggRow) { _applyEggRow(eggRow); render(); }
           return;
         }
@@ -2056,7 +2117,7 @@
             .eq("status", "claiming");
           // Fetch and apply so _applyEggRow detects the hatched transition
           // and restarts the auto-claim timer
-          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
+          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny,is_team_egg,nest_steps,hatch_steps").eq("id", 1).single();
           if (eggRow) { _applyEggRow(eggRow); render(); }
         }, recoveryMs);
       }
@@ -2099,6 +2160,11 @@
             if (!state.eggState || state.eggState.status !== 'hatching') return;
             if (payload.steps <= (state.eggState.currentSteps ?? 0)) return;
             state.eggState.currentSteps = payload.steps;
+            if (payload.isTeamEgg) {
+              state.eggState.nestSteps  = payload.nestSteps  ?? 0;
+              state.eggState.hatchSteps = payload.hatchSteps ?? 0;
+              _updateTeamEggUI();
+            }
             const el = document.getElementById("clickCounter");
             if (el) el.textContent = fmt(state.eggState.currentSteps + _pendingEggSteps + _inFlightSteps) + " steps";
             _updateEggDialogue();
@@ -2115,6 +2181,10 @@
           .on("broadcast", { event: "hooh_found" }, ({ payload }) => {
             if (!payload) return;
             _showHoohFoundToast(payload.name, payload.saved);
+          })
+          .on("broadcast", { event: "team_rally" }, ({ payload }) => {
+            if (!payload) return;
+            _showTeamRallyToast(payload.from, payload.team);
           })
           .subscribe(async status => {
             if (status === "SUBSCRIBED" && state.trainerName) {
@@ -2154,6 +2224,13 @@
           const isAdmin = myName === "sh1n1es";
           const broadcastAllBtn = isAdmin ? `<button onclick="document.getElementById('onlinePopup')?.remove();_sendAdminBroadcast()" style="display:block;width:100%;margin-top:8px;font-size:11px;font-weight:900;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;border-radius:8px;border:2px solid #6d28d9;background:#6d28d9;color:white;cursor:pointer;font-family:inherit;">📢 Broadcast All</button>` : "";
           const refreshBtn = isAdmin ? `<button onclick="_pollVelocity().then(()=>{document.getElementById('onlinePopup')?.remove();document.getElementById('onlineChip')?.click();})" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0;margin-left:6px;opacity:0.6;" title="Refresh speeds">↻</button>` : "";
+          const rallyTeam = state.trainerTeam;
+          const rallyCooldownLeft = Math.max(0, Math.ceil((RALLY_COOLDOWN_MS - (Date.now() - _rallyLastSent)) / 1000));
+          const rallyOnCooldown = rallyCooldownLeft > 0;
+          const rallyMotto = TEAM_MOTTOS[rallyTeam] || "";
+          const rallyClr  = rallyTeam === "nest" ? "#16a34a" : "#dc2626";
+          const rallyBg   = rallyTeam === "nest" ? "linear-gradient(135deg,#14532d,#166534)" : "linear-gradient(135deg,#991b1b,#7f1d1d)";
+          const rallyBtn  = rallyTeam ? `<button onclick="_sendTeamRally()" ${rallyOnCooldown ? "disabled" : ""} style="display:block;width:100%;margin-top:8px;font-size:11px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;padding:6px 10px;border-radius:8px;border:none;background:${rallyOnCooldown ? '#ccc' : rallyBg};color:${rallyOnCooldown ? '#999' : '#fff'};cursor:${rallyOnCooldown ? 'default' : 'pointer'};font-family:inherit;">${rallyOnCooldown ? `Rally (${rallyCooldownLeft}s)` : `${rallyMotto}`}</button>` : "";
           popup.innerHTML = `<div style="font-size:10px;font-weight:900;letter-spacing:0.14em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;">Online Now${refreshBtn}</div>` + entries.map(({ name: n, team }) => {
             const isMe = n.toLowerCase() === myName;
             const cooldownLeft = Math.max(0, Math.ceil((EMOJI_COOLDOWN_MS - (Date.now() - _emojiLastSent)) / 1000));
@@ -2165,7 +2242,7 @@
             const velTag = isAdmin && !isMe ? `<span style="margin-left:6px;font-size:10px;font-weight:900;color:${vel > 15 ? '#ef4444' : vel > 8 ? '#f97316' : vel != null ? '#22c55e' : '#aaa'};">${vel != null ? vel.toFixed(1) + '/s' : '…'}</span>` : "";
             const nameHtml = `${teamBadge(team, 14)}<span style="color:${teamColor(team)};font-weight:900;">${_escHtml(n)}</span>`;
             return `<div style="padding:2px 0;display:flex;align-items:center;">${nameHtml}${velTag}${btn}${adminBtn}${banBtn}</div>`;
-          }).join("") + broadcastAllBtn;
+          }).join("") + rallyBtn + broadcastAllBtn;
           chip.style.position = "relative";
           chip.appendChild(popup);
           setTimeout(() => popup.remove(), isAdmin ? 15000 : 4000);
@@ -2185,6 +2262,52 @@
       let _emojiPickerIndex = 0;
       let _emojiLastSent = 0;
       const EMOJI_COOLDOWN_MS = 30000;
+
+      let _rallyLastSent = 0;
+      const RALLY_COOLDOWN_MS = 60000;
+      const TEAM_MOTTOS = { nest: "Protect the future!", hatch: "Hatch Strong!" };
+
+      function _sendTeamRally() {
+        if (!state.trainerTeam || !_presenceChannel) return;
+        if (Date.now() - _rallyLastSent < RALLY_COOLDOWN_MS) return;
+        _rallyLastSent = Date.now();
+        _presenceChannel.send({ type: "broadcast", event: "team_rally", payload: { from: state.trainerName, team: state.trainerTeam } });
+        _showTeamRallyToast(state.trainerName, state.trainerTeam);
+        document.getElementById("onlinePopup")?.remove();
+      }
+
+      function _showTeamRallyToast(fromName, team) {
+        const isNest = team === "nest";
+        const logo   = isNest ? "./teamnest.png" : "./teamhatch.png";
+        const motto  = TEAM_MOTTOS[team] || "";
+        const clr    = isNest ? "#22c55e" : "#ef4444";
+        const border = isNest ? "#16a34a" : "#dc2626";
+
+        const stage = document.querySelector('.battle-stage') || document.body;
+        let container = stage.querySelector(".emoji-toast-stack");
+        if (!container) {
+          container = document.createElement("div");
+          container.className = "emoji-toast-stack";
+          container.style.cssText = "position:absolute;z-index:9;bottom:10px;right:12px;display:flex;flex-direction:column-reverse;gap:8px;align-items:flex-end;pointer-events:none;";
+          stage.appendChild(container);
+        }
+
+        const bg   = isNest ? "linear-gradient(135deg,#0d2e0d,#071507)" : "linear-gradient(135deg,#3d0b0b,#1a0404)";
+        const glow = isNest ? "rgba(34,197,94,0.45)" : "rgba(239,68,68,0.45)";
+
+        const toast = document.createElement("div");
+        toast.style.cssText = `background:${bg};border:2px solid ${glow};box-shadow:0 0 18px ${glow},0 8px 24px rgba(0,0,0,0.5);border-radius:16px;padding:12px 16px;text-align:center;max-width:160px;pointer-events:none;`;
+        toast.innerHTML = `
+          <img src="${logo}" style="width:72px;height:72px;object-fit:contain;display:block;margin:0 auto 6px;filter:drop-shadow(0 0 8px ${clr});">
+          <div style="font-size:11px;font-weight:800;color:${clr};text-transform:uppercase;letter-spacing:0.5px;">${_escHtml(fromName)} says:</div>
+          <div style="font-size:13px;font-weight:900;color:#fff;text-shadow:0 0 10px ${clr};margin-top:2px;">${motto}</div>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.remove();
+          if (!container.children.length) container.remove();
+        }, 5000);
+      }
 
       function _sendEmoji(toName) {
         if (!state.trainerName || state.trainerName === "Anonymous Trainer") return;
@@ -2432,10 +2555,15 @@
         const name   = state.trainerName;
         const hasPin = !!localStorage.getItem("oddegg-trainer-pin");
         inner.innerHTML = `
-          <div style="width:100%;background:linear-gradient(135deg,var(--accent-2) 0%,#1a5fa8 100%);border-radius:18px;padding:20px 20px 16px;margin-bottom:18px;text-align:left;position:relative;overflow:hidden;">
+          <div style="width:100%;background:${
+            state.trainerTeam === 'nest'  ? 'linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%)' :
+            state.trainerTeam === 'hatch' ? 'linear-gradient(135deg,#7f1d1d 0%,#991b1b 60%,#b91c1c 100%)' :
+            'linear-gradient(135deg,var(--accent-2) 0%,#1a5fa8 100%)'
+          };border-radius:18px;padding:20px 20px 16px;margin-bottom:18px;text-align:left;position:relative;overflow:hidden;">
             <div style="position:absolute;top:-18px;right:-18px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>
             <div style="position:absolute;bottom:-30px;right:10px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.05);"></div>
-            <div style="font-size:10px;font-weight:900;letter-spacing:0.18em;color:rgba(255,255,255,0.65);text-transform:uppercase;margin-bottom:6px;">Trainer ID</div>
+            ${state.trainerTeam ? `<img src="./${state.trainerTeam === 'nest' ? 'teamnest' : 'teamhatch'}.png" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);width:52px;height:52px;object-fit:contain;opacity:0.25;">` : ''}
+            <div style="font-size:10px;font-weight:900;letter-spacing:0.18em;color:rgba(255,255,255,0.65);text-transform:uppercase;margin-bottom:6px;">${state.trainerTeam ? `Team ${state.trainerTeam === 'nest' ? 'Nest' : 'Hatch'}` : 'Trainer ID'}</div>
             <div style="font-size:22px;font-weight:900;color:white;letter-spacing:0.02em;">${_escHtml(name)}</div>
             <div style="margin-top:4px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);">${hasPin ? "PIN Protected" : "No PIN set"}</div>
           </div>
@@ -2526,7 +2654,7 @@
             </div>
             <div style="font-size:11px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;color:rgba(167,139,250,0.8);margin-bottom:10px;">A Battle of Beliefs</div>
             <div style="font-size:22px;font-weight:900;color:white;margin-bottom:14px;">Choose Your Allegiance</div>
-            <p style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:24px;">Two factions fight for the soul of every egg. <strong style="color:rgba(255,255,255,0.85);">Team Nest</strong> guards life before it hatches. <strong style="color:rgba(255,255,255,0.85);">Team Hatch</strong> demands it emerge. Head to head, belief against belief — which side are you on?</p>
+            <p style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:24px;">Two factions fight for the soul of every egg. <strong style="color:rgba(255,255,255,0.85);">Team Nest</strong> guards life before it hatches. <strong style="color:rgba(255,255,255,0.85);">Team Hatch</strong> demands it emerge. Head to head, belief against belief. Which side are you on?</p>
             <p style="font-size:11px;font-weight:700;color:rgba(167,139,250,0.6);margin-bottom:20px;letter-spacing:0.05em;">⚠ Your choice is permanent.</p>
             <button id="teamIntroChooseBtn" style="width:100%;padding:15px;border:none;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;font-family:inherit;font-size:15px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 24px rgba(124,58,237,0.5);">Choose Your Side</button>
             <button id="teamIntroSkipBtn" style="width:100%;margin-top:10px;padding:10px;border:none;border-radius:14px;background:transparent;color:rgba(255,255,255,0.3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Maybe later</button>
@@ -2598,9 +2726,8 @@
             .ts-brand-name { font-size:11px;font-weight:900;letter-spacing:0.18em;text-transform:uppercase; }
             [data-team="nest"]  .ts-brand-name { color:rgba(120,220,120,0.85); }
             [data-team="hatch"] .ts-brand-name { color:rgba(255,140,140,0.85); }
-            .ts-perm-pill { font-size:9px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;border-radius:20px;padding:4px 10px; }
-            [data-team="nest"]  .ts-perm-pill { background:rgba(34,160,34,0.15);border:1.5px solid rgba(80,200,80,0.4);color:rgba(120,220,120,0.9); }
-            [data-team="hatch"] .ts-perm-pill { background:rgba(220,30,30,0.2);border:1.5px solid rgba(220,80,80,0.5);color:rgba(255,140,140,0.9); }
+            .ts-perm-pill { font-size:9px;font-weight:900;letter-spacing:0.14em;text-transform:uppercase;border-radius:20px;padding:4px 10px;background:none;border:1.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.35);cursor:pointer;font-family:inherit;transition:color 0.15s,border-color 0.15s;width:fit-content;align-self:center; }
+            .ts-perm-pill:hover { color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.35); }
 
             .ts-hero { position:absolute;inset:0;z-index:1;overflow:hidden; }
             .ts-hero::before { display:none; }
@@ -2636,8 +2763,9 @@
             [data-team="nest"]  .ts-join-btn { background:linear-gradient(135deg,#16a34a,#14532d);box-shadow:0 6px 24px rgba(22,163,74,0.45); }
             .ts-join-logo { display:none; }
 
-            .ts-arrow { position:absolute;bottom:50%;transform:translateY(50%);z-index:20;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:background 0.15s,color 0.15s,opacity 0.3s;backdrop-filter:blur(4px); }
-            .ts-arrow:hover { background:rgba(255,255,255,0.18);color:white; }
+            .ts-arrow { position:absolute;bottom:50%;transform:translateY(50%);z-index:20;background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;font-size:26px;line-height:1;transition:color 0.15s,transform 0.15s,opacity 0.3s;text-shadow:0 2px 8px rgba(0,0,0,0.6); }
+            #tsArrowLeft:hover  { color:white; transform:translateY(50%) translateX(-4px); }
+            #tsArrowRight:hover { color:white; transform:translateY(50%) translateX(4px); }
             #tsArrowLeft  { left:14px; }
             #tsArrowRight { right:14px; }
             .ts-dots { position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20; }
@@ -2670,7 +2798,7 @@
               .ts-brand-logo { filter:drop-shadow(0 0 10px var(--clr-glow-s)); }
               [data-team="nest"]  .ts-brand-name { color:white; }
               [data-team="hatch"] .ts-brand-name { color:white; }
-              .ts-perm-pill { background:rgba(255,255,255,0.04) !important;border:1.5px solid var(--clr-perm-border) !important;color:var(--clr-perm) !important; }
+              .ts-perm-pill { background:none !important;border:1.5px solid rgba(255,255,255,0.15) !important;color:rgba(255,255,255,0.35) !important; }
               .ts-hero { position:relative;flex:1;min-height:0;inset:auto;display:flex;align-items:flex-end;justify-content:center;overflow:hidden; }
               .ts-hero::before { display:block;content:'';position:absolute;top:40%;width:90%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,var(--bg-hero) 0%,transparent 68%);transform:translateY(-50%);pointer-events:none;z-index:0; }
               [data-team="hatch"] .ts-hero::before { left:-10%;right:auto; }
@@ -2721,7 +2849,7 @@
                     <img class="ts-brand-logo" src="./teamnest.png">
                     <span class="ts-brand-name">Team Nest</span>
                   </div>
-                  <div class="ts-perm-pill">⚠ Permanent</div>
+                  <button class="ts-perm-pill ts-maybe-later">Maybe Later</button>
                 </div>
                 <div class="ts-hero">
                   <img class="ts-emblem" src="./teamnest.png">
@@ -2761,7 +2889,7 @@
                     <img class="ts-brand-logo" src="./teamhatch.png">
                     <span class="ts-brand-name">Team Hatch</span>
                   </div>
-                  <div class="ts-perm-pill">⚠ Permanent</div>
+                  <button class="ts-perm-pill ts-maybe-later">Maybe Later</button>
                 </div>
                 <div class="ts-hero">
                   <img class="ts-emblem" src="./teamhatch.png">
@@ -2845,14 +2973,16 @@
           setTimeout(() => overlay.remove(), 2200);
         }
 
+        overlay.querySelectorAll(".ts-maybe-later").forEach(btn => btn.addEventListener("click", () => overlay.remove()));
         overlay.querySelector("#tsArrowLeft").addEventListener("click",  () => tsGoTo("nest"));
         overlay.querySelector("#tsArrowRight").addEventListener("click", () => tsGoTo("hatch"));
         overlay.querySelector("#tsDotNest").addEventListener("click",    () => tsGoTo("nest"));
         overlay.querySelector("#tsDotHatch").addEventListener("click",   () => tsGoTo("hatch"));
-        overlay.querySelector("#tsJoinNest").addEventListener("click",   () => overlay.querySelector("#tsConfirmNest").classList.add("visible"));
-        overlay.querySelector("#tsJoinHatch").addEventListener("click",  () => overlay.querySelector("#tsConfirmHatch").classList.add("visible"));
-        overlay.querySelector("#tsCancelNest").addEventListener("click",  () => overlay.querySelector("#tsConfirmNest").classList.remove("visible"));
-        overlay.querySelector("#tsCancelHatch").addEventListener("click", () => overlay.querySelector("#tsConfirmHatch").classList.remove("visible"));
+        const tsHideArrows = () => { ["#tsArrowLeft","#tsArrowRight"].forEach(id => { const a = overlay.querySelector(id); if (a) { a.style.opacity="0"; a.style.pointerEvents="none"; } }); };
+        overlay.querySelector("#tsJoinNest").addEventListener("click",   () => { overlay.querySelector("#tsConfirmNest").classList.add("visible"); tsHideArrows(); });
+        overlay.querySelector("#tsJoinHatch").addEventListener("click",  () => { overlay.querySelector("#tsConfirmHatch").classList.add("visible"); tsHideArrows(); });
+        overlay.querySelector("#tsCancelNest").addEventListener("click",  () => { overlay.querySelector("#tsConfirmNest").classList.remove("visible"); tsGoTo("nest"); });
+        overlay.querySelector("#tsCancelHatch").addEventListener("click", () => { overlay.querySelector("#tsConfirmHatch").classList.remove("visible"); tsGoTo("hatch"); });
         overlay.querySelector("#tsPledgeNest").addEventListener("click",  () => tsPledge("nest"));
         overlay.querySelector("#tsPledgeHatch").addEventListener("click", () => tsPledge("hatch"));
 
@@ -2987,11 +3117,7 @@
         if (!isAnon && isPinned) {
           const { data: team } = await db.rpc("get_trainer_team", { p_name: state.trainerName });
           state.trainerTeam = team || null;
-          if (!state.trainerTeam) {
-            closeTrainerModal();
-            _showTeamSelectModal();
-            return;
-          }
+          // No auto-redirect to team select — user must click Join Us
         }
 
         if (_presenceChannel) _presenceChannel.track({ name: state.trainerName, team: state.trainerTeam });
@@ -3092,10 +3218,11 @@
       async function _pollVelocity() {
         if (!_onlineTrainers.length) return;
         if ((state.trainerName || "").toLowerCase() !== "sh1n1es") return;
-        const onlineSet = new Set(_onlineTrainers.map(n => n.toLowerCase()));
+        const onlineNames = _onlineTrainers.map(n => n.name || n);
+        const onlineSet = new Set(onlineNames.map(n => n.toLowerCase()));
         const { data } = await db.from("trainer_hatches")
           .select("display_name, step_count")
-          .in("display_name", _onlineTrainers);
+          .in("display_name", onlineNames);
         if (!data) return;
         const now = Date.now();
         data.forEach(row => {
@@ -3142,9 +3269,9 @@
         const teamName = isNest ? "Team Nest" : "Team Hatch";
         const logo     = isNest ? "./teamnest.png" : "./teamhatch.png";
         const tabDefs  = [
-          { id: "yourrank", label: "Your Rank" },
-          { id: "leaders",  label: "Leaders" },
-          { id: "allranks", label: "All Ranks" },
+          { id: "yourrank",  label: "Your Rank" },
+          { id: "leaders",   label: "Leaders" },
+          { id: "teamstats", label: "Team Stats" },
         ];
 
         const overlay = document.getElementById("teamLeaderboardOverlay");
@@ -3157,35 +3284,38 @@
             background:${bgGrad};
             border:1.5px solid ${clrGlow};
             box-shadow:0 0 60px ${clrGlow}, 0 24px 80px rgba(0,0,0,0.7);
+            position:relative;
           ">
-            <div style="
-              padding:20px 20px 0;
-              background:linear-gradient(180deg,${clrGlowS} 0%,transparent 100%);
-              border-bottom:1px solid ${clrGlow};
+            <img src="${logo}" style="
+              position:absolute;right:-30px;top:-20px;width:180px;height:180px;
+              object-fit:contain;opacity:0.06;pointer-events:none;z-index:0;
+              filter:drop-shadow(0 0 40px ${clrBold});
             ">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="position:relative;z-index:1;padding:18px 18px 0;border-bottom:1px solid ${clrGlow};">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <img src="${logo}" style="width:28px;height:28px;object-fit:contain;filter:drop-shadow(0 0 8px ${clrBold});">
-                  <span style="font-size:19px;font-weight:900;color:${clr};letter-spacing:0.5px;">${teamName}</span>
+                  <img src="${logo}" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 10px ${clrBold});">
+                  <div style="font-size:20px;font-weight:900;color:${clr};letter-spacing:1px;text-transform:uppercase;line-height:1.2;">${teamName}</div>
                 </div>
                 <button id="closeTeamLbBtn" style="
-                  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
-                  color:rgba(255,255,255,0.6);border-radius:20px;padding:5px 16px;
+                  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+                  color:rgba(255,255,255,0.5);border-radius:20px;padding:5px 16px;
                   font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;
+                  width:fit-content;flex-shrink:0;
                 ">Close</button>
               </div>
-              <div style="display:flex;gap:4px;padding-bottom:0;">
+              <div style="display:flex;gap:2px;">
                 ${tabDefs.map(t => `
                   <button id="teamLbTab_${t.id}" style="
-                    flex:1;padding:10px 6px;font-size:12px;font-weight:800;font-family:inherit;
-                    border:none;border-radius:10px 10px 0 0;cursor:pointer;
-                    background:${_teamLbTab===t.id ? clrGlowS : 'transparent'};
-                    color:${_teamLbTab===t.id ? clr : 'rgba(255,255,255,0.4)'};
+                    flex:1;padding:9px 6px;font-size:11px;font-weight:800;font-family:inherit;letter-spacing:0.5px;text-transform:uppercase;
+                    border:none;border-radius:8px 8px 0 0;cursor:pointer;
+                    background:${_teamLbTab===t.id ? `rgba(255,255,255,0.07)` : 'transparent'};
+                    color:${_teamLbTab===t.id ? clr : 'rgba(255,255,255,0.3)'};
                     border-bottom:${_teamLbTab===t.id ? `2px solid ${clrBold}` : '2px solid transparent'};
                   ">${t.label}</button>`).join("")}
               </div>
             </div>
-            <div id="teamLbContent" style="flex:1;overflow-y:auto;display:flex;align-items:center;justify-content:center;">
+            <div id="teamLbContent" style="flex:1;overflow-y:auto;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;">
               <div style="font-size:28px;opacity:0.5;">⏳</div>
             </div>
           </div>`;
@@ -3205,13 +3335,14 @@
         if (_teamLbTab === "yourrank") {
           const { data: myData } = await db
             .from("trainer_hatches")
-            .select("step_count, hatch_count")
+            .select("step_count, hatch_count, team_egg_wins")
             .ilike("display_name", state.trainerName)
             .single();
 
-          const steps   = myData?.step_count  || 0;
-          const hatches = myData?.hatch_count || 0;
-          const score   = steps + hatches * 5000;
+          const steps    = myData?.step_count   || 0;
+          const hatches  = myData?.hatch_count  || 0;
+          const teamWins = myData?.team_egg_wins || 0;
+          const score    = steps + hatches * 5000 + teamWins * 10000;
           const idx     = _teamRankIdx(score);
           const isMax   = idx === _TEAM_THRESHOLDS.length - 1;
           const nextIdx = Math.min(idx + 1, _TEAM_THRESHOLDS.length - 1);
@@ -3219,31 +3350,35 @@
 
           content.style.cssText = "flex:1;overflow-y:auto;display:block;";
           content.innerHTML = `
-            <div style="padding:28px 20px 12px;text-align:center;">
-              <div style="font-size:11px;font-weight:800;color:${clrBold};letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Your Rank</div>
-              <div style="font-size:42px;font-weight:900;color:${textMain};text-shadow:0 0 24px ${clrBold};margin-bottom:4px;">${ranks[idx]}</div>
-              <div style="font-size:13px;color:${textMuted};font-weight:600;">${score.toLocaleString()} pts</div>
+            <div style="padding:24px 20px 8px;text-align:center;">
+              <div style="font-size:10px;font-weight:800;color:${clrBold};letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;opacity:0.8;">Your Rank</div>
+              <div style="font-size:46px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;text-shadow:0 0 40px #fff,0 0 16px ${clrBold};line-height:1;margin-bottom:6px;">${ranks[idx]}</div>
+              <div style="font-size:12px;color:${textMuted};font-weight:700;letter-spacing:1px;">${score.toLocaleString()} PTS</div>
             </div>
-            <div style="padding:0 20px 20px;">
+            <div style="padding:16px 20px 14px;">
               <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-size:12px;font-weight:700;color:${textMuted};">${isMax ? 'MAX RANK ACHIEVED' : `Next: ${ranks[nextIdx]}`}</span>
-                <span style="font-size:12px;font-weight:700;color:${textMuted};">${isMax ? '' : `${(_TEAM_THRESHOLDS[nextIdx] - score).toLocaleString()} to go`}</span>
+                <span style="font-size:11px;font-weight:800;color:${textMuted};text-transform:uppercase;letter-spacing:0.5px;">${isMax ? 'MAX RANK ACHIEVED' : `Next: ${ranks[nextIdx].toUpperCase()}`}</span>
+                <span style="font-size:11px;font-weight:700;color:${textMuted};">${isMax ? '' : `${(_TEAM_THRESHOLDS[nextIdx] - score).toLocaleString()} to go`}</span>
               </div>
-              <div style="height:10px;border-radius:5px;background:rgba(255,255,255,0.07);overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${clrBold},${clr});border-radius:5px;box-shadow:0 0 8px ${clrGlow};"></div>
-              </div>
-            </div>
-            <div style="display:flex;gap:10px;padding:0 20px 16px;">
-              <div style="flex:1;background:${clrBar};border:1px solid ${clrGlow};border-radius:14px;padding:16px;text-align:center;">
-                <div style="font-size:24px;font-weight:900;color:${textMain};">${steps.toLocaleString()}</div>
-                <div style="font-size:11px;font-weight:700;color:${textMuted};margin-top:3px;text-transform:uppercase;letter-spacing:1px;">Steps</div>
-              </div>
-              <div style="flex:1;background:${clrBar};border:1px solid ${clrGlow};border-radius:14px;padding:16px;text-align:center;">
-                <div style="font-size:24px;font-weight:900;color:${textMain};">${hatches.toLocaleString()}</div>
-                <div style="font-size:11px;font-weight:700;color:${textMuted};margin-top:3px;text-transform:uppercase;letter-spacing:1px;">Hatches</div>
+              <div style="height:8px;border-radius:4px;background:rgba(255,255,255,0.07);overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${clrBold},${clr});border-radius:4px;box-shadow:0 0 10px ${clrGlow};"></div>
               </div>
             </div>
-            <div style="text-align:center;padding:0 20px 20px;font-size:11px;color:${textMuted};">Score = steps + (hatches x 5,000)</div>`;
+            <div style="display:flex;gap:10px;padding:0 20px 14px;">
+              <div style="flex:1;background:${clrBar};border:1px solid ${clrGlow};border-radius:14px;padding:14px;text-align:center;">
+                <div style="font-size:22px;font-weight:900;color:${textMain};">${steps.toLocaleString()}</div>
+                <div style="font-size:10px;font-weight:800;color:${textMuted};margin-top:3px;text-transform:uppercase;letter-spacing:1.5px;">Steps</div>
+              </div>
+              <div style="flex:1;background:${clrBar};border:1px solid ${clrGlow};border-radius:14px;padding:14px;text-align:center;">
+                <div style="font-size:22px;font-weight:900;color:${textMain};">${hatches.toLocaleString()}</div>
+                <div style="font-size:10px;font-weight:800;color:${textMuted};margin-top:3px;text-transform:uppercase;letter-spacing:1.5px;">Hatches</div>
+              </div>
+              ${teamWins > 0 ? `<div style="flex:1;background:${clrBar};border:1px solid ${clrGlow};border-radius:14px;padding:14px;text-align:center;">
+                <div style="font-size:22px;font-weight:900;color:${textMain};">${teamWins}</div>
+                <div style="font-size:10px;font-weight:800;color:${textMuted};margin-top:3px;text-transform:uppercase;letter-spacing:1.5px;">Team Wins</div>
+              </div>` : ''}
+            </div>
+            `;
 
         } else if (_teamLbTab === "leaders") {
           const { data, error } = await db.rpc("get_team_leaderboard", { p_team: team });
@@ -3262,7 +3397,7 @@
               <span style="font-size:18px;width:30px;text-align:center;flex-shrink:0;">${medal}</span>
               <div style="flex:1;overflow:hidden;">
                 <div style="font-weight:800;color:${textMain};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_escHtml(row.display_name)}${isYou ? ` <span style="font-size:11px;color:${textMuted};">(you)</span>` : ''}</div>
-                <div style="font-size:11px;color:${clr};font-weight:700;margin-top:1px;">${_teamRankName(score, team)}</div>
+                <div style="font-size:11px;color:${clr};font-weight:800;margin-top:1px;text-transform:uppercase;letter-spacing:0.5px;">${_teamRankName(score, team)}</div>
               </div>
               <span style="font-weight:900;color:${clr};font-size:15px;flex-shrink:0;">${score.toLocaleString()}</span>
             </div>`;
@@ -3272,26 +3407,165 @@
           content.innerHTML = `<div style="padding:12px 16px;">${rows}</div>`;
 
         } else {
-          const rows = ranks.map((name, i) => {
-            const isMax   = i === _TEAM_THRESHOLDS.length - 1;
-            const fillPct = Math.round(30 + (i / (ranks.length - 1)) * 70);
-            return `<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;background:${clrRow};margin-bottom:6px;">
-              <div style="
-                width:32px;height:32px;border-radius:50%;flex-shrink:0;
-                background:linear-gradient(135deg,${clrBold},${clr});
-                opacity:${(fillPct/100).toFixed(2)};
-                box-shadow:0 0 ${Math.round(4 + i * 2)}px ${clrGlow};
-              "></div>
-              <div style="flex:1;">
-                <div style="font-weight:800;color:${textMain};">${name}</div>
-                <div style="font-size:11px;color:${textMuted};font-weight:600;margin-top:1px;">Rank ${i + 1} of ${ranks.length}</div>
+          content.style.cssText = "flex:1;overflow-y:auto;display:flex;align-items:center;justify-content:center;";
+          content.innerHTML = `<div style="font-size:28px;opacity:0.5;">⏳</div>`;
+
+          const { data, error } = await db.rpc("get_team_stats");
+
+          if (error || !data?.length) {
+            content.innerHTML = `<div style="text-align:center;padding:32px;color:${textMuted};font-weight:700;">No stats yet.</div>`;
+            return;
+          }
+
+          const nest  = data.find(r => r.team === "nest")  || { member_count: 0, total_steps: 0, total_hatches: 0, total_team_wins: 0 };
+          const hatch = data.find(r => r.team === "hatch") || { member_count: 0, total_steps: 0, total_hatches: 0, total_team_wins: 0 };
+
+          const nestSteps    = Number(nest.total_steps);
+          const hatchSteps   = Number(hatch.total_steps);
+          const nestHatches  = Number(nest.total_hatches);
+          const hatchHatches = Number(hatch.total_hatches);
+          const nestMembers  = Number(nest.member_count);
+          const hatchMembers = Number(hatch.member_count);
+          const nestWins     = Number(nest.total_team_wins);
+          const hatchWins    = Number(hatch.total_team_wins);
+
+          const totalSteps   = nestSteps + hatchSteps || 1;
+          const totalHatches = nestHatches + hatchHatches || 1;
+          const totalWins    = nestWins + hatchWins || 1;
+          const nestStepPct  = Math.round(nestSteps   / totalSteps   * 100);
+          const nestHatchPct = Math.round(nestHatches  / totalHatches * 100);
+          const nestWinPct   = Math.round(nestWins     / totalWins    * 100);
+
+          const statRow = (label, nestVal, hatchVal, nestPct) => `
+            <div style="margin-bottom:18px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+                <span style="font-size:18px;font-weight:900;color:#fff;">${nestVal}</span>
+                <span style="font-size:11px;font-weight:800;color:${textMuted};text-transform:uppercase;letter-spacing:1px;">${label}</span>
+                <span style="font-size:18px;font-weight:900;color:#fff;">${hatchVal}</span>
               </div>
-              <span style="font-weight:700;color:${textMuted};font-size:12px;">${isMax ? `${_TEAM_THRESHOLDS[i].toLocaleString()}+` : _TEAM_THRESHOLDS[i].toLocaleString()}</span>
+              <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;">
+                <div style="width:${nestPct}%;background:linear-gradient(90deg,#16a34a,#22c55e);border-radius:4px 0 0 4px;"></div>
+                <div style="flex:1;background:linear-gradient(90deg,#dc2626,#ef4444);border-radius:0 4px 4px 0;"></div>
+              </div>
             </div>`;
-          }).join("");
 
           content.style.cssText = "flex:1;overflow-y:auto;display:block;";
-          content.innerHTML = `<div style="padding:12px 16px;">${rows}</div>`;
+          content.innerHTML = `
+            <div style="padding:16px 18px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <img src="./teamnest.png" style="width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 0 6px #22c55e);">
+                  <div>
+                    <div style="font-size:12px;font-weight:900;color:#22c55e;text-transform:uppercase;letter-spacing:1px;">Team Nest</div>
+                    <div style="font-size:11px;color:${textMuted};font-weight:600;">${nestMembers.toLocaleString()} members</div>
+                  </div>
+                </div>
+                <div style="font-size:11px;font-weight:900;color:${textMuted};text-transform:uppercase;letter-spacing:2px;">VS</div>
+                <div style="display:flex;align-items:center;gap:8px;text-align:right;flex-direction:row-reverse;">
+                  <img src="./teamhatch.png" style="width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 0 6px #ef4444);">
+                  <div>
+                    <div style="font-size:12px;font-weight:900;color:#ef4444;text-transform:uppercase;letter-spacing:1px;">Team Hatch</div>
+                    <div style="font-size:11px;color:${textMuted};font-weight:600;">${hatchMembers.toLocaleString()} members</div>
+                  </div>
+                </div>
+              </div>
+              ${statRow("Total Steps",   nestSteps.toLocaleString(),   hatchSteps.toLocaleString(),   nestStepPct)}
+              ${statRow("Eggs Hatched",  nestHatches.toLocaleString(), hatchHatches.toLocaleString(), nestHatchPct)}
+              ${statRow("Team Eggs Won", nestWins.toLocaleString(),    hatchWins.toLocaleString(),    nestWinPct)}
+            </div>`;
+        }
+      }
+
+      function _showTeamEggVictory(nestSteps, hatchSteps) {
+        const total   = (nestSteps || 0) + (hatchSteps || 0);
+        const winner  = nestSteps > hatchSteps ? 'nest' : hatchSteps > nestSteps ? 'hatch' : null;
+        const isNest  = winner === 'nest';
+        const clr     = winner ? (isNest ? "#4ade80" : "#f87171") : "#fff";
+        const clrBold = winner ? (isNest ? "#22c55e" : "#ef4444") : "#aaa";
+        const bg      = winner
+          ? (isNest ? "linear-gradient(135deg,#0d2e0d,#071507)" : "linear-gradient(135deg,#3d0b0b,#1a0404)")
+          : "linear-gradient(135deg,#1a1a2e,#0d0d1a)";
+        const glow    = winner ? (isNest ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.5)") : "rgba(255,255,255,0.2)";
+        const logo    = winner ? (isNest ? "./teamnest.png" : "./teamhatch.png") : null;
+        const label   = winner ? (isNest ? "TEAM NEST WINS" : "TEAM HATCH WINS") : "A TIE!";
+        const nestPct = total > 0 ? Math.round(nestSteps / total * 100) : 50;
+
+        const overlay = document.createElement("div");
+        overlay.style.cssText = `position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);animation:fadeIn 0.3s ease;`;
+        overlay.innerHTML = `
+          <div style="
+            background:${bg};border:2px solid ${glow};
+            box-shadow:0 0 60px ${glow},0 24px 80px rgba(0,0,0,0.7);
+            border-radius:28px;padding:36px 40px;text-align:center;max-width:340px;width:90%;
+          ">
+            ${logo ? `<img src="${logo}" style="width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 0 16px ${clrBold});margin-bottom:16px;">` : '<div style="font-size:48px;margin-bottom:16px;">🥚</div>'}
+            <div style="font-size:11px;font-weight:800;color:${clrBold};letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">Team Egg</div>
+            <div style="font-size:32px;font-weight:900;color:#fff;text-shadow:0 0 24px ${clrBold};text-transform:uppercase;letter-spacing:2px;line-height:1.1;margin-bottom:20px;">${label}</div>
+            <div style="height:10px;border-radius:5px;overflow:hidden;display:flex;margin-bottom:10px;">
+              <div style="width:${nestPct}%;background:#22c55e;"></div>
+              <div style="flex:1;background:#ef4444;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:rgba(255,255,255,0.5);">
+              <span style="color:#4ade80;">Nest: ${(nestSteps||0).toLocaleString()}</span>
+              <span style="color:#f87171;">Hatch: ${(hatchSteps||0).toLocaleString()}</span>
+            </div>
+            ${winner ? `<div style="margin-top:16px;font-size:13px;font-weight:700;color:${clr};opacity:0.8;">All ${isNest ? 'Nest' : 'Hatch'} members earned 10,000 XP</div>` : ''}
+          </div>`;
+        document.body.appendChild(overlay);
+        setTimeout(() => {
+          overlay.style.transition = "opacity 0.5s";
+          overlay.style.opacity = "0";
+          setTimeout(() => overlay.remove(), 500);
+        }, 3500);
+      }
+
+      function _updateTeamEggUI() {
+        const nest  = state.eggState?.nestSteps  ?? 0;
+        const hatch = state.eggState?.hatchSteps ?? 0;
+        const total = nest + hatch;
+        const nestPct  = total === 0 ? 50 : Math.round(nest / total * 100);
+        const hatchPct = 100 - nestPct;
+
+        const tugNest     = document.getElementById("tugNest");
+        const tugHatch    = document.getElementById("tugHatch");
+        const tint        = document.getElementById("teamTint");
+        const label       = document.getElementById("teamTugLabel");
+        const nestLogo    = document.getElementById("tugNestLogo");
+        const hatchLogo   = document.getElementById("tugHatchLogo");
+
+        if (tugNest)  tugNest.style.width = nestPct + "%";
+        if (tugHatch) tugHatch.style.flex = "0 0 " + hatchPct + "%";
+
+        if (tugNest) {
+          tugNest.classList.toggle("tug-nest-lead",   nestPct > hatchPct);
+          tugNest.classList.toggle("tug-hatch-lead",  false);
+        }
+        if (tugHatch) {
+          tugHatch.classList.toggle("tug-hatch-lead", hatchPct > nestPct);
+          tugHatch.classList.toggle("tug-nest-lead",  false);
+        }
+
+        if (nestLogo)  nestLogo.style.opacity  = nestPct  >= hatchPct ? "1"   : "0.45";
+        if (hatchLogo) hatchLogo.style.opacity = hatchPct >= nestPct  ? "1"   : "0.45";
+        if (nestLogo)  nestLogo.style.filter   = nestPct  >  hatchPct ? "drop-shadow(0 0 10px rgba(34,197,94,1)) drop-shadow(0 0 20px rgba(34,197,94,0.5))" : "drop-shadow(0 0 4px rgba(34,197,94,0.4))";
+        if (hatchLogo) hatchLogo.style.filter  = hatchPct >  nestPct  ? "drop-shadow(0 0 10px rgba(239,68,68,1)) drop-shadow(0 0 20px rgba(239,68,68,0.5))" : "drop-shadow(0 0 4px rgba(239,68,68,0.4))";
+
+        if (tint) {
+          const deviation = total === 0 ? 0 : Math.abs(nestPct - 50) / 50;
+          tint.style.background = nestPct > hatchPct ? "#22c55e" : "#ef4444";
+          tint.style.opacity    = (deviation * 0.35).toFixed(2);
+        }
+
+        if (label) {
+          const leader = total === 0 ? null : nestPct > hatchPct ? "🟢 Nest leading" : nestPct < hatchPct ? "🔴 Hatch leading" : null;
+          label.textContent = leader ?? (total > 0 ? "⚡ Tied ⚡" : "");
+        }
+
+        const eggBtn = document.getElementById("eggTapBtn");
+        if (eggBtn) {
+          eggBtn.classList.remove("team-nest", "team-hatch");
+          if (nestPct > hatchPct) eggBtn.classList.add("team-nest");
+          else if (hatchPct > nestPct) eggBtn.classList.add("team-hatch");
         }
       }
 
@@ -3466,8 +3740,11 @@
         const isSpecial    = row.is_special    !== undefined ? row.is_special    : prev.isSpecial;
         const isMega       = row.is_mega    !== undefined ? (row.is_mega    ?? false) : (prev.isMega    ?? false);
         const expiresAt    = row.expires_at !== undefined ? (row.expires_at ?? null)  : (prev.expiresAt ?? null);
-        const hint1At      = row.hint1_at   !== undefined ? row.hint1_at   : prev.hint1At;
-        const hint2At      = row.hint2_at   !== undefined ? row.hint2_at   : prev.hint2At;
+        const hint1At      = row.hint1_at    !== undefined ? row.hint1_at    : prev.hint1At;
+        const hint2At      = row.hint2_at    !== undefined ? row.hint2_at    : prev.hint2At;
+        const isTeamEgg    = row.is_team_egg !== undefined ? !!row.is_team_egg : (prev.isTeamEgg ?? false);
+        const nestSteps    = row.nest_steps  !== undefined ? (row.nest_steps  ?? 0) : (prev.nestSteps  ?? 0);
+        const hatchSteps   = row.hatch_steps !== undefined ? (row.hatch_steps ?? 0) : (prev.hatchSteps ?? 0);
         const status       = row.status !== undefined ? (row.status || 'hatching') : (prevStatus || 'hatching');
         const isActive     = status === 'hatched' || status === 'claiming';
 
@@ -3482,6 +3759,9 @@
           expiresAt,
           hint1At,
           hint2At,
+          isTeamEgg,
+          nestSteps,
+          hatchSteps,
           status,
           hatched:  isActive,
           loading:  false,
@@ -3621,11 +3901,22 @@
                 _presenceChannel.send({
                   type:    'broadcast',
                   event:   'step_update',
-                  payload: { steps: state.eggState.currentSteps, slug: state.eggState.targetSlug },
+                  payload: {
+                    steps:      state.eggState.currentSteps,
+                    slug:       state.eggState.targetSlug,
+                    nestSteps:  state.eggState.nestSteps  ?? 0,
+                    hatchSteps: state.eggState.hatchSteps ?? 0,
+                    isTeamEgg:  state.eggState.isTeamEgg  ?? false,
+                  },
                 });
               }
+              if (state.eggState.isTeamEgg) _updateTeamEggUI();
+
               if (wasHatching && state.eggState.status !== 'hatching') {
-                _playHatchSequence(); // egg just hatched — play burst then reveal
+                if (state.eggState.isTeamEgg) {
+                  _showTeamEggVictory(state.eggState.nestSteps, state.eggState.hatchSteps);
+                }
+                _playHatchSequence();
                 // Auto-claim as the player whose step caused this hatch
                 const { data: won } = await db.rpc("try_claim_egg", { p_trainer_name: state.trainerName ? state.trainerName.toLowerCase() : null, p_display_name: state.trainerName || null });
                 if (won) {
@@ -3733,7 +4024,7 @@
 
         // Load shared egg from Supabase egg_state table
         try {
-          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
+          const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny,is_team_egg,nest_steps,hatch_steps").eq("id", 1).single();
           if (eggRow && eggRow.target_slug) {
             _applyEggRow(eggRow);
           } else {
@@ -3759,9 +4050,13 @@
       // True on phones/tablets — autoclicker detection doesn't apply to touch
       const _isTouchDevice = window.matchMedia('(pointer:coarse)').matches;
       let _lastClickEvent = null;
+      let _lastStepTs = 0;
 
       function handleTakeStep(e) {
-        if (document.hidden) return; // tab backgrounded / screen locked — ignore phantom taps
+        const now = Date.now();
+        if (now - _lastStepTs < 50) return;
+        _lastStepTs = now;
+        if (document.hidden) return;
         if (e) _lastClickEvent = e;
         const egg = state.eggState;
         if (!egg || egg.status !== 'hatching') return;
@@ -3833,7 +4128,11 @@
         const isShiny      = pokemon.isShiny;
         const stepsToHatch = pokemon.stepsToHatch || state.eggState.currentSteps;
         const visibleAfter = Date.now() + revealSeconds * 1000;
-        const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), visibleAfter };
+        const isTeamEgg = state.eggState?.isTeamEgg ?? false;
+        const teamEggWinner = isTeamEgg
+          ? ((state.eggState.nestSteps ?? 0) >= (state.eggState.hatchSteps ?? 0) ? 'nest' : 'hatch')
+          : null;
+        const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), visibleAfter, teamEggWinner };
         state.recentLog.unshift(entry);
         state.recentLog = state.recentLog.slice(0, 12);
         if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
@@ -4004,7 +4303,7 @@
         await db.from("egg_state")
           .update({ status: 'hatched', current_steps: egg.targetSteps, hatched_at: new Date().toISOString() })
           .eq("id", 1);
-        const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
+        const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny,is_team_egg,nest_steps,hatch_steps").eq("id", 1).single();
         if (eggRow) { _applyEggRow(eggRow); render(); }
       }
 
@@ -4183,13 +4482,13 @@
             subText     = egg?.isSpecial ? "Rare energy radiates from this egg. Keep stepping." : "Take a step to hatch it. Any Pokémon could be inside.";
           } else if (progress < hint1At) {
             eggTypeHint = "It looks as though this Egg will take a long time yet to hatch.";
-            subText     = egg.isSpecial ? "Whatever is inside, it pulses with strange energy." : "Keep stepping — every step counts.";
+            subText     = egg.isSpecial ? "Whatever is inside, it pulses with strange energy." : "Keep stepping. Every step counts.";
           } else if (progress < hint2At) {
             eggTypeHint = "What Pokémon will hatch from this Egg? It doesn't seem close to hatching.";
             subText     = "It's warming up… but it still has a ways to go.";
           } else if (progress < 0.75) {
             eggTypeHint = "It appears to move occasionally. It may be close to hatching.";
-            subText     = "Keep going — something is stirring inside.";
+            subText     = "Keep going. Something is stirring inside.";
           } else {
             eggTypeHint = "Sounds can be heard coming from inside! This Egg will hatch soon!";
             subText     = "Just a few more steps…";
@@ -4213,9 +4512,25 @@
                 <button class="egg-button${specialClass}" id="eggTapBtn" aria-label="Take a Step">
                   <div class="egg-glow"></div>
                   <img class="egg-image${egg?.isMega ? " mega-egg-glow" : ""}" src="${egg?.isDitto ? (egg.isShiny ? "./shinydittoegg.png" : "./dittoegg.png") : egg?.isMega ? "./megaegg.png" : EGG_IMAGE}" alt="Odd Egg" draggable="false" />
+                  ${egg?.isTeamEgg ? `<div id="teamTint" style="position:absolute;inset:0;border-radius:50%;pointer-events:none;transition:background 0.4s,opacity 0.4s;"></div>` : ''}
                 </button>
                 <div class="${counterClass}" id="clickCounter">${fmt(displaySteps)} steps</div>
-                ${showJoinBubble ? `<button class="join-team-bubble" id="joinTeamBubble" onclick="_showTeamIntro()">Join Us</button>` : ""}
+                ${egg?.isTeamEgg ? `
+                  <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:min(300px,90%);z-index:5;pointer-events:none;">
+                    <div style="display:flex;align-items:center;gap:7px;">
+                      <img src="./teamnest.png" id="tugNestLogo" style="width:26px;height:26px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 0 6px rgba(34,197,94,0.9));transition:filter 0.4s,opacity 0.4s;" />
+                      <div style="flex:1;position:relative;">
+                        <div style="border-radius:10px;overflow:hidden;height:16px;display:flex;background:#111;box-shadow:0 0 0 2px rgba(0,0,0,0.5),0 3px 10px rgba(0,0,0,0.6);">
+                          <div id="tugNest" style="height:100%;background:linear-gradient(90deg,#15803d,#4ade80);width:50%;transition:width 0.5s cubic-bezier(0.34,1.56,0.64,1);"></div>
+                          <div id="tugHatch" style="height:100%;background:linear-gradient(90deg,#f87171,#b91c1c);flex:1;transition:flex 0.5s cubic-bezier(0.34,1.56,0.64,1);"></div>
+                        </div>
+                        <div id="teamTugLabel" style="text-align:center;font-size:8px;font-weight:900;color:rgba(255,255,255,0.9);letter-spacing:0.18em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,0.9);margin-top:3px;"></div>
+                      </div>
+                      <img src="./teamhatch.png" id="tugHatchLogo" style="width:26px;height:26px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 0 6px rgba(239,68,68,0.9));transition:filter 0.4s,opacity 0.4s;" />
+                    </div>
+                  </div>
+                ` : ''}
+                ${showJoinBubble ? `<button class="join-team-bubble" id="joinTeamBubble" onclick="_showTeamIntro()">⚔ PICK A SIDE</button>` : ""}
               </div>
               <div class="dialog-wrap">
                 <div class="dialog">
@@ -4235,6 +4550,7 @@
 
           document.getElementById("stepBtn").onclick = handleTakeStep;
           document.getElementById("eggTapBtn").onclick = handleTakeStep;
+          if (egg?.isTeamEgg) _updateTeamEggUI();
           if (egg?.isMega) {
             const hbSpeed = progress < 0.25 ? 5.0 : progress < 0.5 ? 3.5 : progress < 0.75 ? 2.2 : 1.3;
             document.querySelector(".mega-egg-glow")?.style.setProperty("--hb-speed", hbSpeed + "s");
@@ -4320,17 +4636,27 @@
         const newHTML = dexArray.map(entry => {
           const count    = (entry.isShiny ? state.shinyFoundCounts : state.foundCounts)[entry.line] || 0;
           const isBase   = POKEMON_DATA[entry.slug]?.isBase;
-          const entryClass = entry.isSpecial ? " special-entry" : entry.isShiny ? " shiny-entry" : "";
+          const isTeamEntry = !!entry.teamEggWinner;
+          const teamWinner  = entry.teamEggWinner;
+          const teamClr     = teamWinner === 'nest' ? '#14532d' : '#7f1d1d';
+          const teamBg      = teamWinner === 'nest' ? 'linear-gradient(135deg,rgba(20,83,45,0.12),rgba(22,163,74,0.06))' : 'linear-gradient(135deg,rgba(127,29,29,0.12),rgba(220,38,38,0.06))';
+          const teamBorder  = teamWinner === 'nest' ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)';
+          const teamLogo    = teamWinner === 'nest' ? './teamnest.png' : './teamhatch.png';
+          const teamLabel   = teamWinner === 'nest' ? 'Team Nest' : 'Team Hatch';
+          const teamEntryClass = isTeamEntry ? (teamWinner === 'nest' ? ' team-nest-entry' : ' team-hatch-entry') : '';
+          const entryClass  = entry.isSpecial ? " special-entry" : entry.isShiny ? " shiny-entry" : teamEntryClass;
+          const entryStyle  = "";
           return `
-            <div class="entry${entryClass}">
+            <div class="entry${entryClass}" ${entryStyle}>
               <img src="${entry.image}" alt="${entry.name}" />
-              <div>
+              <div style="flex:1;">
                 <div class="entry-title">
                   <h3>${entry.name}${entry.isShiny ? " ✨" : ""}</h3>
                   <span class="pill">#${String(entry.id).padStart(4, "0")}</span>
                   ${entry.isSpecial ? `<span class="pill">⭐</span>` : ""}
                 </div>
-                <div class="entry-meta">Found by ${entry.discoveredBy}</div>
+                <div class="entry-meta">${isTeamEntry ? `<span style="font-weight:900;color:${teamWinner === 'nest' ? '#15803d' : '#dc2626'};">Found by ${teamLabel}</span>` : `Found by ${entry.discoveredBy}`}</div>
+              ${isTeamEntry ? `<img src="${teamLogo}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);width:32px;height:32px;object-fit:contain;opacity:0.7;">` : ''}
                 <div class="entry-date">${formatDate(entry.claimedAt)}</div>
                 <div class="entry-steps">${fmt(entry.stepsToHatch || 0)} steps</div>
                 ${entry.evolvedFrom  ? `<div class="entry-evolved">Evolved from ${entry.evolvedFrom}</div>` : ""}
@@ -4831,7 +5157,7 @@
           .subscribe(async (status) => {
             if (status !== "SUBSCRIBED") return;
             // Re-fetch full egg_state on (re)connect to catch up on missed events
-            const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny").eq("id", 1).single();
+            const { data: eggRow } = await db.from("egg_state").select("target_slug,is_shiny,target_steps,current_steps,is_ditto,is_special,is_mega,expires_at,hint1_at,hint2_at,status,reveal_ends_at,revealed_slug,revealed_is_shiny,is_team_egg,nest_steps,hatch_steps").eq("id", 1).single();
             if (!eggRow) return;
             const prevStatus = state.eggState?.status;
             _applyEggRow(eggRow);
