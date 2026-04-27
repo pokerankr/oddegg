@@ -1664,6 +1664,7 @@
       let _dittoCountdown     = 0;                 // seconds left on ditto picker
       let _presenceChannel    = null;
       let _onlineTrainers     = [];
+      const _trainerTeamCache = new Map(); // name.toLowerCase() → team string
       let _velocitySnapshots  = {};  // { lowerName: { steps, time } }
       let _velocityReadings   = {};  // { lowerName: steps/sec }
       let _banStatus          = null; // { expiresAt: Date|null } if banned, else null
@@ -2169,7 +2170,11 @@
             const seen = new Map();
             Object.values(ps).flat()
               .filter(p => p.name)
-              .forEach(p => seen.set(p.name.toLowerCase(), { name: p.name, team: p.team || null }));
+              .forEach(p => {
+                const lower = p.name.toLowerCase();
+                seen.set(lower, { name: p.name, team: p.team || null });
+                if (p.team) _trainerTeamCache.set(lower, p.team);
+              });
             _onlineTrainers = Array.from(seen.values());
             renderOnlineTrainers();
           })
@@ -4067,6 +4072,23 @@
           if (!processedLines.has(e.line + "|0")) { autoMerge(e.line, false); processedLines.add(e.line + "|0"); }
           if (!processedLines.has(e.line + "|1")) { autoMerge(e.line, true);  processedLines.add(e.line + "|1"); }
         });
+
+        _backfillTrainerTeams();
+      }
+
+      async function _backfillTrainerTeams() {
+        const names = new Set();
+        [...state.recentLog, ...state.shinyRecentLog].forEach(e => {
+          if (e.discoveredBy && !e.discovererTeam) {
+            const lower = e.discoveredBy.toLowerCase();
+            if (!_trainerTeamCache.has(lower)) names.add(e.discoveredBy);
+          }
+        });
+        for (const name of names) {
+          const { data } = await db.rpc("get_trainer_team", { p_name: name });
+          if (data) _trainerTeamCache.set(name.toLowerCase(), data);
+        }
+        if (names.size > 0) renderRecentFound();
       }
 
       // ─── Event handlers ──────────────────────────────────────────────────────
@@ -4663,6 +4685,7 @@
           const isTeamEntry = !!entry.teamEggWinner;
           const teamWinner  = entry.teamEggWinner;
           const discovererTeam = entry.discovererTeam ||
+            _trainerTeamCache.get((entry.discoveredBy||'').toLowerCase()) ||
             (_onlineTrainers.find(t => (t.name||'').toLowerCase() === (entry.discoveredBy||'').toLowerCase())?.team) || null;
           const teamClr     = teamWinner === 'nest' ? '#14532d' : '#7f1d1d';
           const teamBg      = teamWinner === 'nest' ? 'linear-gradient(135deg,rgba(20,83,45,0.12),rgba(22,163,74,0.06))' : 'linear-gradient(135deg,rgba(127,29,29,0.12),rgba(220,38,38,0.06))';
