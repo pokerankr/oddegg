@@ -1217,9 +1217,9 @@
                 <div class="dex-subtitle">Living Dex</div>
               </div>
               <div class="dex-charm-row" id="dexCharmRow">
-                <div class="dex-charm-icon" id="dexFlameBodyCharm" style="display:none">
+                <div class="dex-charm-icon charm-icon-locked" id="dexFlameBodyCharm">
                   <img src="volcanobadge.png" alt="Flame Body" />
-                  <div class="charm-tooltip" id="dexFlameBodyTip">Flame Body: Eggs hatch 10% faster</div>
+                  <div class="charm-tooltip" id="dexFlameBodyTip">Flame Body: locked</div>
                 </div>
                 <div class="dex-charm-icon charm-icon-locked" id="dexOvalCharm">
                   <img src="ovalcharm.png" alt="Oval Charm" />
@@ -4662,6 +4662,8 @@
           const isBase   = POKEMON_DATA[entry.slug]?.isBase;
           const isTeamEntry = !!entry.teamEggWinner;
           const teamWinner  = entry.teamEggWinner;
+          const discovererTeam = entry.discovererTeam ||
+            (_onlineTrainers.find(t => (t.name||'').toLowerCase() === (entry.discoveredBy||'').toLowerCase())?.team) || null;
           const teamClr     = teamWinner === 'nest' ? '#14532d' : '#7f1d1d';
           const teamBg      = teamWinner === 'nest' ? 'linear-gradient(135deg,rgba(20,83,45,0.12),rgba(22,163,74,0.06))' : 'linear-gradient(135deg,rgba(127,29,29,0.12),rgba(220,38,38,0.06))';
           const teamBorder  = teamWinner === 'nest' ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)';
@@ -4679,7 +4681,7 @@
                   <span class="pill">#${String(entry.id).padStart(4, "0")}</span>
                   ${entry.isSpecial ? `<span class="pill">⭐</span>` : ""}
                 </div>
-                <div class="entry-meta">${isTeamEntry ? `<span style="font-weight:900;color:${teamWinner === 'nest' ? '#15803d' : '#dc2626'};">Found by ${teamLabel}</span>` : `Found by ${teamBadge(entry.discovererTeam, 13)}<span style="color:${teamColor(entry.discovererTeam)};font-weight:${entry.discovererTeam ? '900' : '700'};">${_escHtml(entry.discoveredBy || '')}</span>`}</div>
+                <div class="entry-meta">${isTeamEntry ? `<span style="font-weight:900;color:${teamWinner === 'nest' ? '#15803d' : '#dc2626'};">Found by ${teamLabel}</span>` : `Found by ${teamBadge(discovererTeam, 13)}<span style="color:${teamColor(discovererTeam)};font-weight:${discovererTeam ? '900' : '700'};">${_escHtml(entry.discoveredBy || '')}</span>`}</div>
               ${isTeamEntry ? `<img src="${teamLogo}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);width:32px;height:32px;object-fit:contain;opacity:0.7;">` : ''}
                 <div class="entry-date">${formatDate(entry.claimedAt)}</div>
                 <div class="entry-steps">${fmt(entry.stepsToHatch || 0)} steps</div>
@@ -4871,7 +4873,10 @@
         const catchTip   = document.getElementById("dexCatchingTip");
 
         if (flameIcon) {
-          flameIcon.style.display = state.flameBodyCharmUnlocked ? "" : "none";
+          flameIcon.classList.toggle("charm-icon-locked", !state.flameBodyCharmUnlocked);
+          if (flameTip) flameTip.textContent = state.flameBodyCharmUnlocked
+            ? "Flame Body: Eggs hatch 10% faster"
+            : "Flame Body: Hatch a Flame Body Pokémon";
         }
         if (ovalIcon) {
           ovalIcon.classList.toggle("charm-icon-locked", !state.ovalCharmUnlocked);
