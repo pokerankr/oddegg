@@ -2147,7 +2147,11 @@
         _presenceChannel
           .on("presence", { event: "sync" }, () => {
             const ps = _presenceChannel.presenceState();
-            _onlineTrainers = Object.values(ps).flat().map(p => ({ name: p.name, team: p.team || null })).filter(p => p.name);
+            const seen = new Map();
+            Object.values(ps).flat()
+              .filter(p => p.name)
+              .forEach(p => seen.set(p.name.toLowerCase(), { name: p.name, team: p.team || null }));
+            _onlineTrainers = Array.from(seen.values());
             renderOnlineTrainers();
           })
           .on("broadcast", { event: "emoji" }, ({ payload }) => {
