@@ -4131,6 +4131,7 @@
             const evolvedEntry = {
               ...buildPokemonRecord(toSlug, isShiny),
               discoveredBy: baseEntry.discoveredBy,
+              discovererTeam: baseEntry.discovererTeam || null,
               stepsToHatch: baseEntry.stepsToHatch,
               claimedAt:    new Date().toISOString(),
               evolvedFrom:  fromName,
@@ -4155,7 +4156,7 @@
         const teamEggWinner = isTeamEgg
           ? ((state.eggState.nestSteps ?? 0) >= (state.eggState.hatchSteps ?? 0) ? 'nest' : 'hatch')
           : null;
-        const entry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), visibleAfter, teamEggWinner };
+        const entry = { ...pokemon, discoveredBy: trainerName, discovererTeam: state.trainerTeam || null, stepsToHatch, claimedAt: new Date().toISOString(), visibleAfter, teamEggWinner };
         state.recentLog.unshift(entry);
         state.recentLog = state.recentLog.slice(0, 12);
         if (isShiny) { state.shinyRecentLog.unshift(entry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
@@ -4203,7 +4204,7 @@
         state.foundCounts[dittoLineKey]      = (state.foundCounts[dittoLineKey] || 0) + 1;
         if (isShiny) state.shinyFoundCounts[dittoLineKey] = (state.shinyFoundCounts[dittoLineKey] || 0) + 1;
         unlockPokemon("ditto", isShiny);
-        const dittoEntry = { ...pokemon, discoveredBy: trainerName, stepsToHatch, claimedAt: new Date().toISOString(), morphedInto: dittoChosenSlug, visibleAfter };
+        const dittoEntry = { ...pokemon, discoveredBy: trainerName, discovererTeam: state.trainerTeam || null, stepsToHatch, claimedAt: new Date().toISOString(), morphedInto: dittoChosenSlug, visibleAfter };
         state.recentLog.unshift(dittoEntry);
         state.recentLog = state.recentLog.slice(0, 12);
         if (isShiny) { state.shinyRecentLog.unshift(dittoEntry); state.shinyRecentLog = state.shinyRecentLog.slice(0, 8); }
@@ -4678,7 +4679,7 @@
                   <span class="pill">#${String(entry.id).padStart(4, "0")}</span>
                   ${entry.isSpecial ? `<span class="pill">⭐</span>` : ""}
                 </div>
-                <div class="entry-meta">${isTeamEntry ? `<span style="font-weight:900;color:${teamWinner === 'nest' ? '#15803d' : '#dc2626'};">Found by ${teamLabel}</span>` : `Found by ${entry.discoveredBy}`}</div>
+                <div class="entry-meta">${isTeamEntry ? `<span style="font-weight:900;color:${teamWinner === 'nest' ? '#15803d' : '#dc2626'};">Found by ${teamLabel}</span>` : `Found by ${teamBadge(entry.discovererTeam, 13)}<span style="color:${teamColor(entry.discovererTeam)};font-weight:${entry.discovererTeam ? '900' : '700'};">${_escHtml(entry.discoveredBy || '')}</span>`}</div>
               ${isTeamEntry ? `<img src="${teamLogo}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);width:32px;height:32px;object-fit:contain;opacity:0.7;">` : ''}
                 <div class="entry-date">${formatDate(entry.claimedAt)}</div>
                 <div class="entry-steps">${fmt(entry.stepsToHatch || 0)} steps</div>
