@@ -3880,8 +3880,7 @@
       }
 
       function _showJirachiToast(name, wishType) {
-        const stage = document.getElementById("eggStage");
-        if (!stage) return;
+        const stage = document.querySelector('.battle-stage') || document.body;
         let container = stage.querySelector(".hooh-toast-container");
         if (!container) {
           container = document.createElement("div");
