@@ -3793,8 +3793,11 @@
 
       // ─── Jirachi Easter Egg ───────────────────────────────────────────────────
       function startJirachiScheduler() {
-        const ms = (3600 + Math.random() * 3600) * 1000; // 1–2 hours
-        setTimeout(() => { spawnJirachi(); startJirachiScheduler(); }, ms);
+        setInterval(async () => {
+          if (Math.random() >= 1 / 8192) return;
+          const { data } = await db.rpc("claim_jirachi_spawn");
+          if (data) spawnJirachi();
+        }, 37000);
       }
 
       function spawnJirachi() {
